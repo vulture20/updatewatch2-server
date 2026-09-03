@@ -69,6 +69,8 @@ public class BruteForceLoginServiceTests
 
         public NotificationThresholdOptions NotificationThresholds => throw new NotSupportedException();
 
+        public AdOptions Ad => throw new NotSupportedException();
+
         public string LogLevel => throw new NotSupportedException();
 
         public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();

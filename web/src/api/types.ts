@@ -51,6 +51,7 @@ export interface VersionInfo {
 }
 
 export type SmtpEncryption = 'None' | 'SslTls' | 'StartTls';
+export type AdEncryption = 'None' | 'StartTls' | 'Ldaps';
 
 export interface AdminSettings {
   logLevel: string;
@@ -67,15 +68,29 @@ export interface AdminSettings {
   smtpConfigured: boolean;
   notificationUpdatesPerMachineThreshold: number;
   notificationAffectedMachinesThreshold: number;
+  adEnabled: boolean;
+  adHost: string;
+  adPort: number;
+  adEncryption: AdEncryption;
+  adBindDn: string;
+  adBindPasswordSet: boolean;
+  adBaseDn: string;
+  adUserSearchFilter: string;
+  adLoginGroupDn: string;
+  adConfigured: boolean;
 }
 
 /**
- * smtpPassword: undefined/omitted leaves the stored password unchanged;
- * an empty string clears it. There is no way to read the current password
- * back out (AdminSettings only has smtpPasswordSet), so the form must
- * default this to undefined and only set it when the admin actually types
- * a new one.
+ * smtpPassword/adBindPassword: undefined/omitted leaves the stored
+ * password unchanged; an empty string clears it. There is no way to read
+ * either current password back out (AdminSettings only has the *Set
+ * booleans), so the form must default these to undefined and only set one
+ * when the admin actually types a new value.
  */
-export type UpdateAdminSettings = Omit<AdminSettings, 'smtpPasswordSet' | 'smtpConfigured'> & {
+export type UpdateAdminSettings = Omit<
+  AdminSettings,
+  'smtpPasswordSet' | 'smtpConfigured' | 'adBindPasswordSet' | 'adConfigured'
+> & {
   smtpPassword?: string;
+  adBindPassword?: string;
 };

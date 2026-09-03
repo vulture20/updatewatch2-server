@@ -21,13 +21,13 @@ npm test        # vitest
 - `src/auth/` — `AuthContext`/`AuthProvider` (session state via `/api/auth/me`, `login`/`logout`), `RequireAuth` route guard
 - `src/i18n/` — DE/EN translations (react-i18next), browser-language default with a `localStorage` override
 - `src/theme/` — light/dark theme via CSS custom properties (`tokens.css`, kept in sync by hand with the server's `Resources/Themes/*.json`), system-preference default with a `localStorage` override
-- `src/pages/` — `LoginPage` (wired to `/api/auth/login`), `AgentsListPage` (with bulk approve), `AgentDetailPage`, `AdminPage` (a real editable form, wired to `PUT /api/admin/settings`)
+- `src/pages/` — `LoginPage` (wired to `/api/auth/login`, tries the local account then AD), `AgentsListPage` (with bulk approve), `AgentDetailPage`, `AdminPage` — a real editable form, wired to `PUT /api/admin/settings`, split into three tabs (General, Notifications, Active Directory)
 - `src/components/` — shared bits: `ThemeToggle`, `LanguageSwitcher`, `SmtpWarningBanner` (shown in the authenticated app shell, not on the login form — the mail-server warning is meant for logged-in admins)
 
 ## Known gaps
 
-- Only the local `admin` account can log in — AD-authenticated login (`updatewatch2-server#2`) is a separate, not-yet-implemented path. The AD-connection tab from CLAUDE.md section 6.1 has no UI yet either.
-- No test-mail button — `IEmailNotificationService.SendTestEmailAsync` exists server-side but isn't exposed via an endpoint yet.
+- No "test connection" button on the Active Directory tab, and no test-mail button on Notifications — both would need their own endpoints on top of `IActiveDirectoryAuthService`/`IEmailNotificationService`, out of scope for settings persistence itself.
+- An AD-authenticated session can't use `PUT /api/auth/password` (that changes the local admin account specifically) — by design, not a gap, but worth knowing if a saved-settings round-trip test seems to silently do nothing for that button while signed in as an AD user.
 - `SmtpWarningBanner` reflects `smtpConfigured` (is SMTP set up at all), not live reachability — the reachability check already exists server-side (`IEmailNotificationService.IsHealthyAsync`) but isn't exposed via the settings endpoint yet.
 - Changing the log level from `AdminPage` persists immediately but only takes effect on the server's next restart — there's no hot-reload of the running logger's minimum level (see `Program.cs`'s comment on this).
 - No "forgot password" flow — if the admin loses the auto-generated password without having changed it via `/api/auth/password` first, recovery means resetting the `AdminAccounts` row directly in the database.

@@ -81,7 +81,16 @@ public class AdminSettingsStoreTests : IDisposable
             SmtpFromAddress: "updatewatch2@example.com",
             SmtpFromName: "UpdateWatch2 Notifier",
             NotificationUpdatesPerMachineThreshold: 3,
-            NotificationAffectedMachinesThreshold: 7);
+            NotificationAffectedMachinesThreshold: 7,
+            AdEnabled: true,
+            AdHost: "ldap.example.com",
+            AdPort: 636,
+            AdEncryption: "Ldaps",
+            AdBindDn: "cn=service,dc=example,dc=com",
+            AdBindPassword: "ad-s3cret!",
+            AdBaseDn: "dc=example,dc=com",
+            AdUserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
+            AdLoginGroupDn: "cn=admins,dc=example,dc=com");
 
         var dto = await store.UpdateAsync(request);
 
@@ -92,11 +101,18 @@ public class AdminSettingsStoreTests : IDisposable
         Assert.Equal("s3cret!", store.Smtp.Password);
         Assert.Equal("DEBUG", store.LogLevel);
         Assert.Equal(3, store.NotificationThresholds.UpdatesPerMachine);
+        Assert.True(store.Ad.Enabled);
+        Assert.Equal("ldap.example.com", store.Ad.Host);
+        Assert.Equal(AdEncryption.Ldaps, store.Ad.Encryption);
+        Assert.Equal("ad-s3cret!", store.Ad.BindPassword);
+        Assert.Equal("cn=admins,dc=example,dc=com", store.Ad.LoginGroupDn);
 
-        // The password never comes back out through the DTO.
+        // Neither password ever comes back out through the DTO.
         Assert.True(dto.SmtpPasswordSet);
         Assert.Equal("smtp.example.com", dto.SmtpHost);
         Assert.True(dto.SmtpConfigured);
+        Assert.True(dto.AdBindPasswordSet);
+        Assert.True(dto.AdConfigured);
 
         // ... and survives a fresh read from the DB (not just the cache).
         using var scope = _services.CreateScope();
@@ -145,5 +161,14 @@ public class AdminSettingsStoreTests : IDisposable
         SmtpFromAddress: "updatewatch2@example.com",
         SmtpFromName: "UpdateWatch2",
         NotificationUpdatesPerMachineThreshold: 5,
-        NotificationAffectedMachinesThreshold: 10);
+        NotificationAffectedMachinesThreshold: 10,
+        AdEnabled: false,
+        AdHost: "",
+        AdPort: 389,
+        AdEncryption: "StartTls",
+        AdBindDn: "",
+        AdBindPassword: null,
+        AdBaseDn: "",
+        AdUserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
+        AdLoginGroupDn: "");
 }

@@ -117,6 +117,24 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Login_falls_through_to_AD_for_an_unknown_local_username_and_fails_cleanly_when_AD_is_disabled()
+    {
+        // Exercises the AuthController -> IActiveDirectoryAuthService wiring
+        // without needing a real directory: AdOptions.Enabled defaults to
+        // false, so ActiveDirectoryAuthService short-circuits before ever
+        // opening an LDAP connection. The actual bind/search/group-membership
+        // logic against a real LDAP server was verified by hand — see
+        // CLAUDE.md's note on ActiveDirectoryAuthService for how to repeat
+        // that.
+        using var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest("someone-not-the-local-admin", "whatever"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Repeated_failed_logins_lock_the_account_out()
     {
         using var client = _factory.CreateClient();

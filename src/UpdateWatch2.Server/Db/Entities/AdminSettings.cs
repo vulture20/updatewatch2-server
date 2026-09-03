@@ -37,5 +37,23 @@ public class AdminSettings
 
     public int NotificationAffectedMachinesThreshold { get; set; }
 
+    public bool AdEnabled { get; set; }
+
+    public required string AdHost { get; set; }
+
+    public int AdPort { get; set; }
+
+    public required string AdEncryption { get; set; }
+
+    public required string AdBindDn { get; set; }
+
+    public string? AdBindPassword { get; set; }
+
+    public required string AdBaseDn { get; set; }
+
+    public required string AdUserSearchFilter { get; set; }
+
+    public required string AdLoginGroupDn { get; set; }
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

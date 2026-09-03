@@ -19,6 +19,8 @@ public interface IAdminSettingsStore
 
     NotificationThresholdOptions NotificationThresholds { get; }
 
+    AdOptions Ad { get; }
+
     /// <summary>
     /// The persisted log level. Reflected here immediately on change, but
     /// — unlike the other settings — does NOT hot-reload the running

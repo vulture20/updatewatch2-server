@@ -34,6 +34,16 @@ const baseSettings = {
   smtpConfigured: true,
   notificationUpdatesPerMachineThreshold: 5,
   notificationAffectedMachinesThreshold: 10,
+  adEnabled: false,
+  adHost: '',
+  adPort: 389,
+  adEncryption: 'StartTls' as const,
+  adBindDn: '',
+  adBindPasswordSet: false,
+  adBaseDn: '',
+  adUserSearchFilter: '(&(objectClass=user)(sAMAccountName={0}))',
+  adLoginGroupDn: '',
+  adConfigured: false,
 };
 
 describe('AdminPage', () => {
@@ -76,11 +86,60 @@ describe('AdminPage', () => {
     const user = userEvent.setup();
 
     render(<AdminPage />);
-    await user.type(await screen.findByLabelText('SMTP password'), 'new-secret');
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Notifications' }));
+    await user.type(screen.getByLabelText('SMTP password'), 'new-secret');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ smtpPassword: 'new-secret' }));
+  });
+
+  it('switches to the Active Directory tab and submits its settings', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, adEnabled: true });
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Active Directory' }));
+
+    await user.click(screen.getByLabelText('Enable Active Directory login'));
+    await user.type(screen.getByLabelText('LDAP host'), 'ldap.example.com');
+    await user.type(screen.getByLabelText('Search base DN'), 'dc=example,dc=com');
+    await user.type(screen.getByLabelText('Login group DN'), 'cn=admins,dc=example,dc=com');
+    await user.type(screen.getByLabelText('Service account password'), 'ad-secret');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adEnabled: true,
+        adHost: 'ldap.example.com',
+        adBaseDn: 'dc=example,dc=com',
+        adLoginGroupDn: 'cn=admins,dc=example,dc=com',
+        adBindPassword: 'ad-secret',
+      }),
+    );
+  });
+
+  it('keeps General-tab edits when saving after switching to another tab', async () => {
+    // Fields on hidden tabs must stay mounted (not unmounted), or edits
+    // made before switching tabs would be lost on submit.
+    mockedUpdateSettings.mockResolvedValue(baseSettings);
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+
+    const maxAttempts = screen.getByLabelText('Max attempts');
+    await user.clear(maxAttempts);
+    await user.type(maxAttempts, '9');
+
+    await user.click(screen.getByRole('tab', { name: 'Notifications' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ bruteForceMaxAttempts: 9 }));
   });
 
   it('shows the server validation error message on a failed save', async () => {

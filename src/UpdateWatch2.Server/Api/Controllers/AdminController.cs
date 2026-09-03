@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Audit;
+using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Notifications;
 
 namespace UpdateWatch2.Server.Api.Controllers;
@@ -33,6 +34,7 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
         {
             LogLevel = request.LogLevel.ToUpperInvariant(),
             SmtpEncryption = Enum.Parse<SmtpEncryption>(request.SmtpEncryption, ignoreCase: true).ToString(),
+            AdEncryption = Enum.Parse<AdEncryption>(request.AdEncryption, ignoreCase: true).ToString(),
         };
 
         var updated = await settingsStore.UpdateAsync(normalized, ct);
@@ -82,6 +84,43 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
         if (request.NotificationAffectedMachinesThreshold < 1)
         {
             errors.Add("NotificationAffectedMachinesThreshold must be at least 1.");
+        }
+
+        if (!Enum.TryParse<AdEncryption>(request.AdEncryption, ignoreCase: true, out _))
+        {
+            errors.Add($"AdEncryption must be one of: {string.Join(", ", Enum.GetNames<AdEncryption>())}.");
+        }
+
+        if (request.AdPort is < 1 or > 65535)
+        {
+            errors.Add("AdPort must be between 1 and 65535.");
+        }
+
+        if (request.AdEnabled)
+        {
+            if (string.IsNullOrWhiteSpace(request.AdHost))
+            {
+                errors.Add("AdHost is required when AD login is enabled.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.AdBaseDn))
+            {
+                errors.Add("AdBaseDn is required when AD login is enabled.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.AdUserSearchFilter))
+            {
+                errors.Add("AdUserSearchFilter is required when AD login is enabled.");
+            }
+            else if (!request.AdUserSearchFilter.Contains("{0}"))
+            {
+                errors.Add("AdUserSearchFilter must contain a {0} placeholder for the submitted username.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.AdLoginGroupDn))
+            {
+                errors.Add("AdLoginGroupDn is required when AD login is enabled.");
+            }
         }
 
         return errors;

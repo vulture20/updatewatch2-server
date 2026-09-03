@@ -81,12 +81,13 @@ builder.Services.AddDataProtection()
     .SetApplicationName("UpdateWatch2.Server")
     .PersistKeysToFileSystem(keysDirectory);
 
-// These three are bound purely as the compiled-in defaults AdminSettingsStore
+// These four are bound purely as the compiled-in defaults AdminSettingsStore
 // seeds its DB row from on first run — the database is authoritative after
 // that, not these IOptions<T> snapshots. See each options class's doc comment.
 builder.Services.Configure<BruteForceOptions>(builder.Configuration.GetSection(BruteForceOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.Configure<NotificationThresholdOptions>(builder.Configuration.GetSection(NotificationThresholdOptions.SectionName));
+builder.Services.Configure<AdOptions>(builder.Configuration.GetSection(AdOptions.SectionName));
 
 builder.Services.AddScoped<IAgentService, AgentService>();
 builder.Services.AddScoped<IUpdateService, UpdateService>();
@@ -95,6 +96,7 @@ builder.Services.AddSingleton<ITrustedIpRangeProvider, EnvironmentTrustedIpRange
 builder.Services.AddSingleton<IBruteForceLoginService, BruteForceLoginService>();
 builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
 builder.Services.AddScoped<IAdminAccountService, AdminAccountService>();
+builder.Services.AddScoped<IActiveDirectoryAuthService, ActiveDirectoryAuthService>();
 builder.Services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
 
 // The frontend (server/web) is a separate origin in development (its own

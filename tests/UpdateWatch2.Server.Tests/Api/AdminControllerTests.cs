@@ -148,5 +148,14 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
         SmtpFromAddress: "updatewatch2@example.com",
         SmtpFromName: "UpdateWatch2",
         NotificationUpdatesPerMachineThreshold: 5,
-        NotificationAffectedMachinesThreshold: 10);
+        NotificationAffectedMachinesThreshold: 10,
+        AdEnabled: false,
+        AdHost: "",
+        AdPort: 389,
+        AdEncryption: "StartTls",
+        AdBindDn: "",
+        AdBindPassword: null,
+        AdBaseDn: "",
+        AdUserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
+        AdLoginGroupDn: "");
 }

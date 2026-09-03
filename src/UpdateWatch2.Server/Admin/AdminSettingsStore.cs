@@ -11,13 +11,15 @@ public class AdminSettingsStore(
     IServiceScopeFactory scopeFactory,
     IOptions<BruteForceOptions> defaultBruteForce,
     IOptions<SmtpOptions> defaultSmtp,
-    IOptions<NotificationThresholdOptions> defaultNotificationThresholds) : IAdminSettingsStore
+    IOptions<NotificationThresholdOptions> defaultNotificationThresholds,
+    IOptions<AdOptions> defaultAd) : IAdminSettingsStore
 {
     private readonly object _lock = new();
 
     private BruteForceOptions _bruteForce = defaultBruteForce.Value;
     private SmtpOptions _smtp = defaultSmtp.Value;
     private NotificationThresholdOptions _notificationThresholds = defaultNotificationThresholds.Value;
+    private AdOptions _ad = defaultAd.Value;
     private string _logLevel = "INFO";
 
     public BruteForceOptions BruteForce
@@ -33,6 +35,11 @@ public class AdminSettingsStore(
     public NotificationThresholdOptions NotificationThresholds
     {
         get { lock (_lock) return _notificationThresholds; }
+    }
+
+    public AdOptions Ad
+    {
+        get { lock (_lock) return _ad; }
     }
 
     public string LogLevel
@@ -84,6 +91,18 @@ public class AdminSettingsStore(
         row.SmtpFromName = request.SmtpFromName;
         row.NotificationUpdatesPerMachineThreshold = request.NotificationUpdatesPerMachineThreshold;
         row.NotificationAffectedMachinesThreshold = request.NotificationAffectedMachinesThreshold;
+        row.AdEnabled = request.AdEnabled;
+        row.AdHost = request.AdHost;
+        row.AdPort = request.AdPort;
+        row.AdEncryption = request.AdEncryption;
+        row.AdBindDn = request.AdBindDn;
+        if (request.AdBindPassword is not null)
+        {
+            row.AdBindPassword = request.AdBindPassword.Length == 0 ? null : request.AdBindPassword;
+        }
+        row.AdBaseDn = request.AdBaseDn;
+        row.AdUserSearchFilter = request.AdUserSearchFilter;
+        row.AdLoginGroupDn = request.AdLoginGroupDn;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -110,7 +129,17 @@ public class AdminSettingsStore(
                 _smtp.FromName,
                 _smtp.IsConfigured,
                 _notificationThresholds.UpdatesPerMachine,
-                _notificationThresholds.AffectedMachines);
+                _notificationThresholds.AffectedMachines,
+                _ad.Enabled,
+                _ad.Host,
+                _ad.Port,
+                _ad.Encryption.ToString(),
+                _ad.BindDn,
+                !string.IsNullOrEmpty(_ad.BindPassword),
+                _ad.BaseDn,
+                _ad.UserSearchFilter,
+                _ad.LoginGroupDn,
+                _ad.IsConfigured);
         }
     }
 
@@ -133,6 +162,15 @@ public class AdminSettingsStore(
         SmtpFromName = defaultSmtp.Value.FromName,
         NotificationUpdatesPerMachineThreshold = defaultNotificationThresholds.Value.UpdatesPerMachine,
         NotificationAffectedMachinesThreshold = defaultNotificationThresholds.Value.AffectedMachines,
+        AdEnabled = defaultAd.Value.Enabled,
+        AdHost = defaultAd.Value.Host,
+        AdPort = defaultAd.Value.Port,
+        AdEncryption = defaultAd.Value.Encryption.ToString(),
+        AdBindDn = defaultAd.Value.BindDn,
+        AdBindPassword = defaultAd.Value.BindPassword,
+        AdBaseDn = defaultAd.Value.BaseDn,
+        AdUserSearchFilter = defaultAd.Value.UserSearchFilter,
+        AdLoginGroupDn = defaultAd.Value.LoginGroupDn,
     };
 
     private void Apply(AdminSettings row)
@@ -158,12 +196,25 @@ public class AdminSettingsStore(
             UpdatesPerMachine = row.NotificationUpdatesPerMachineThreshold,
             AffectedMachines = row.NotificationAffectedMachinesThreshold,
         };
+        var ad = new AdOptions
+        {
+            Enabled = row.AdEnabled,
+            Host = row.AdHost,
+            Port = row.AdPort,
+            Encryption = Enum.Parse<AdEncryption>(row.AdEncryption),
+            BindDn = row.AdBindDn,
+            BindPassword = row.AdBindPassword,
+            BaseDn = row.AdBaseDn,
+            UserSearchFilter = row.AdUserSearchFilter,
+            LoginGroupDn = row.AdLoginGroupDn,
+        };
 
         lock (_lock)
         {
             _bruteForce = bruteForce;
             _smtp = smtp;
             _notificationThresholds = thresholds;
+            _ad = ad;
             _logLevel = row.LogLevel;
         }
     }
