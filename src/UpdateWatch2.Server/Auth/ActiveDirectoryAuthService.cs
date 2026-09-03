@@ -23,6 +23,19 @@ public class ActiveDirectoryAuthService(IAdminSettingsStore settingsStore, ILogg
             return new AdAuthResult(false, null, "AD login is not configured.");
         }
 
+        // RFC 4513 §5.1.2: a simple bind with a non-empty DN but a
+        // zero-length password is defined as an *unauthenticated* bind —
+        // a compliant LDAP server accepts it without checking the password
+        // at all. Without this guard, the user-DN bind below would
+        // "succeed" for any valid/guessed username submitted with an empty
+        // password field, authenticating as that user with no password
+        // check whatsoever. This must be rejected before any bind is
+        // attempted, not inferred from a caught exception.
+        if (string.IsNullOrEmpty(password))
+        {
+            return new AdAuthResult(false, null, "Invalid username or password.");
+        }
+
         LdapConnection searchConnection;
         try
         {
