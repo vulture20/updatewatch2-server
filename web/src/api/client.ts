@@ -52,8 +52,18 @@ async function request<T>(path: string, init?: RequestInit & { skipUnauthorizedH
 async function readErrorMessage(response: Response, method: string, path: string): Promise<string> {
   try {
     const body: unknown = await response.clone().json();
-    if (body && typeof body === 'object' && 'message' in body && typeof body.message === 'string') {
-      return body.message;
+    if (body && typeof body === 'object') {
+      if ('message' in body && typeof body.message === 'string') {
+        return body.message;
+      }
+      // ASP.NET Core model-validation failures (e.g. AdminController's PUT)
+      // come back as { errors: string[] } rather than a single message.
+      if ('errors' in body && Array.isArray(body.errors)) {
+        const errors = body.errors.filter((e): e is string => typeof e === 'string');
+        if (errors.length > 0) {
+          return errors.join(' ');
+        }
+      }
     }
   } catch {
     // response body wasn't JSON (or was empty) — fall through to the generic message

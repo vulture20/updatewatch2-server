@@ -1,38 +1,89 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.Admin;
-using UpdateWatch2.Server.Auth;
+using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Notifications;
 
 namespace UpdateWatch2.Server.Api.Controllers;
 
-/// <summary>
-/// Backs the "Administration" area (CLAUDE.md section 6). Currently
-/// read-only; PUT endpoints to persist changes land with AD integration
-/// and dynamic log-level push to agents. Requires an admin session.
-/// </summary>
+/// <summary>Backs the "Administration" area (CLAUDE.md section 6). Requires an admin session.</summary>
 [ApiController]
 [Route("api/admin/settings")]
 [Authorize]
-public class AdminController(
-    IOptionsMonitor<BruteForceOptions> bruteForce,
-    IOptionsMonitor<SmtpOptions> smtp,
-    IOptionsMonitor<NotificationThresholdOptions> notificationThresholds) : ControllerBase
+public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService auditLog) : ControllerBase
 {
-    [HttpGet]
-    public IActionResult Get()
-    {
-        var bf = bruteForce.CurrentValue;
-        var nt = notificationThresholds.CurrentValue;
+    private static readonly string[] ValidLogLevels = ["DEBUG", "INFO", "WARNING", "ERROR"];
 
-        return Ok(new AdminSettingsDto(
-            LogLevel: Environment.GetEnvironmentVariable("UPDATEWATCH2_LOGLEVEL") ?? "INFO",
-            BruteForceMaxAttempts: bf.MaxAttempts,
-            BruteForceWindowMinutes: bf.WindowMinutes,
-            BruteForceLockoutMinutes: bf.LockoutMinutes,
-            SmtpConfigured: smtp.CurrentValue.IsConfigured,
-            NotificationUpdatesPerMachineThreshold: nt.UpdatesPerMachine,
-            NotificationAffectedMachinesThreshold: nt.AffectedMachines));
+    [HttpGet]
+    public IActionResult Get() => Ok(settingsStore.ToDto());
+
+    [HttpPut]
+    public async Task<IActionResult> Update([FromBody] UpdateAdminSettingsRequest request, CancellationToken ct)
+    {
+        var errors = Validate(request);
+        if (errors.Count > 0)
+        {
+            return BadRequest(new { errors });
+        }
+
+        // Normalize to the exact casing AdminSettingsStore round-trips
+        // through Enum.Parse (case-sensitive) when reloading from the DB —
+        // validation above only confirms these parse case-insensitively.
+        var normalized = request with
+        {
+            LogLevel = request.LogLevel.ToUpperInvariant(),
+            SmtpEncryption = Enum.Parse<SmtpEncryption>(request.SmtpEncryption, ignoreCase: true).ToString(),
+        };
+
+        var updated = await settingsStore.UpdateAsync(normalized, ct);
+        await auditLog.LogAsync(User.Identity!.Name!, "admin.settings.updated", ct: ct);
+        return Ok(updated);
+    }
+
+    private static List<string> Validate(UpdateAdminSettingsRequest request)
+    {
+        var errors = new List<string>();
+
+        if (!ValidLogLevels.Contains(request.LogLevel.ToUpperInvariant()))
+        {
+            errors.Add($"LogLevel must be one of: {string.Join(", ", ValidLogLevels)}.");
+        }
+
+        if (request.BruteForceMaxAttempts < 1)
+        {
+            errors.Add("BruteForceMaxAttempts must be at least 1.");
+        }
+
+        if (request.BruteForceWindowMinutes < 1)
+        {
+            errors.Add("BruteForceWindowMinutes must be at least 1.");
+        }
+
+        if (request.BruteForceLockoutMinutes < 1)
+        {
+            errors.Add("BruteForceLockoutMinutes must be at least 1.");
+        }
+
+        if (request.SmtpPort is < 1 or > 65535)
+        {
+            errors.Add("SmtpPort must be between 1 and 65535.");
+        }
+
+        if (!Enum.TryParse<SmtpEncryption>(request.SmtpEncryption, ignoreCase: true, out _))
+        {
+            errors.Add($"SmtpEncryption must be one of: {string.Join(", ", Enum.GetNames<SmtpEncryption>())}.");
+        }
+
+        if (request.NotificationUpdatesPerMachineThreshold < 1)
+        {
+            errors.Add("NotificationUpdatesPerMachineThreshold must be at least 1.");
+        }
+
+        if (request.NotificationAffectedMachinesThreshold < 1)
+        {
+            errors.Add("NotificationAffectedMachinesThreshold must be at least 1.");
+        }
+
+        return errors;
     }
 }

@@ -6,6 +6,7 @@ import type {
   BulkApproveResult,
   LoginResponse,
   MeResponse,
+  UpdateAdminSettings,
   UpdateItem,
   VersionInfo,
 } from './types';
@@ -38,4 +39,6 @@ export const versionApi = {
 
 export const adminApi = {
   getSettings: () => apiClient.get<AdminSettings>('/api/admin/settings'),
+  updateSettings: (settings: UpdateAdminSettings) =>
+    apiClient.put<AdminSettings>('/api/admin/settings', settings),
 };

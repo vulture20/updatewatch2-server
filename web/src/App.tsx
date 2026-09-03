@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import logo from './assets/logo.svg';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { SmtpWarningBanner } from './components/SmtpWarningBanner';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -23,6 +24,10 @@ export default function App() {
           <RequireAuth>
             <div className="app-shell">
               <header>
+                <div className="app-shell-brand">
+                  <img src={logo} alt="" width={28} height={28} />
+                  <span>UpdateWatch2</span>
+                </div>
                 <nav>
                   <Link to="/agents">{t('nav.agents')}</Link>
                   <Link to="/admin">{t('nav.admin')}</Link>

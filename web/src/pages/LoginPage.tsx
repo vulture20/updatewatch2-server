@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import logo from '../assets/logo.svg';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
@@ -42,6 +43,7 @@ export function LoginPage() {
   return (
     <main className="login-page">
       <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
+        <img src={logo} alt="UpdateWatch2" width={64} height={64} className="login-logo" />
         <h1>{t('login.title')}</h1>
         {error && <div role="alert" className="login-error">{error}</div>}
         <label>

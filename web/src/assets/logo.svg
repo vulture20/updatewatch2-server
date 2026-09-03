@@ -21,15 +21,8 @@
     </filter>
   </defs>
 
-  <!-- Hintergrund -->
-  <rect
-    width="512"
-    height="512"
-    rx="120"
-    fill="#0F172A"/>
-
-  <!-- Gesamtes Logo um 20 % vergoessert -->
-  <g transform="translate(256 256) scale(1.4) translate(-256 -256)">
+  <!-- Komplettes Logo um 20 % vergrößert -->
+  <g transform="translate(256 256) scale(1.2) translate(-256 -256)">
 
     <!-- Ring -->
     <circle

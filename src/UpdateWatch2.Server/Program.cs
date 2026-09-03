@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Auth;
@@ -10,12 +12,35 @@ using UpdateWatch2.Server.Updates;
 var builder = WebApplication.CreateBuilder(args);
 
 // UPDATEWATCH2_LOGLEVEL overrides the configured default log level, per
-// CLAUDE.md ("Server: over the Oberfläche oder über die Umgebungsvariable
-// UPDATEWATCH2_LOGLEVEL").
+// CLAUDE.md ("Server: über die Oberfläche oder über die Umgebungsvariable
+// UPDATEWATCH2_LOGLEVEL"). If it's not set, fall back to whatever an admin
+// last saved via the Administration UI (Admin/AdminSettingsStore) — read
+// with a raw, read-only connection since this runs before the DI container
+// (and AppDbContext) exists. This deliberately does NOT use the same
+// lazy-resolution path the AddDbContext factory below uses: it's a
+// best-effort probe of whatever appsettings.json's Database:Path says
+// *before* WebApplicationFactory-in-tests applies its config override
+// (see that factory's comment), so in tests it harmlessly looks at the
+// wrong/nonexistent file and finds nothing — never creates a directory or
+// touches a file, unlike the real DbContext path. Either way, a persisted
+// value here only takes effect on the next process start: there's no
+// hot-reload of the running logger's minimum level yet (see
+// IAdminSettingsStore.LogLevel's doc comment).
+//
+// This sets builder.Configuration["Logging:LogLevel:Default"] directly
+// rather than calling builder.Logging.SetMinimumLevel(...) — verified by
+// hand that SetMinimumLevel is silently a no-op here: ASP.NET Core's
+// default host logging re-reads "Logging:LogLevel:*" from IConfiguration
+// reactively, and that config-sourced rule wins over the imperative
+// MinLevel floor SetMinimumLevel sets, regardless of call order. Writing
+// the value ASP.NET Core's own config-driven filter reads is the only
+// version of this that was confirmed to actually change verbosity.
 var logLevelEnv = Environment.GetEnvironmentVariable("UPDATEWATCH2_LOGLEVEL");
-if (logLevelEnv is not null && Enum.TryParse<LogLevel>(MapLogLevel(logLevelEnv), out var minLevel))
+var effectiveLogLevel = logLevelEnv ?? TryReadPersistedLogLevel(
+    Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["Database:Path"] ?? "data/updatewatch2.sqlite")));
+if (effectiveLogLevel is not null && Enum.TryParse<LogLevel>(MapLogLevel(effectiveLogLevel), out _))
 {
-    builder.Logging.SetMinimumLevel(minLevel);
+    builder.Configuration["Logging:LogLevel:Default"] = MapLogLevel(effectiveLogLevel);
 }
 
 builder.Services.AddControllers();
@@ -36,22 +61,21 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     options.UseSqlite($"Data Source={fullDbPath}");
 });
 
+// These three are bound purely as the compiled-in defaults AdminSettingsStore
+// seeds its DB row from on first run — the database is authoritative after
+// that, not these IOptions<T> snapshots. See each options class's doc comment.
 builder.Services.Configure<BruteForceOptions>(builder.Configuration.GetSection(BruteForceOptions.SectionName));
-// UPDATEWATCH2_TRUSTEDIP is read directly from the environment rather than
-// appsettings, per CLAUDE.md — it's an operational/deployment concern, not
-// an admin-UI setting.
-builder.Services.PostConfigure<BruteForceOptions>(opts =>
-    opts.TrustedIpRange = Environment.GetEnvironmentVariable("UPDATEWATCH2_TRUSTEDIP"));
-
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.Configure<NotificationThresholdOptions>(builder.Configuration.GetSection(NotificationThresholdOptions.SectionName));
 
 builder.Services.AddScoped<IAgentService, AgentService>();
 builder.Services.AddScoped<IUpdateService, UpdateService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddSingleton<ITrustedIpRangeProvider, EnvironmentTrustedIpRangeProvider>();
 builder.Services.AddSingleton<IBruteForceLoginService, BruteForceLoginService>();
 builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
 builder.Services.AddScoped<IAdminAccountService, AdminAccountService>();
+builder.Services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
 
 // The frontend (server/web) is a separate origin in development (its own
 // Vite dev server port) and, even in a same-origin production deployment
@@ -103,6 +127,9 @@ using (var scope = app.Services.CreateScope())
 
     var accounts = scope.ServiceProvider.GetRequiredService<IAdminAccountService>();
     await accounts.EnsureSeededAsync();
+
+    var settingsStore = scope.ServiceProvider.GetRequiredService<IAdminSettingsStore>();
+    await settingsStore.InitializeAsync();
 }
 
 if (app.Environment.IsDevelopment())
@@ -118,6 +145,29 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static string? TryReadPersistedLogLevel(string dbPath)
+{
+    if (!File.Exists(dbPath))
+    {
+        return null;
+    }
+
+    try
+    {
+        using var connection = new SqliteConnection($"Data Source={dbPath}");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT LogLevel FROM AdminSettings LIMIT 1";
+        return command.ExecuteScalar() as string;
+    }
+    catch (SqliteException)
+    {
+        // Table doesn't exist yet (fresh DB, migrations haven't run this
+        // process) — nothing persisted yet, that's fine.
+        return null;
+    }
+}
 
 static string MapLogLevel(string value) => value.Trim().ToUpperInvariant() switch
 {

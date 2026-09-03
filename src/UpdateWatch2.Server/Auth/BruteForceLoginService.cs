@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
-using Microsoft.Extensions.Options;
+using UpdateWatch2.Server.Admin;
 
 namespace UpdateWatch2.Server.Auth;
 
@@ -9,14 +9,14 @@ namespace UpdateWatch2.Server.Auth;
 /// single server instance; if the server is ever scaled out, this needs to
 /// move to a shared store (e.g. a DB table) instead.
 /// </summary>
-public class BruteForceLoginService(IOptionsMonitor<BruteForceOptions> options) : IBruteForceLoginService
+public class BruteForceLoginService(IAdminSettingsStore settingsStore, ITrustedIpRangeProvider trustedIpProvider) : IBruteForceLoginService
 {
     private readonly ConcurrentDictionary<string, List<DateTimeOffset>> _failedAttempts = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, DateTimeOffset> _lockedUntil = new(StringComparer.OrdinalIgnoreCase);
 
     public bool IsLockedOut(string username, IPAddress? remoteIp)
     {
-        if (TrustedIpMatcher.IsTrusted(options.CurrentValue.TrustedIpRange, remoteIp))
+        if (TrustedIpMatcher.IsTrusted(trustedIpProvider.TrustedIpRange, remoteIp))
         {
             return false;
         }
@@ -26,12 +26,12 @@ public class BruteForceLoginService(IOptionsMonitor<BruteForceOptions> options) 
 
     public void RecordFailedAttempt(string username, IPAddress? remoteIp)
     {
-        if (TrustedIpMatcher.IsTrusted(options.CurrentValue.TrustedIpRange, remoteIp))
+        if (TrustedIpMatcher.IsTrusted(trustedIpProvider.TrustedIpRange, remoteIp))
         {
             return;
         }
 
-        var opts = options.CurrentValue;
+        var opts = settingsStore.BruteForce;
         var now = DateTimeOffset.UtcNow;
         var windowStart = now - TimeSpan.FromMinutes(opts.WindowMinutes);
 

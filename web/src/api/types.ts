@@ -50,12 +50,32 @@ export interface VersionInfo {
   database: string;
 }
 
+export type SmtpEncryption = 'None' | 'SslTls' | 'StartTls';
+
 export interface AdminSettings {
   logLevel: string;
   bruteForceMaxAttempts: number;
   bruteForceWindowMinutes: number;
   bruteForceLockoutMinutes: number;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUsername: string | null;
+  smtpPasswordSet: boolean;
+  smtpEncryption: SmtpEncryption;
+  smtpFromAddress: string;
+  smtpFromName: string;
   smtpConfigured: boolean;
   notificationUpdatesPerMachineThreshold: number;
   notificationAffectedMachinesThreshold: number;
 }
+
+/**
+ * smtpPassword: undefined/omitted leaves the stored password unchanged;
+ * an empty string clears it. There is no way to read the current password
+ * back out (AdminSettings only has smtpPasswordSet), so the form must
+ * default this to undefined and only set it when the admin actually types
+ * a new one.
+ */
+export type UpdateAdminSettings = Omit<AdminSettings, 'smtpPasswordSet' | 'smtpConfigured'> & {
+  smtpPassword?: string;
+};

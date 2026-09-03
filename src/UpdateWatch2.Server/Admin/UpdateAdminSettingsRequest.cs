@@ -1,11 +1,13 @@
 namespace UpdateWatch2.Server.Admin;
 
 /// <summary>
-/// The settings shown (and, via PUT, editable) under Administration. Never
-/// includes the SMTP password — <see cref="SmtpPasswordSet"/> only says
-/// whether one is stored.
+/// Full replacement of the admin-editable settings (PUT /api/admin/settings).
+/// <see cref="SmtpPassword"/> is the one exception to "replace everything":
+/// null/omitted means "leave the stored password unchanged" — GET never
+/// echoes it back, so there'd be nothing for the UI to resubmit otherwise.
+/// Send an empty string to clear it.
 /// </summary>
-public record AdminSettingsDto(
+public record UpdateAdminSettingsRequest(
     string LogLevel,
     int BruteForceMaxAttempts,
     int BruteForceWindowMinutes,
@@ -13,10 +15,9 @@ public record AdminSettingsDto(
     string SmtpHost,
     int SmtpPort,
     string? SmtpUsername,
-    bool SmtpPasswordSet,
+    string? SmtpPassword,
     string SmtpEncryption,
     string SmtpFromAddress,
     string SmtpFromName,
-    bool SmtpConfigured,
     int NotificationUpdatesPerMachineThreshold,
     int NotificationAffectedMachinesThreshold);

@@ -53,6 +53,13 @@ td {
   gap: 1rem;
 }
 
+.app-shell-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
 .app-shell-controls {
   display: flex;
   gap: 0.5rem;
@@ -85,12 +92,22 @@ td {
   gap: 0.25rem;
 }
 
+.login-logo {
+  align-self: center;
+}
+
 .smtp-warning {
   background: var(--color-danger);
   color: white;
   padding: 0.75rem 1rem;
   border-radius: 0.25rem;
   margin-bottom: 1rem;
+}
+
+.field-hint {
+  font-size: 0.875rem;
+  opacity: 0.75;
+  margin: -0.5rem 0 1rem;
 }
 
 .login-error {

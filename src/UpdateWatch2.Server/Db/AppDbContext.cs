@@ -13,6 +13,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<AdminAccount> AdminAccounts => Set<AdminAccount>();
 
+    public DbSet<AdminSettings> AdminSettings => Set<AdminSettings>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agent>()

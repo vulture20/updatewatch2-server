@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using System.Net.Sockets;
-using Microsoft.Extensions.Options;
+using UpdateWatch2.Server.Admin;
 
 namespace UpdateWatch2.Server.Notifications;
 
@@ -11,12 +11,12 @@ namespace UpdateWatch2.Server.Notifications;
 /// upgrade) — implicit TLS on port 465 isn't well supported by
 /// <see cref="SmtpClient"/>. Revisit with MailKit if that matters.
 /// </summary>
-public class EmailNotificationService(IOptionsMonitor<SmtpOptions> options, ILogger<EmailNotificationService> logger)
+public class EmailNotificationService(IAdminSettingsStore settingsStore, ILogger<EmailNotificationService> logger)
     : IEmailNotificationService
 {
     public async Task SendTestEmailAsync(string toAddress, CancellationToken ct = default)
     {
-        var opts = options.CurrentValue;
+        var opts = settingsStore.Smtp;
         if (!opts.IsConfigured)
         {
             throw new InvalidOperationException("SMTP is not configured.");
@@ -37,7 +37,7 @@ public class EmailNotificationService(IOptionsMonitor<SmtpOptions> options, ILog
 
     public async Task<bool> IsHealthyAsync(CancellationToken ct = default)
     {
-        var opts = options.CurrentValue;
+        var opts = settingsStore.Smtp;
         if (!opts.IsConfigured)
         {
             return false;

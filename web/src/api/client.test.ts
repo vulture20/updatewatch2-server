@@ -55,6 +55,22 @@ describe('apiClient', () => {
     );
   });
 
+  it('joins ASP.NET Core model-validation errors into the message', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({ errors: ['LogLevel must be one of: DEBUG, INFO, WARNING, ERROR.', 'SmtpPort must be between 1 and 65535.'] }),
+          { status: 400 },
+        ),
+      ),
+    );
+
+    await expect(apiClient.put('/api/admin/settings', {})).rejects.toMatchObject(
+      new ApiError(400, 'LogLevel must be one of: DEBUG, INFO, WARNING, ERROR. SmtpPort must be between 1 and 65535.'),
+    );
+  });
+
   it('calls the unauthorized handler on a 401 response', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
     const handler = vi.fn();

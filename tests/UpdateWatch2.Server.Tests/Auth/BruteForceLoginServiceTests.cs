@@ -1,13 +1,14 @@
 using System.Net;
-using Microsoft.Extensions.Options;
+using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Auth;
+using UpdateWatch2.Server.Notifications;
 
 namespace UpdateWatch2.Server.Tests.Auth;
 
 public class BruteForceLoginServiceTests
 {
-    private static BruteForceLoginService CreateService(BruteForceOptions options) =>
-        new(TestOptionsMonitor.For(options));
+    private static BruteForceLoginService CreateService(BruteForceOptions options, string? trustedIpRange = null) =>
+        new(new FakeAdminSettingsStore(options), new FakeTrustedIpRangeProvider(trustedIpRange));
 
     [Fact]
     public void Locks_out_after_max_attempts_within_window()
@@ -44,8 +45,8 @@ public class BruteForceLoginServiceTests
     [Fact]
     public void Trusted_ip_is_exempt_from_lockout()
     {
-        var options = new BruteForceOptions { MaxAttempts = 1, WindowMinutes = 5, LockoutMinutes = 30, TrustedIpRange = "203.0.113.0/24" };
-        var service = CreateService(options);
+        var options = new BruteForceOptions { MaxAttempts = 1, WindowMinutes = 5, LockoutMinutes = 30 };
+        var service = CreateService(options, trustedIpRange: "203.0.113.0/24");
         var ip = IPAddress.Parse("203.0.113.42");
 
         service.RecordFailedAttempt("admin", ip);
@@ -54,20 +55,27 @@ public class BruteForceLoginServiceTests
         Assert.False(service.IsLockedOut("admin", ip));
     }
 
-    private class TestOptionsMonitor : IOptionsMonitor<BruteForceOptions>
+    private class FakeTrustedIpRangeProvider(string? trustedIpRange) : ITrustedIpRangeProvider
     {
-        public required BruteForceOptions CurrentValue { get; init; }
+        public string? TrustedIpRange => trustedIpRange;
+    }
 
-        public static TestOptionsMonitor For(BruteForceOptions value) => new() { CurrentValue = value };
+    /// <summary>Only <see cref="BruteForce"/> is exercised by this service; everything else throws if touched.</summary>
+    private class FakeAdminSettingsStore(BruteForceOptions bruteForce) : IAdminSettingsStore
+    {
+        public BruteForceOptions BruteForce => bruteForce;
 
-        public BruteForceOptions Get(string? name) => CurrentValue;
+        public SmtpOptions Smtp => throw new NotSupportedException();
 
-        public IDisposable OnChange(Action<BruteForceOptions, string?> listener) => NullDisposable.Instance;
+        public NotificationThresholdOptions NotificationThresholds => throw new NotSupportedException();
 
-        private class NullDisposable : IDisposable
-        {
-            public static readonly NullDisposable Instance = new();
-            public void Dispose() { }
-        }
+        public string LogLevel => throw new NotSupportedException();
+
+        public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public AdminSettingsDto ToDto() => throw new NotSupportedException();
     }
 }
