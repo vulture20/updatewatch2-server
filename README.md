@@ -26,6 +26,8 @@ docker run -d -p 8080:8080 \
 
 The generated `admin` password is printed to the container's log on first start (`docker logs <container>`). See `docker/docker-compose.yml` for a ready-to-edit local setup, and `.env.example` for the environment variables. Mounting `/app/data` (SQLite database + Data Protection keys, so admin sessions survive a restart) is required for anything beyond a throwaway test; `/app/certs` isn't used yet (mutual-TLS agent auth — see `updatewatch2-server#1` — isn't implemented).
 
+The image has a `HEALTHCHECK` (unauthenticated `GET /api/health`, checked every 30s) — `docker ps` shows `(healthy)`/`(unhealthy)`, and `docker inspect --format='{{json .State.Health}}' <container>` gives the check history. It only confirms the process is up and serving requests, not that the database is reachable, so an orchestrator won't restart-loop the container over a transient SQLite hiccup.
+
 Images are built and published to `ghcr.io/vulture20/updatewatch2-server` by `.github/workflows/docker-publish.yml` on every push to `main` and on `v*.*.*` tags, tagged `latest`, `v<VERSION file contents>`, `sha-<short sha>`, and (for tag pushes) the tag itself. Pull requests build the image without pushing, gated on `dotnet test` and `npm test` both passing first.
 
 Companion repository: `updatewatch2-agent`.

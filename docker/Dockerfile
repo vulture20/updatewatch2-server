@@ -24,6 +24,13 @@ RUN dotnet publish UpdateWatch2.Server/UpdateWatch2.Server.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
+# curl backs the HEALTHCHECK below — the base runtime image doesn't
+# include it. Installed while still root, before the USER switch further
+# down.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=server-build /app/publish .
 COPY --from=web-build /web/dist ./wwwroot
 
@@ -36,6 +43,14 @@ COPY --from=web-build /web/dist ./wwwroot
 ENV ASPNETCORE_URLS=http://+:8080 \
     Database__Path=data/updatewatch2.sqlite
 EXPOSE 8080
+
+# /api/health is unauthenticated and just confirms the process is up and
+# serving requests (no DB check — a hiccup there shouldn't make an
+# orchestrator restart-loop the whole container over a transient SQLite
+# issue). start-period gives EF Core migrations + admin-account/settings
+# seeding room to finish before a slow first response counts as a failure.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl -fsS http://localhost:8080/api/health || exit 1
 
 # Runs as the non-root "app" user the aspnet base image already provides —
 # volume mount points are created and chowned here, before switching user
