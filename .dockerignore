@@ -1,0 +1,21 @@
+# .NET
+**/bin/
+**/obj/
+
+# Web
+web/node_modules/
+web/dist/
+
+# Runtime data — never bake into an image
+data/
+certs/
+logs/
+
+# VCS / editor / misc
+.git/
+.gitignore
+.dockerignore
+*.md
+docs/
+.vscode/
+.idea/

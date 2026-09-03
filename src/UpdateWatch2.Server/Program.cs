@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
@@ -60,6 +61,24 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     Directory.CreateDirectory(Path.GetDirectoryName(fullDbPath)!);
     options.UseSqlite($"Data Source={fullDbPath}");
 });
+
+// Persists Data Protection keys (used to encrypt/sign the auth cookie)
+// next to the SQLite database rather than the container's ephemeral
+// default (~/.aspnet/DataProtection-Keys) — otherwise every container
+// restart invalidates every admin session. Rides along with the same
+// volume Database:Path is already on (see docker/Dockerfile's /app/data
+// VOLUME), no separate config knob needed. Read eagerly here rather than
+// lazily like AddDbContext above — unlike the SQLite path, tests sharing
+// this default directory across WebApplicationFactory instances isn't a
+// correctness issue (Data Protection is explicitly designed for multiple
+// instances to share one key ring).
+var keysDirectory = new DirectoryInfo(Path.Combine(
+    Path.GetDirectoryName(Path.GetFullPath(Path.Combine(
+        builder.Environment.ContentRootPath, builder.Configuration["Database:Path"] ?? "data/updatewatch2.sqlite")))!,
+    "keys"));
+builder.Services.AddDataProtection()
+    .SetApplicationName("UpdateWatch2.Server")
+    .PersistKeysToFileSystem(keysDirectory);
 
 // These three are bound purely as the compiled-in defaults AdminSettingsStore
 // seeds its DB row from on first run — the database is authoritative after
@@ -139,10 +158,25 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Serves the built web/ SPA from wwwroot when present (the Docker image
+// copies it in — see docker/Dockerfile) so the API and admin UI ship as
+// one deployable container, per CLAUDE.md. In local `dotnet run` dev,
+// wwwroot only has the placeholder .gitkeep — these are harmless no-ops
+// and the frontend is served by its own Vite dev server instead (see
+// web/README.md).
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Client-side routing (react-router) fallback: any request that isn't an
+// API route or a real static file resolves to index.html. Must come after
+// MapControllers so API routes still take precedence.
+app.MapFallbackToFile("index.html");
 
 app.Run();
 

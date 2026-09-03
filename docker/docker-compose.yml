@@ -1,0 +1,21 @@
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: updatewatch2-server:local
+    ports:
+      - "8080:8080"
+    volumes:
+      - data:/app/data
+      - certs:/app/certs
+    environment:
+      # See ../.env.example for the full list. UPDATEWATCH2_TRUSTEDIP is
+      # deliberately env-var-only (CLAUDE.md) — not an admin-UI setting.
+      UPDATEWATCH2_LOGLEVEL: INFO
+      # UPDATEWATCH2_TRUSTEDIP: 10.0.0.0/8
+      Cors__AllowedOrigins__0: http://localhost:8080
+
+volumes:
+  data:
+  certs:

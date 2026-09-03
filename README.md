@@ -14,4 +14,18 @@ Central management and distribution component of UpdateWatch2 — a system for c
 
 See the project CLAUDE.md for the full architectural briefing, module layout, and configurable-behavior contract, and this repo's own open issues for what's still outstanding.
 
+## Running
+
+The image serves both the API and the built admin UI (`web/`) from one container.
+
+```
+docker run -d -p 8080:8080 \
+  -v uw2-data:/app/data -v uw2-certs:/app/certs \
+  ghcr.io/vulture20/updatewatch2-server:latest
+```
+
+The generated `admin` password is printed to the container's log on first start (`docker logs <container>`). See `docker/docker-compose.yml` for a ready-to-edit local setup, and `.env.example` for the environment variables. Mounting `/app/data` (SQLite database + Data Protection keys, so admin sessions survive a restart) is required for anything beyond a throwaway test; `/app/certs` isn't used yet (mutual-TLS agent auth — see `updatewatch2-server#1` — isn't implemented).
+
+Images are built and published to `ghcr.io/vulture20/updatewatch2-server` by `.github/workflows/docker-publish.yml` on every push to `main` and on `v*.*.*` tags, tagged `latest`, `v<VERSION file contents>`, `sha-<short sha>`, and (for tag pushes) the tag itself. Pull requests build the image without pushing, gated on `dotnet test` and `npm test` both passing first.
+
 Companion repository: `updatewatch2-agent`.
