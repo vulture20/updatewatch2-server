@@ -1,0 +1,21 @@
+# UpdateWatch2 Server — example configuration
+# Copy to config.yaml for local use. Do not commit real credentials.
+
+server:
+  host: 0.0.0.0
+  port: 8443
+
+database:
+  path: ./data/updatewatch2.sqlite
+
+logging:
+  level: INFO  # DEBUG | INFO | WARNING | ERROR
+
+smtp:
+  host: ""
+  port: 587
+  username: ""
+  password: ""
+  encryption: STARTTLS  # none | SSL/TLS | STARTTLS
+  from_address: ""
+  from_name: "UpdateWatch2"
