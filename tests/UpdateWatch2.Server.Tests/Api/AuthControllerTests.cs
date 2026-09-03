@@ -44,6 +44,50 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Login_over_plain_http_does_not_mark_the_cookie_secure()
+    {
+        // Regression test: CookieSecurePolicy.Always marked the cookie
+        // Secure even over plain HTTP. A real browser silently refuses to
+        // store a Secure cookie from an insecure connection — login
+        // appeared to succeed (200 + body), but the browser never actually
+        // kept the session, so the very next request bounced straight
+        // back to the login page with no error shown. This asserts on the
+        // Set-Cookie header directly (what a browser actually enforces)
+        // rather than on whether *this* .NET test client's own cookie jar
+        // still sends the cookie afterward — that's not a reliable proxy:
+        // it kept resending the Secure-flagged cookie over plain HTTP even
+        // under the old, broken policy (confirmed by hand), so a
+        // client-behavior-only assertion would not have caught this bug.
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("http://localhost") });
+
+        var loginResponse = await client.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(AuthTestHelper.Username, AuthTestHelper.Password));
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+
+        var setCookie = Assert.Single(loginResponse.Headers.GetValues("Set-Cookie"));
+        Assert.DoesNotContain("secure", setCookie, StringComparison.OrdinalIgnoreCase);
+
+        // The feature should still work normally over plain HTTP, of course.
+        var me = await client.GetFromJsonAsync<MeResponseDto>("/api/auth/me");
+        Assert.True(me?.authenticated);
+    }
+
+    [Fact]
+    public async Task Login_over_https_marks_the_cookie_secure()
+    {
+        // WebApplicationFactory.CreateClient()'s default base address is
+        // http://localhost, not https (confirmed by hand — don't assume
+        // otherwise) — request https:// explicitly.
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+
+        var loginResponse = await client.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(AuthTestHelper.Username, AuthTestHelper.Password));
+
+        var setCookie = Assert.Single(loginResponse.Headers.GetValues("Set-Cookie"));
+        Assert.Contains("secure", setCookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Login_with_correct_credentials_succeeds_and_establishes_a_session()
     {
         using var client = _factory.CreateClient();

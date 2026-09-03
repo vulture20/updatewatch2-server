@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
@@ -108,18 +109,38 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
+// The container almost never terminates TLS itself (see docker/Dockerfile
+// — it listens on plain HTTP; a reverse proxy in front is expected to
+// terminate HTTPS, per CLAUDE.md/.env.example). Trusting X-Forwarded-Proto
+// from any proxy (not just loopback, the default) is what lets
+// CookieSecurePolicy.SameAsRequest below correctly mark the auth cookie
+// Secure when the *original* client connection was HTTPS, even though
+// Kestrel itself only ever sees HTTP. The real security boundary here is
+// network-level (only the reverse proxy can reach this container), not
+// this middleware's proxy allowlist.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.Cookie.Name = "UpdateWatch2.Auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
-        // Relaxed in Development so the API can be exercised over plain
-        // HTTP locally without a trusted dev certificate; real deployments
-        // always require HTTPS, so this stays Always outside Development.
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-            ? CookieSecurePolicy.SameAsRequest
-            : CookieSecurePolicy.Always;
+        // SameAsRequest — not Always — everywhere, not just Development:
+        // marking the cookie Secure when the request came in over plain
+        // HTTP means the browser silently refuses to store it at all, so
+        // a correct login still bounces straight back to the login page
+        // with no error (confirmed live: this shipped broken for exactly
+        // the docker run / plain-HTTP walkthrough in this repo's own
+        // README before this fix). SameAsRequest still marks the cookie
+        // Secure whenever the request genuinely was HTTPS — directly, or
+        // via X-Forwarded-Proto once UseForwardedHeaders() runs, below.
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
         // This is an API, not an MVC app with login pages — return status
@@ -156,6 +177,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Must run before anything that inspects the request scheme/remote IP
+// (HttpsRedirection, the cookie auth handler's SameAsRequest check, IP
+// logging) — see the ForwardedHeadersOptions comment above.
+app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
 
