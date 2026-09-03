@@ -22,3 +22,8 @@ logs/
 !.env.example
 config/config.yaml
 !config/config.example.yaml
+
+# .NET build output
+bin/
+obj/
+*.user

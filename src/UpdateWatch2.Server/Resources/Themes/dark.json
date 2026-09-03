@@ -1,0 +1,10 @@
+{
+  "name": "dark",
+  "colors": {
+    "background": "#121212",
+    "surface": "#1e1e1e",
+    "text": "#f5f5f5",
+    "primary": "#3b82f6",
+    "danger": "#ef4444"
+  }
+}

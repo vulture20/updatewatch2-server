@@ -1,0 +1,11 @@
+{
+  "login.title": "Anmelden",
+  "login.username": "Benutzername",
+  "login.password": "Passwort",
+  "login.smtpWarning": "Der Mailserver ist nicht erreichbar oder falsch konfiguriert.",
+  "agents.title": "Agents",
+  "agents.hostname": "Hostname",
+  "agents.rebootRequired": "Neustart erforderlich",
+  "agents.pendingUpdates": "Ausstehende Updates",
+  "admin.title": "Administration"
+}

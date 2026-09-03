@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/UpdateWatch2.Server/UpdateWatch2.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/UpdateWatch2.Server.Tests/UpdateWatch2.Server.Tests.csproj" />
+  </Folder>
+</Solution>

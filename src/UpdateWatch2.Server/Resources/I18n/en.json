@@ -1,0 +1,11 @@
+{
+  "login.title": "Sign in",
+  "login.username": "Username",
+  "login.password": "Password",
+  "login.smtpWarning": "Mail server is unreachable or misconfigured.",
+  "agents.title": "Agents",
+  "agents.hostname": "Hostname",
+  "agents.rebootRequired": "Reboot required",
+  "agents.pendingUpdates": "Pending updates",
+  "admin.title": "Administration"
+}

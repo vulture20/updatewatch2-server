@@ -1,0 +1,6 @@
+@UpdateWatch2.Server_HostAddress = http://localhost:5055
+
+GET {{UpdateWatch2.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

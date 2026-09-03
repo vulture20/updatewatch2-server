@@ -1,0 +1,10 @@
+{
+  "name": "light",
+  "colors": {
+    "background": "#ffffff",
+    "surface": "#f5f5f5",
+    "text": "#1a1a1a",
+    "primary": "#2563eb",
+    "danger": "#dc2626"
+  }
+}
