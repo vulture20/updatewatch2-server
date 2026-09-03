@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { apiClient, ApiError } from './client';
+import { apiClient, ApiError, setUnauthorizedHandler } from './client';
 
 describe('apiClient', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    setUnauthorizedHandler(null);
   });
 
   it('sends a GET request and returns the parsed JSON body', async () => {
@@ -39,5 +40,40 @@ describe('apiClient', () => {
     await expect(apiClient.get('/api/agents/missing')).rejects.toMatchObject(
       new ApiError(404, 'GET /api/agents/missing failed with 404'),
     );
+  });
+
+  it('uses the server-provided message when the error body has one', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ message: 'Invalid username or password.' }), { status: 401 }),
+      ),
+    );
+
+    await expect(apiClient.get('/api/auth/me')).rejects.toMatchObject(
+      new ApiError(401, 'Invalid username or password.'),
+    );
+  });
+
+  it('calls the unauthorized handler on a 401 response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+
+    await expect(apiClient.get('/api/agents')).rejects.toThrow(ApiError);
+
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('does not call the unauthorized handler when skipUnauthorizedHandler is set', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+
+    await expect(
+      apiClient.get('/api/auth/me', { skipUnauthorizedHandler: true }),
+    ).rejects.toThrow(ApiError);
+
+    expect(handler).not.toHaveBeenCalled();
   });
 });

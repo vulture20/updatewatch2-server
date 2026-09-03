@@ -4,9 +4,23 @@ import type {
   AgentDetail,
   AgentListItem,
   BulkApproveResult,
+  LoginResponse,
+  MeResponse,
   UpdateItem,
   VersionInfo,
 } from './types';
+
+export const authApi = {
+  // skipUnauthorizedHandler: a failed login attempt is not a "session
+  // expired" event, and /me's whole point is to answer "am I logged in?" —
+  // neither should trigger the global unauthorized handler.
+  me: () => apiClient.get<MeResponse>('/api/auth/me', { skipUnauthorizedHandler: true }),
+  login: (username: string, password: string) =>
+    apiClient.post<LoginResponse>('/api/auth/login', { username, password }, { skipUnauthorizedHandler: true }),
+  logout: () => apiClient.post<void>('/api/auth/logout'),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiClient.put<void>('/api/auth/password', { currentPassword, newPassword }),
+};
 
 export const agentsApi = {
   list: () => apiClient.get<AgentListItem[]>('/api/agents'),

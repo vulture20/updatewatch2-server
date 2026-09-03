@@ -1,14 +1,17 @@
 {
   "nav": {
     "agents": "Agents",
-    "admin": "Administration"
+    "admin": "Administration",
+    "logout": "Abmelden"
   },
   "login": {
     "title": "Anmelden",
     "username": "Benutzername",
     "password": "Passwort",
     "submit": "Anmelden",
-    "smtpWarning": "Der Mailserver ist nicht erreichbar oder falsch konfiguriert."
+    "smtpWarning": "Der Mailserver ist nicht erreichbar oder falsch konfiguriert.",
+    "lockedOut": "Zu viele Fehlversuche. Bitte später erneut versuchen.",
+    "genericError": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
   },
   "agents": {
     "title": "Agents",

@@ -10,10 +10,23 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/**
+ * Set by AuthProvider so a 401 from any API call (e.g. a session that
+ * expired while the tab was open) clears auth state immediately, rather
+ * than only being noticed the next time /api/auth/me happens to be
+ * checked. Session-establishing/-checking calls (login, me) are excluded
+ * by their callers to avoid tripping this on an ordinary failed login.
+ */
+let onUnauthorized: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler;
+}
+
+async function request<T>(path: string, init?: RequestInit & { skipUnauthorizedHandler?: boolean }): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    credentials: 'include', // for the future cookie-based admin session — see updatewatch2-server#2
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...init?.headers,
@@ -21,7 +34,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, `${init?.method ?? 'GET'} ${path} failed with ${response.status}`);
+    if (response.status === 401 && !init?.skipUnauthorizedHandler) {
+      onUnauthorized?.();
+    }
+
+    const message = await readErrorMessage(response, init?.method ?? 'GET', path);
+    throw new ApiError(response.status, message);
   }
 
   if (response.status === 204) {
@@ -31,8 +49,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+async function readErrorMessage(response: Response, method: string, path: string): Promise<string> {
+  try {
+    const body: unknown = await response.clone().json();
+    if (body && typeof body === 'object' && 'message' in body && typeof body.message === 'string') {
+      return body.message;
+    }
+  } catch {
+    // response body wasn't JSON (or was empty) — fall through to the generic message
+  }
+  return `${method} ${path} failed with ${response.status}`;
+}
+
 export const apiClient = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) }),
+  get: <T>(path: string, options?: { skipUnauthorizedHandler?: boolean }) =>
+    request<T>(path, options),
+  post: <T>(path: string, body?: unknown, options?: { skipUnauthorizedHandler?: boolean }) =>
+    request<T>(path, {
+      method: 'POST',
+      body: body === undefined ? undefined : JSON.stringify(body),
+      ...options,
+    }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: 'PUT', body: body === undefined ? undefined : JSON.stringify(body) }),
 };

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UpdateWatch2.Server.Updates;
 
@@ -12,13 +13,19 @@ namespace UpdateWatch2.Server.Api.Controllers;
 public class UpdatesController(IUpdateService updateService) : ControllerBase
 {
     [HttpGet("updates")]
+    [Authorize]
     public async Task<IActionResult> GetUpdates(string hostname, CancellationToken ct)
     {
         var updates = await updateService.GetForAgentAsync(hostname, ct);
         return updates is null ? NotFound() : Ok(updates);
     }
 
+    // Not admin-facing: this is the agent's own self-report, so it doesn't
+    // require the admin cookie session. It's still unauthenticated — real
+    // agent authentication (mutual TLS) isn't implemented yet, see
+    // updatewatch2-server#3.
     [HttpPost("updates")]
+    [AllowAnonymous]
     public async Task<IActionResult> ReportUpdates(string hostname, [FromBody] ReportUpdatesRequest request, CancellationToken ct)
     {
         var found = await updateService.ReportUpdatesAsync(hostname, request, ct);
@@ -26,10 +33,10 @@ public class UpdatesController(IUpdateService updateService) : ControllerBase
     }
 
     [HttpPost("install")]
+    [Authorize]
     public async Task<IActionResult> TriggerInstall(string hostname, CancellationToken ct)
     {
-        // TODO: replace with the authenticated admin's username once auth is wired up.
-        var found = await updateService.TriggerInstallAsync(hostname, triggeredBy: "admin", ct);
+        var found = await updateService.TriggerInstallAsync(hostname, triggeredBy: User.Identity!.Name!, ct);
         return found ? Accepted() : NotFound();
     }
 }

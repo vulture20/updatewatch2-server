@@ -1,7 +1,15 @@
 // Mirrors the server DTOs in UpdateWatch2.Server (Agents/AgentDtos.cs,
-// Admin/AdminSettingsDto.cs, Api/Controllers/VersionController.cs). Keep in
-// sync by hand for now — see updatewatch2-server#5 for generating this from
-// the OpenAPI spec instead.
+// Admin/AdminSettingsDto.cs, Auth/AuthDtos.cs,
+// Api/Controllers/VersionController.cs). Kept in sync by hand for now.
+
+export interface MeResponse {
+  authenticated: boolean;
+  username: string | null;
+}
+
+export interface LoginResponse {
+  username: string;
+}
 
 export interface AgentListItem {
   hostname: string;

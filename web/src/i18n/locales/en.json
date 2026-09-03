@@ -1,14 +1,17 @@
 {
   "nav": {
     "agents": "Agents",
-    "admin": "Administration"
+    "admin": "Administration",
+    "logout": "Log out"
   },
   "login": {
     "title": "Sign in",
     "username": "Username",
     "password": "Password",
     "submit": "Sign in",
-    "smtpWarning": "Mail server is unreachable or misconfigured."
+    "smtpWarning": "Mail server is unreachable or misconfigured.",
+    "lockedOut": "Too many failed attempts. Try again later.",
+    "genericError": "Something went wrong. Please try again."
   },
   "agents": {
     "title": "Agents",

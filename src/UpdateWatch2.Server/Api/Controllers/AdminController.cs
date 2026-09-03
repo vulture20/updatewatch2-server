@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.Admin;
@@ -9,10 +10,11 @@ namespace UpdateWatch2.Server.Api.Controllers;
 /// <summary>
 /// Backs the "Administration" area (CLAUDE.md section 6). Currently
 /// read-only; PUT endpoints to persist changes land with AD integration
-/// and dynamic log-level push to agents.
+/// and dynamic log-level push to agents. Requires an admin session.
 /// </summary>
 [ApiController]
 [Route("api/admin/settings")]
+[Authorize]
 public class AdminController(
     IOptionsMonitor<BruteForceOptions> bruteForce,
     IOptionsMonitor<SmtpOptions> smtp,

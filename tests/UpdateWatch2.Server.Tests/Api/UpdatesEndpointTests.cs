@@ -5,15 +5,16 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
+using UpdateWatch2.Server.Tests.TestHelpers;
 using UpdateWatch2.Server.Updates;
 
 namespace UpdateWatch2.Server.Tests.Api;
 
-public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
+public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"updatewatch2-test-{Guid.NewGuid()}.sqlite");
     private readonly WebApplicationFactory<Program> _factory;
-    private readonly HttpClient _client;
+    private HttpClient _client = null!;
 
     public UpdatesEndpointTests(WebApplicationFactory<Program> factory)
     {
@@ -23,8 +24,13 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
                 {
                     ["Database:Path"] = _dbPath,
                 })));
+    }
 
+    public async Task InitializeAsync()
+    {
         _client = _factory.CreateClient();
+        await AuthTestHelper.SeedAdminAsync(_factory.Services);
+        await AuthTestHelper.LoginAsync(_client);
     }
 
     [Fact]
@@ -87,10 +93,11 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
         await db.SaveChangesAsync();
     }
 
-    public void Dispose()
+    public Task DisposeAsync()
     {
         _client.Dispose();
         File.Delete(_dbPath);
+        return Task.CompletedTask;
     }
 
     private record AgentDetail(string Hostname, string? DnsName, string? OperatingSystem, string? IpAddress,

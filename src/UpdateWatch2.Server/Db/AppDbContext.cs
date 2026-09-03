@@ -11,10 +11,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<UpdateItem> UpdateItems => Set<UpdateItem>();
 
+    public DbSet<AdminAccount> AdminAccounts => Set<AdminAccount>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agent>()
             .HasIndex(a => a.Hostname)
+            .IsUnique();
+
+        modelBuilder.Entity<AdminAccount>()
+            .HasIndex(a => a.Username)
             .IsUnique();
 
         modelBuilder.Entity<UpdateItem>()
