@@ -1,0 +1,24 @@
+# Secrets & certificates — never commit
+certs/
+*.pfx
+*.pem
+*.key
+*.crt
+*.p12
+
+# Runtime data & database
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Environment / local config
+.env
+.env.*
+!.env.example
+config/config.yaml
+!config/config.example.yaml
