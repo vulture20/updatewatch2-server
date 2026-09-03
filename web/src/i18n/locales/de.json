@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "agents": "Agents",
+    "admin": "Administration"
+  },
+  "login": {
+    "title": "Anmelden",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "submit": "Anmelden",
+    "smtpWarning": "Der Mailserver ist nicht erreichbar oder falsch konfiguriert."
+  },
+  "agents": {
+    "title": "Agents",
+    "hostname": "Hostname",
+    "approved": "Bestätigt",
+    "rebootRequired": "Neustart erforderlich",
+    "pendingUpdates": "Ausstehende Updates",
+    "approveSelected": "Auswahl bestätigen",
+    "empty": "Noch keine Agents registriert.",
+    "loading": "Agents werden geladen…",
+    "yes": "Ja",
+    "no": "Nein"
+  },
+  "agentDetail": {
+    "dnsName": "DNS-Name",
+    "operatingSystem": "Betriebssystem",
+    "ipAddress": "IP-Adresse",
+    "agentVersion": "Agent-Version",
+    "lastAliveAt": "Letzte Alive-Meldung",
+    "never": "Nie",
+    "approve": "Bestätigen",
+    "triggerInstall": "Updates jetzt installieren",
+    "updates": "Ausstehende Updates",
+    "noUpdates": "Keine ausstehenden Updates."
+  },
+  "admin": {
+    "title": "Administration",
+    "serverVersion": "Server-Version",
+    "protocolVersion": "Protokollversion",
+    "databaseVersion": "Datenbankversion",
+    "logLevel": "Log-Stufe",
+    "bruteForce": "Brute-Force-Schutz",
+    "bruteForceMaxAttempts": "Max. Fehlversuche",
+    "bruteForceWindowMinutes": "Zeitraum (Minuten)",
+    "bruteForceLockoutMinutes": "Sperre (Minuten)",
+    "notifications": "Benachrichtigungen",
+    "smtpConfigured": "SMTP konfiguriert",
+    "notificationUpdatesPerMachine": "Schwelle Updates pro Maschine",
+    "notificationAffectedMachines": "Schwelle betroffene Maschinen"
+  },
+  "theme": {
+    "light": "Hell",
+    "dark": "Dunkel"
+  }
+}

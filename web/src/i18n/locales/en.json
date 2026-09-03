@@ -1,0 +1,56 @@
+{
+  "nav": {
+    "agents": "Agents",
+    "admin": "Administration"
+  },
+  "login": {
+    "title": "Sign in",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "smtpWarning": "Mail server is unreachable or misconfigured."
+  },
+  "agents": {
+    "title": "Agents",
+    "hostname": "Hostname",
+    "approved": "Approved",
+    "rebootRequired": "Reboot required",
+    "pendingUpdates": "Pending updates",
+    "approveSelected": "Approve selected",
+    "empty": "No agents registered yet.",
+    "loading": "Loading agents…",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "agentDetail": {
+    "dnsName": "DNS name",
+    "operatingSystem": "Operating system",
+    "ipAddress": "IP address",
+    "agentVersion": "Agent version",
+    "lastAliveAt": "Last alive",
+    "never": "Never",
+    "approve": "Approve",
+    "triggerInstall": "Install updates now",
+    "updates": "Pending updates",
+    "noUpdates": "No pending updates."
+  },
+  "admin": {
+    "title": "Administration",
+    "serverVersion": "Server version",
+    "protocolVersion": "Protocol version",
+    "databaseVersion": "Database schema version",
+    "logLevel": "Log level",
+    "bruteForce": "Brute-force protection",
+    "bruteForceMaxAttempts": "Max attempts",
+    "bruteForceWindowMinutes": "Window (minutes)",
+    "bruteForceLockoutMinutes": "Lockout (minutes)",
+    "notifications": "Notifications",
+    "smtpConfigured": "SMTP configured",
+    "notificationUpdatesPerMachine": "Updates-per-machine threshold",
+    "notificationAffectedMachines": "Affected-machines threshold"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark"
+  }
+}
