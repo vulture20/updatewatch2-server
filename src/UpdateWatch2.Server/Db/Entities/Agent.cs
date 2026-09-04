@@ -19,8 +19,30 @@ public class Agent
     /// <summary>Version string reported by the agent itself (independent of protocol/server versions).</summary>
     public string? AgentVersion { get; set; }
 
-    /// <summary>Thumbprint of the client certificate issued to this agent after approval.</summary>
+    /// <summary>
+    /// SHA-256 thumbprint of the client certificate issued to this agent after
+    /// approval. Also doubles as the one-shot-delivery marker for
+    /// <see cref="RegistrationTokenHash"/>'s flow: once set, the certificate has
+    /// already been handed to the agent and will never be re-issued/re-sent —
+    /// see AgentRegistrationService.
+    /// </summary>
     public string? ClientCertificateThumbprint { get; set; }
+
+    /// <summary>When the client certificate identified by <see cref="ClientCertificateThumbprint"/> was issued.</summary>
+    public DateTimeOffset? ClientCertificateIssuedAt { get; set; }
+
+    /// <summary>When the client certificate identified by <see cref="ClientCertificateThumbprint"/> expires.</summary>
+    public DateTimeOffset? ClientCertificateExpiresAt { get; set; }
+
+    /// <summary>
+    /// SHA-256 hash of the opaque registration token handed to this agent on
+    /// first contact (never the raw token — same secret-hygiene convention as
+    /// password/AD-bind-password storage elsewhere in this codebase). Used to
+    /// prevent a different host from hijacking an in-flight, not-yet-approved
+    /// registration for the same hostname. Not needed once a certificate has
+    /// been delivered, so it's cleared at that point.
+    /// </summary>
+    public string? RegistrationTokenHash { get; set; }
 
     /// <summary>
     /// False until an admin manually confirms this agent (individually or via bulk approval).
