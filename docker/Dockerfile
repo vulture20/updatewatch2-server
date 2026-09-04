@@ -36,13 +36,27 @@ COPY --from=web-build /web/dist ./wwwroot
 
 # Matches server/data/ and server/certs/ in the source tree — see
 # CLAUDE.md's "never commit secrets" gitignore rules for those same paths.
-# Database:Path is relative to the content root (this WORKDIR), so
-# "data/updatewatch2.sqlite" here means /app/data/updatewatch2.sqlite,
-# unlike the dev default (../../data/updatewatch2.sqlite, relative to
-# src/UpdateWatch2.Server) — see appsettings.json.
-ENV ASPNETCORE_URLS=http://+:8080 \
-    Database__Path=data/updatewatch2.sqlite
+# Both Database:Path and Certs:Path are relative to the content root (this
+# WORKDIR), so "data/updatewatch2.sqlite"/"certs" here mean
+# /app/data/updatewatch2.sqlite and /app/certs, unlike appsettings.json's
+# dev defaults (../../data/updatewatch2.sqlite, ../../certs — relative to
+# src/UpdateWatch2.Server, two levels up from the repo root). Certs__Path
+# must be set explicitly here, the same as Database__Path already is —
+# confirmed by hand: without it, the container silently inherits
+# appsettings.json's dev-relative "../../certs", which resolves from /app
+# to /certs (outside the chowned/volumed directory below), and startup
+# fails outright trying to create it there.
+#
+# No ASPNETCORE_URLS here anymore: Program.cs's Kestrel listener config is
+# now explicit (two ports, one plain-HTTP for this admin/browser-facing
+# port, one HTTPS+client-cert for agent traffic — see updatewatch2-server#1)
+# and an explicit Listen call replaces ASPNETCORE_URLS entirely rather than
+# merging with it, so setting it here would be silently ignored — removed
+# rather than left as a misleading no-op.
+ENV Database__Path=data/updatewatch2.sqlite \
+    Certs__Path=certs
 EXPOSE 8080
+EXPOSE 8443
 
 # /api/health is unauthenticated and just confirms the process is up and
 # serving requests (no DB check — a hiccup there shouldn't make an

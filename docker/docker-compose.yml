@@ -6,6 +6,10 @@ services:
     image: updatewatch2-server:local
     ports:
       - "8080:8080"
+      # Agent-facing mutual-TLS port (updatewatch2-server#1) — Kestrel
+      # terminates TLS directly here, no reverse proxy in front, unlike
+      # 8080.
+      - "8443:8443"
     volumes:
       - data:/app/data
       - certs:/app/certs
@@ -14,6 +18,15 @@ services:
       # deliberately env-var-only (CLAUDE.md) — not an admin-UI setting.
       UPDATEWATCH2_LOGLEVEL: INFO
       # UPDATEWATCH2_TRUSTEDIP: 10.0.0.0/8
+      # The externally-reachable hostname this container is addressed by —
+      # becomes the SAN on the agent-facing TLS certificate Kestrel
+      # generates on first run. MUST match the ServerAddress agents are
+      # configured to dial: an agent validates the server's certificate by
+      # checking this SAN, not just that it chains to the pinned CA, so a
+      # mismatch here means every agent connection fails cert validation.
+      # Defaults to the container's own hostname (its container ID) if
+      # unset, which is almost never what you want for a real deployment.
+      # UPDATEWATCH2_SERVER_HOSTNAME: updatewatch2.example.com
       Cors__AllowedOrigins__0: http://localhost:8080
 
 volumes:

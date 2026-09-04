@@ -19,12 +19,15 @@ See the project CLAUDE.md for the full architectural briefing, module layout, an
 The image serves both the API and the built admin UI (`web/`) from one container.
 
 ```
-docker run -d -p 8080:8080 \
+docker run -d -p 8080:8080 -p 8443:8443 \
+  -e UPDATEWATCH2_SERVER_HOSTNAME=updatewatch2.example.com \
   -v uw2-data:/app/data -v uw2-certs:/app/certs \
   ghcr.io/vulture20/updatewatch2-server:latest
 ```
 
-The generated `admin` password is printed to the container's log on first start (`docker logs <container>`). See `docker/docker-compose.yml` for a ready-to-edit local setup, and `.env.example` for the environment variables. Mounting `/app/data` (SQLite database + Data Protection keys, so admin sessions survive a restart) is required for anything beyond a throwaway test; `/app/certs` isn't used yet (mutual-TLS agent auth — see `updatewatch2-server#1` — isn't implemented).
+The generated `admin` password is printed to the container's log on first start (`docker logs <container>`). See `docker/docker-compose.yml` for a ready-to-edit local setup, and `.env.example` for the environment variables. Mounting `/app/data` (SQLite database + Data Protection keys, so admin sessions survive a restart) and `/app/certs` (the internal CA + server certificate mutual-TLS agent auth generates on first run — see `updatewatch2-server#1`) are both required for anything beyond a throwaway test — losing `/app/certs` invalidates every already-approved agent's certificate on the next restart, the same way losing `/app/data` invalidates every admin session.
+
+Two ports: `8080` is plain HTTP for the admin UI/API, meant to sit behind a TLS-terminating reverse proxy (see the Data-Protection-cookie note above and `.env.example`'s CORS settings). `8443` is agent-only, Kestrel-terminated TLS with mutual-certificate authentication — no reverse proxy in front of it. `UPDATEWATCH2_SERVER_HOSTNAME` sets the SAN on the certificate Kestrel presents there; it must match whatever `ServerAddress` agents are configured to dial, since an agent pins and validates that SAN, not just that the certificate chains to the server's internal CA.
 
 The image has a `HEALTHCHECK` (unauthenticated `GET /api/health`, checked every 30s) — `docker ps` shows `(healthy)`/`(unhealthy)`, and `docker inspect --format='{{json .State.Health}}' <container>` gives the check history. It only confirms the process is up and serving requests, not that the database is reachable, so an orchestrator won't restart-loop the container over a transient SQLite hiccup.
 
