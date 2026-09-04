@@ -13,6 +13,7 @@ using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
+using UpdateWatch2.Server.Demo;
 using UpdateWatch2.Server.Notifications;
 using UpdateWatch2.Server.Updates;
 
@@ -103,6 +104,7 @@ builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>(
 builder.Services.AddScoped<IAdminAccountService, AdminAccountService>();
 builder.Services.AddScoped<IActiveDirectoryAuthService, ActiveDirectoryAuthService>();
 builder.Services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
+builder.Services.AddScoped<IDemoDataSeeder, DemoDataSeeder>();
 
 // The frontend (server/web) is a separate origin in development (its own
 // Vite dev server port) and, even in a same-origin production deployment
@@ -283,6 +285,17 @@ using (var scope = app.Services.CreateScope())
 
     var settingsStore = scope.ServiceProvider.GetRequiredService<IAdminSettingsStore>();
     await settingsStore.InitializeAsync();
+
+    // UPDATEWATCH2_DEMOMODE — deliberately env-var-only, never an
+    // admin-UI setting, the same as UPDATEWATCH2_TRUSTEDIP (CLAUDE.md).
+    // Seeds a handful of realistic-looking dummy agents/updates so an
+    // otherwise-empty instance is demonstrable; see Demo/DemoDataSeeder
+    // for what gets created and its idempotency (safe to leave this set
+    // across restarts).
+    if (IsDemoModeEnabled())
+    {
+        await scope.ServiceProvider.GetRequiredService<IDemoDataSeeder>().EnsureSeededAsync();
+    }
 }
 
 if (app.Environment.IsDevelopment())
@@ -347,6 +360,12 @@ static string? TryReadPersistedLogLevel(string dbPath)
         // process) — nothing persisted yet, that's fine.
         return null;
     }
+}
+
+static bool IsDemoModeEnabled()
+{
+    var value = Environment.GetEnvironmentVariable("UPDATEWATCH2_DEMOMODE");
+    return value is not null && (value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1");
 }
 
 static string MapLogLevel(string value) => value.Trim().ToUpperInvariant() switch

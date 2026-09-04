@@ -27,6 +27,9 @@ services:
       # Defaults to the container's own hostname (its container ID) if
       # unset, which is almost never what you want for a real deployment.
       # UPDATEWATCH2_SERVER_HOSTNAME: updatewatch2.example.com
+      # Seeds a handful of dummy agents/updates for demos — idempotent,
+      # env-var-only, never set this on a real production instance.
+      # UPDATEWATCH2_DEMOMODE: "true"
       Cors__AllowedOrigins__0: http://localhost:8080
 
 volumes:
