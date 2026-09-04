@@ -1,30 +1,73 @@
-/* Token values kept in sync by hand with
+/* Design tokens derived from /opt/UpdateWatch2/claude/DESIGN.md (Discord's
+   marketing design language) — colors reference DESIGN.md's `colors.*`,
+   radii reference `rounded.*`. DESIGN.md itself only specifies a dark
+   theme (deep-indigo canvas, white ink); the light theme below keeps the
+   same brand hues (Blurple primary, green accent, magenta) but deepens the
+   accent/magenta and lightens the surface so they hold contrast on white,
+   since CLAUDE.md requires a real light theme, not just a dimmed dark one.
+   Kept in sync by hand with
    src/UpdateWatch2.Server/Resources/Themes/{light,dark}.json — see
    updatewatch2-server#5 for making one of the two the source of truth. */
 
 :root,
 [data-theme='light'] {
   --color-background: #ffffff;
-  --color-surface: #f5f5f5;
-  --color-text: #1a1a1a;
-  --color-primary: #2563eb;
-  --color-danger: #dc2626;
+  --color-surface: #f2f3fb;
+  --color-surface-alt: #e7e8f6;
+  --color-hairline: #dcdef0;
+  --color-text: #23272a;
+  --color-primary: #5865f2;
+  --color-on-primary: #ffffff;
+  --color-accent: #1d9d55;
+  --color-on-accent: #ffffff;
+  --color-magenta: #b32e94;
+  --color-danger: #d83c3e;
 }
 
 [data-theme='dark'] {
-  --color-background: #121212;
-  --color-surface: #1e1e1e;
-  --color-text: #f5f5f5;
-  --color-primary: #3b82f6;
-  --color-danger: #ef4444;
+  --color-background: #0a0d3a;
+  --color-surface: #1e2353;
+  --color-surface-alt: #23272a;
+  --color-hairline: #2c3266;
+  --color-text: #ffffff;
+  --color-primary: #5865f2;
+  --color-on-primary: #ffffff;
+  --color-accent: #35ed7e;
+  --color-on-accent: #000000;
+  --color-magenta: #ec48bd;
+  --color-danger: #ed4245;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-background: #121212;
-    --color-surface: #1e1e1e;
-    --color-text: #f5f5f5;
-    --color-primary: #3b82f6;
-    --color-danger: #ef4444;
+    --color-background: #0a0d3a;
+    --color-surface: #1e2353;
+    --color-surface-alt: #23272a;
+    --color-hairline: #2c3266;
+    --color-text: #ffffff;
+    --color-primary: #5865f2;
+    --color-on-primary: #ffffff;
+    --color-accent: #35ed7e;
+    --color-on-accent: #000000;
+    --color-magenta: #ec48bd;
+    --color-danger: #ed4245;
   }
+}
+
+:root {
+  /* ABC Ginto Nord / ggsans are proprietary — DESIGN.md's own suggested
+     open substitutes, loaded from Google Fonts in index.html. */
+  --font-display: 'Space Grotesk', 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-xs: 6px;
+  --radius-sm: 12px;
+  --radius-md: 14px;
+  --radius-lg: 16px;
+  --radius-xl: 40px;
+  --radius-pill: 50px;
+
+  /* DESIGN.md's one extracted shadow — a wide, violet-tinted diffuse glow
+     used to lift a surface off the canvas instead of a hard-edged shadow. */
+  --shadow-float: 0 3px 68px rgba(69, 42, 124, 0.15);
 }

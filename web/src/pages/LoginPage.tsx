@@ -68,7 +68,7 @@ export function LoginPage() {
             required
           />
         </label>
-        <button type="submit" disabled={submitting}>
+        <button type="submit" className="btn-accent" disabled={submitting}>
           {t('login.submit')}
         </button>
       </form>

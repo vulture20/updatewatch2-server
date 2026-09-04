@@ -6,7 +6,7 @@ export function ThemeToggle() {
   const { t } = useTranslation();
 
   return (
-    <button type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+    <button type="button" className="btn-ghost" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
       {theme === 'light' ? t('theme.dark') : t('theme.light')}
     </button>
   );

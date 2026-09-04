@@ -84,7 +84,7 @@ export function AgentDetailPage() {
       )}
 
       {!agent.approved && (
-        <button type="button" onClick={() => void agentsApi.approve(agent.hostname).then(reload)}>
+        <button type="button" className="btn-accent" onClick={() => void agentsApi.approve(agent.hostname).then(reload)}>
           {t('agentDetail.approve')}
         </button>
       )}

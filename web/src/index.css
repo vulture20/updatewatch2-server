@@ -1,3 +1,10 @@
+/* Base rules follow the design system in /opt/UpdateWatch2/claude/DESIGN.md
+   — Blurple/green/magenta brand chord, heavy display type over generously
+   rounded surfaces. Toned down from DESIGN.md's marketing-hero scale
+   (82px all-caps headlines, 40px+ media radii) to something a dense admin
+   UI can actually work in — see tokens.css for the derived light/dark
+   palettes and radius/font tokens this file consumes. */
+
 * {
   box-sizing: border-box;
 }
@@ -7,13 +14,76 @@ body {
   min-height: 100vh;
   background: var(--color-background);
   color: var(--color-text);
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--font-body);
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 0 0 1rem;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1.375rem;
 }
 
 button,
 input,
 select {
   font: inherit;
+}
+
+button {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 1.25rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The single highest-intent action on a page (per DESIGN.md: reserve the
+   electric-green accent for that one CTA, never as a general accent) —
+   applied to Login's Sign in, and the Approve actions that gate a new
+   agent into the fleet. */
+.btn-accent {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* Secondary chrome (theme toggle, log out) — DESIGN.md's button-ghost:
+   a quieter surface fill instead of a second/third solid brand pill
+   competing with the actual page CTA. */
+.btn-ghost {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: var(--radius-lg);
+}
+
+input,
+select {
+  background: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xs);
+  padding: 0.45rem 0.6rem;
+}
+
+input[type='checkbox'] {
+  width: auto;
+  padding: 0;
 }
 
 a {
@@ -25,11 +95,19 @@ table {
   border-collapse: collapse;
 }
 
+thead th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
+}
+
 th,
 td {
   text-align: left;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--color-surface);
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--color-hairline);
 }
 
 .app-shell {
@@ -44,8 +122,9 @@ td {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 1rem;
-  background: var(--color-surface);
+  padding: 1rem 1.5rem;
+  background: var(--color-background);
+  border-bottom: 1px solid var(--color-hairline);
 }
 
 .app-shell > header nav {
@@ -57,17 +136,20 @@ td {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
 }
 
 .app-shell-controls {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
 .app-shell > .table-wrapper,
 .app-shell section {
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
 .login-page {
@@ -76,6 +158,7 @@ td {
   justify-content: center;
   min-height: 100vh;
   padding: 1rem;
+  background: var(--color-background);
 }
 
 .login-form {
@@ -84,6 +167,10 @@ td {
   gap: 0.75rem;
   width: 100%;
   max-width: 24rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-float);
 }
 
 .login-form label {
@@ -100,13 +187,13 @@ td {
   background: var(--color-danger);
   color: white;
   padding: 0.75rem 1rem;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-lg);
   margin-bottom: 1rem;
 }
 
 .one-time-secret {
   border: 1px solid var(--color-danger);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-lg);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
 }
@@ -121,7 +208,7 @@ td {
   overflow-wrap: anywhere;
   background: var(--color-surface);
   padding: 0.5rem;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-sm);
   margin: 0.5rem 0;
 }
 
@@ -140,28 +227,30 @@ td {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
-  border-bottom: 1px solid var(--color-surface);
+  border-bottom: 1px solid var(--color-hairline);
   margin-bottom: 1rem;
 }
 
 .admin-tab {
   background: none;
   border: none;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   border-bottom: 2px solid transparent;
   padding: 0.5rem 0.75rem;
   cursor: pointer;
   color: var(--color-text);
+  font-weight: 500;
 }
 
 .admin-tab-active {
   border-bottom-color: var(--color-primary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .login-error {
   color: var(--color-danger);
   border: 1px solid var(--color-danger);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-lg);
   padding: 0.5rem 0.75rem;
 }
 

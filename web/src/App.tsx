@@ -36,7 +36,7 @@ export default function App() {
                   <LanguageSwitcher />
                   <ThemeToggle />
                   {username && <span>{username}</span>}
-                  <button type="button" onClick={() => void logout()}>
+                  <button type="button" className="btn-ghost" onClick={() => void logout()}>
                     {t('nav.logout')}
                   </button>
                 </div>

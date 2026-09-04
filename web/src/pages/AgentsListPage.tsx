@@ -53,7 +53,7 @@ export function AgentsListPage() {
         <p>{t('agents.empty')}</p>
       ) : (
         <>
-          <button type="button" disabled={selected.size === 0} onClick={() => void approveSelected()}>
+          <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void approveSelected()}>
             {t('agents.approveSelected')} ({selected.size})
           </button>
           <table>
