@@ -9,8 +9,9 @@ public interface IAgentService
     /// <summary>
     /// Approves a single unconfirmed agent. Returns false if no agent with
     /// that hostname exists. Certificate issuance (see CLAUDE.md onboarding
-    /// flow) is triggered separately by the Auth module once approval lands
-    /// here — not yet wired up.
+    /// flow) does not happen synchronously here — it happens lazily, the
+    /// next time the now-approved agent polls
+    /// <see cref="AgentRegistrationService.RegisterAsync"/>.
     /// </summary>
     Task<bool> ApproveAsync(string hostname, string approvedBy, CancellationToken ct = default);
 

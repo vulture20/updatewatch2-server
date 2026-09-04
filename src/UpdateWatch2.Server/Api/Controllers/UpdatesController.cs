@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Updates;
 
 namespace UpdateWatch2.Server.Api.Controllers;
@@ -21,13 +22,19 @@ public class UpdatesController(IUpdateService updateService) : ControllerBase
     }
 
     // Not admin-facing: this is the agent's own self-report, so it doesn't
-    // require the admin cookie session. It's still unauthenticated — real
-    // agent authentication (mutual TLS) isn't implemented yet, see
-    // updatewatch2-server#3.
+    // require the admin cookie session — it requires the agent's own
+    // mutual-TLS client certificate instead (updatewatch2-server#1).
     [HttpPost("updates")]
-    [AllowAnonymous]
+    [Authorize(Policy = CertificateAuthenticationSetup.AgentCertificatePolicy)]
     public async Task<IActionResult> ReportUpdates(string hostname, [FromBody] ReportUpdatesRequest request, CancellationToken ct)
     {
+        // Defense in depth: a validly-approved agent for host A must not be
+        // able to tamper with the URL and post as host B.
+        if (!string.Equals(User.Identity?.Name, hostname, StringComparison.Ordinal))
+        {
+            return Forbid();
+        }
+
         var found = await updateService.ReportUpdatesAsync(hostname, request, ct);
         return found ? NoContent() : NotFound();
     }

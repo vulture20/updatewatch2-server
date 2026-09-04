@@ -33,27 +33,52 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
         await AuthTestHelper.LoginAsync(_client);
     }
 
+    // ReportUpdates now requires the agent's own mutual-TLS client
+    // certificate (updatewatch2-server#1) rather than being anonymous —
+    // WebApplicationFactory's in-memory TestServer bypasses Kestrel/real TLS
+    // entirely, so it can't present a client certificate and the success
+    // path can't be exercised through this test harness. That path is
+    // covered by CertificateValidatorTests/AgentRegistrationServiceTests
+    // (the logic) and by a live curl/real-agent walkthrough (the actual
+    // mTLS handshake) — see this feature's commit history. What's covered
+    // here is that the route genuinely rejects non-cert callers, including
+    // an authenticated *admin* (cookie-session) caller, which must not be
+    // treated as equivalent to a cert-authenticated agent.
     [Fact]
-    public async Task Reporting_updates_for_unknown_agent_returns_not_found()
+    public async Task Reporting_updates_without_a_client_certificate_is_rejected_even_for_a_logged_in_admin()
     {
         var response = await _client.PostAsJsonAsync(
             "/api/agents/does-not-exist/updates",
             new ReportUpdatesRequest([], RebootRequired: false));
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
-    public async Task Reported_updates_show_up_in_agent_detail_and_updates_list()
+    public async Task Reporting_updates_without_a_client_certificate_is_rejected_when_fully_anonymous()
     {
-        await SeedAgentAsync("test-host");
+        using var anonymousClient = _factory.CreateClient();
 
-        var report = new ReportUpdatesRequest(
-            [new ReportedUpdate("Security Update", "KB123456", "A security fix")],
-            RebootRequired: true);
+        var response = await anonymousClient.PostAsJsonAsync(
+            "/api/agents/does-not-exist/updates",
+            new ReportUpdatesRequest([], RebootRequired: false));
 
-        var reportResponse = await _client.PostAsJsonAsync("/api/agents/test-host/updates", report);
-        Assert.Equal(HttpStatusCode.NoContent, reportResponse.StatusCode);
+        // Confirmed by hand, not assumed: the certificate-auth handler has
+        // no browser-style "challenge" redirect, so a request with no
+        // client certificate at all lands on 403 here too, the same as an
+        // authenticated-but-wrong-scheme (admin cookie) caller above — not
+        // the 401 a missing-cookie request against a cookie-gated route
+        // would get. Both are "rejected", which is what actually matters.
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Previously_reported_updates_show_up_in_agent_detail_and_updates_list()
+    {
+        // Seeds directly via the DbContext rather than through the
+        // (now cert-gated) POST endpoint — see the comment above. This
+        // still exercises the two admin-facing GET routes end to end.
+        await SeedAgentWithUpdateAsync("test-host", "Security Update", "KB123456", rebootRequired: true);
 
         var updates = await _client.GetFromJsonAsync<List<UpdateItemDto>>("/api/agents/test-host/updates");
         Assert.NotNull(updates);
@@ -90,6 +115,25 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Agents.Add(new Agent { Hostname = hostname, Approved = true });
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Seeds an agent with one pending update directly via the DbContext,
+    /// mirroring exactly what UpdateService.ReportUpdatesAsync itself
+    /// writes (UpdateItem row + Agent.PendingUpdateCount/RebootRequired) —
+    /// see the comment on the tests that use this for why the POST endpoint
+    /// itself can no longer be driven from this test harness.
+    /// </summary>
+    private async Task SeedAgentWithUpdateAsync(string hostname, string title, string? packageId, bool rebootRequired)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var agent = new Agent { Hostname = hostname, Approved = true, PendingUpdateCount = 1, RebootRequired = rebootRequired };
+        db.Agents.Add(agent);
+        await db.SaveChangesAsync();
+
+        db.UpdateItems.Add(new UpdateItem { AgentId = agent.Id, Title = title, PackageId = packageId });
         await db.SaveChangesAsync();
     }
 

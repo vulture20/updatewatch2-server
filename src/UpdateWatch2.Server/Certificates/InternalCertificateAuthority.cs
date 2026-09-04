@@ -42,6 +42,19 @@ public class InternalCertificateAuthority : ICertificateAuthority
     private static readonly Oid ServerAuthEku = new("1.3.6.1.5.5.7.3.1");
     private static readonly Oid ClientAuthEku = new("1.3.6.1.5.5.7.3.2");
 
+    // Process-wide, not per-instance: guards against two InternalCertificateAuthority
+    // instances constructed concurrently in the same process (e.g. two
+    // WebApplicationFactory-based test hosts sharing the default certs
+    // directory) both seeing "no ca.pfx yet" and generating two different
+    // roots, racing to write — which would leave whichever instance loses
+    // the race holding an in-memory root that no longer matches the file
+    // its own EnsureServerLeaf call reads moments later. Once ca.pfx exists,
+    // every instance loads the same bytes and is trivially consistent; this
+    // lock only closes the narrow "does it exist yet" race, not general
+    // cross-process safety (this project's deployment model is one
+    // container = one exclusive certs volume, where that doesn't apply).
+    private static readonly Lock RootLock = new();
+
     private readonly string _certsDirectory;
     private readonly Lock _issueLock = new();
 
@@ -92,12 +105,20 @@ public class InternalCertificateAuthority : ICertificateAuthority
 
     private X509Certificate2 LoadOrCreateRoot()
     {
-        var path = Path.Combine(_certsDirectory, "ca.pfx");
-        if (File.Exists(path))
+        lock (RootLock)
         {
-            return X509CertificateLoader.LoadPkcs12FromFile(path, password: null, X509KeyStorageFlags.Exportable);
-        }
+            var path = Path.Combine(_certsDirectory, "ca.pfx");
+            if (File.Exists(path))
+            {
+                return X509CertificateLoader.LoadPkcs12FromFile(path, password: null, X509KeyStorageFlags.Exportable);
+            }
 
+            return CreateAndPersistRoot(path);
+        }
+    }
+
+    private X509Certificate2 CreateAndPersistRoot(string path)
+    {
         using var rsa = RSA.Create(RootKeySizeBits);
         var request = new CertificateRequest(
             new X500DistinguishedName("CN=UpdateWatch2 Internal CA"),

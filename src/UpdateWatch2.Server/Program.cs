@@ -1,12 +1,17 @@
+using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Authentication.Certificate;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Auth;
+using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Notifications;
 using UpdateWatch2.Server.Updates;
@@ -111,20 +116,91 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
-// The container almost never terminates TLS itself (see docker/Dockerfile
-// — it listens on plain HTTP; a reverse proxy in front is expected to
+// The browser/admin-UI port (8080, below) almost never terminates TLS
+// itself (see docker/Dockerfile — a reverse proxy in front is expected to
 // terminate HTTPS, per CLAUDE.md/.env.example). Trusting X-Forwarded-Proto
 // from any proxy (not just loopback, the default) is what lets
 // CookieSecurePolicy.SameAsRequest below correctly mark the auth cookie
 // Secure when the *original* client connection was HTTPS, even though
-// Kestrel itself only ever sees HTTP. The real security boundary here is
-// network-level (only the reverse proxy can reach this container), not
-// this middleware's proxy allowlist.
+// Kestrel itself only ever sees HTTP on that port. The real security
+// boundary here is network-level (only the reverse proxy can reach this
+// container), not this middleware's proxy allowlist. This has no bearing
+// on the agent-facing 8443 port below, which Kestrel terminates directly.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
+});
+
+// Certificate-based mutual TLS is the security backbone for agent-server
+// communication (CLAUDE.md) — see UpdateWatch2.Server.Certificates for the
+// design rationale (internal CA, why the server leaf auto-regenerates,
+// etc.). This has to happen before builder.Build() because Kestrel's
+// listener configuration (right below) needs the server's own TLS leaf
+// certificate already in hand, and Kestrel is configured as part of the
+// WebApplicationBuilder, not after the app exists. It's pure filesystem
+// I/O with no DB dependency, unlike the admin-account/settings seeding
+// later in this file, which does need a built app's DI container/DbContext
+// and so runs in a scope after builder.Build() instead.
+var certsPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["Certs:Path"] ?? "certs"));
+var certificateAuthority = new InternalCertificateAuthority(certsPath);
+var serverHostname = Environment.GetEnvironmentVariable("UPDATEWATCH2_SERVER_HOSTNAME") ?? Environment.MachineName;
+var serverLeafCertificate = certificateAuthority.EnsureServerLeaf(serverHostname);
+builder.Services.AddSingleton<ICertificateAuthority>(certificateAuthority);
+builder.Services.AddScoped<ICertificateValidator, CertificateValidator>();
+builder.Services.AddScoped<IAgentRegistrationService, AgentRegistrationService>();
+
+// Two listeners, not one: 8080 stays plain HTTP for the browser-facing
+// admin UI/API, unchanged, still reverse-proxy-terminated (see above). 8443
+// is new — Kestrel-direct-TLS-terminated, no proxy in front, dedicated to
+// agent traffic (matches AgentOptions.ServerPort's existing default on the
+// agent side, not a coincidence). ClientCertificateMode.AllowCertificate
+// (not Require) because agent registration must be reachable with no
+// client certificate at all — the agent doesn't have one yet at first
+// contact; every other agent route enforces a certificate via the
+// AgentCertificate authorization policy below instead, layered on top of
+// this Kestrel-level allowance, not in place of it.
+//
+// Explicit Listen calls here replace ASPNETCORE_URLS entirely rather than
+// merging with it (confirmed by hand) — so ASPNETCORE_URLS is no longer
+// used at all; see docker/Dockerfile's comment on removing it. Ports are
+// configurable (Kestrel:HttpPort / Kestrel:AgentPort, defaulting to the
+// documented 8080/8443) purely so local/CI runs can avoid a port already
+// taken on the host — the Docker image's EXPOSE/compose port mappings
+// assume the defaults and were not designed to be reconfigured routinely.
+var httpPort = builder.Configuration.GetValue("Kestrel:HttpPort", 8080);
+var agentPort = builder.Configuration.GetValue("Kestrel:AgentPort", 8443);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(httpPort);
+    options.ListenAnyIP(agentPort, listenOptions =>
+    {
+        listenOptions.UseHttps(https =>
+        {
+            https.ServerCertificate = serverLeafCertificate;
+            https.ClientCertificateMode = ClientCertificateMode.AllowCertificate;
+
+            // Confirmed by hand, not assumed: without this, Kestrel's own
+            // HttpsConnectionMiddleware runs its own default client-cert
+            // validation — chain-building against the OS trust store — at
+            // the raw TLS layer, entirely separate from and *before* the
+            // Microsoft.AspNetCore.Authentication.Certificate middleware's
+            // CustomTrustStore/OnCertificateValidated logic below ever
+            // runs. An agent leaf signed by our internal CA is never in the
+            // OS store, so Kestrel silently aborted the TLS handshake
+            // itself for every agent request (logged only at Debug:
+            // "Failed to authenticate HTTPS connection... The remote
+            // certificate was rejected by the provided
+            // RemoteCertificateValidationCallback" — surfaced to callers as
+            // a bare connection reset/"unexpected eof", not any HTTP status
+            // code, which is what made this look like a protocol-level bug
+            // rather than a trust-store mismatch). Accepting unconditionally
+            // here defers *all* trust decisions to the authentication
+            // middleware's CustomTrustStore, which is where they belong.
+            https.ClientCertificateValidation = (_, _, _) => true;
+        });
+    });
 });
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -157,8 +233,43 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             return Task.CompletedTask;
         };
+    })
+    .AddCertificate(CertificateAuthenticationSetup.SchemeName, options =>
+    {
+        // Chain-build against our own internal CA, not the OS trust store —
+        // an agent certificate is never meant to be trusted by anything
+        // else, and nothing else should be trusted here.
+        options.AllowedCertificateTypes = CertificateTypes.Chained;
+        options.ChainTrustValidationMode = X509ChainTrustMode.CustomRootTrust;
+        options.CustomTrustStore = [certificateAuthority.RootCertificate];
+        // Revocation is meaningless for a CA with no CRL/OCSP infrastructure
+        // (see InternalCertificateAuthority's remarks) — the one-shot
+        // delivery + admin-approval model is this project's substitute for
+        // revocation, not a gap being silently ignored.
+        options.RevocationMode = X509RevocationMode.NoCheck;
+        options.Events = new CertificateAuthenticationEvents
+        {
+            OnCertificateValidated = async context =>
+            {
+                var validator = context.HttpContext.RequestServices.GetRequiredService<ICertificateValidator>();
+                var result = await validator.ValidateAsync(context.ClientCertificate, context.HttpContext.RequestAborted);
+                if (result.Success)
+                {
+                    context.Principal = new ClaimsPrincipal(new ClaimsIdentity(
+                        [new Claim(ClaimTypes.Name, result.Hostname!)], context.Scheme.Name));
+                    context.Success();
+                }
+                else
+                {
+                    context.Fail(result.FailureReason ?? "Certificate rejected.");
+                }
+            },
+        };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy(CertificateAuthenticationSetup.AgentCertificatePolicy, policy => policy
+        .AddAuthenticationSchemes(CertificateAuthenticationSetup.SchemeName)
+        .RequireAuthenticatedUser()));
 
 var app = builder.Build();
 
@@ -181,11 +292,18 @@ if (app.Environment.IsDevelopment())
 }
 
 // Must run before anything that inspects the request scheme/remote IP
-// (HttpsRedirection, the cookie auth handler's SameAsRequest check, IP
-// logging) — see the ForwardedHeadersOptions comment above.
+// (the cookie auth handler's SameAsRequest check, IP logging) — see the
+// ForwardedHeadersOptions comment above.
 app.UseForwardedHeaders();
 
-app.UseHttpsRedirection();
+// Deliberately no app.UseHttpsRedirection() here: this app now has two
+// listeners with very different purposes (see ConfigureKestrel above), and
+// this middleware has no way to know it should redirect only the
+// browser/admin-UI port (8080) toward its external reverse-proxy HTTPS URL
+// and never touch the agent-only 8443 port. 8080 was always meant to stay
+// plain HTTP directly (TLS is the reverse proxy's job, per
+// CookieSecurePolicy.SameAsRequest above) — this middleware was never
+// doing real work for that path even before 8443 existed.
 
 // Serves the built web/ SPA from wwwroot when present (the Docker image
 // copies it in — see docker/Dockerfile) so the API and admin UI ship as
