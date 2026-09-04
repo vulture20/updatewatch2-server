@@ -7,7 +7,7 @@ import type { AdEncryption, AdminSettings, SmtpEncryption, VersionInfo } from '.
 const LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const;
 const SMTP_ENCRYPTIONS: SmtpEncryption[] = ['None', 'StartTls', 'SslTls'];
 const AD_ENCRYPTIONS: AdEncryption[] = ['None', 'StartTls', 'Ldaps'];
-const TABS = ['general', 'notifications', 'activeDirectory'] as const;
+const TABS = ['general', 'notifications', 'activeDirectory', 'certificates'] as const;
 type Tab = (typeof TABS)[number];
 
 type FormState = Omit<
@@ -297,6 +297,21 @@ export function AdminPage() {
             <input type="text" value={form.adLoginGroupDn} onChange={(e) => update('adLoginGroupDn', e.target.value)} />
           </label>
           <p className="field-hint">{t('admin.adLoginGroupDnHint')}</p>
+        </div>
+
+        <div hidden={tab !== 'certificates'}>
+          <h2>{t('admin.tabs.certificates')}</h2>
+          <label>
+            {t('admin.agentCertificateValidityDays')}
+            <input
+              type="number"
+              min={1}
+              max={3650}
+              value={form.agentCertificateValidityDays}
+              onChange={(e) => update('agentCertificateValidityDays', Number(e.target.value))}
+            />
+          </label>
+          <p className="field-hint">{t('admin.agentCertificateValidityDaysHint')}</p>
         </div>
 
         <button type="submit" disabled={saving}>

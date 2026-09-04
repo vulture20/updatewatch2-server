@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Auth;
+using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Notifications;
 
 namespace UpdateWatch2.Server.Tests.Auth;
@@ -70,6 +71,8 @@ public class ActiveDirectoryAuthServiceTests
         public SmtpOptions Smtp => throw new NotSupportedException();
 
         public NotificationThresholdOptions NotificationThresholds => throw new NotSupportedException();
+
+        public CertificateOptions Certificate => throw new NotSupportedException();
 
         public string LogLevel => throw new NotSupportedException();
 

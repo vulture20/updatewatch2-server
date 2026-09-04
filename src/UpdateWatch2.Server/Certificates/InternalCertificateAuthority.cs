@@ -18,11 +18,16 @@ namespace UpdateWatch2.Server.Certificates;
 /// Root: RSA 4096, 10-year validity — long enough that rotation is a rare,
 /// deliberately out-of-scope, separate concern (see the follow-up issue
 /// opened alongside this feature). Leaves (server + agent): ECDsa P-256,
-/// short-lived by comparison (2 years — see <see cref="AgentLeafValidity"/>),
-/// cheap to generate, cross-signed under the RSA root via
+/// short-lived by comparison, cheap to generate, cross-signed under the RSA root via
 /// <see cref="CertificateRequest.Create(X509Certificate2, DateTimeOffset, DateTimeOffset, byte[])"/>,
-/// a standard, fully-supported .NET pattern. Leaf renewal-before-expiry is
-/// also deliberately out of scope here — another follow-up issue.
+/// a standard, fully-supported .NET pattern. The server leaf's validity is
+/// still a fixed constant; the agent leaf's is not — <see cref="IssueAgentLeaf"/>
+/// takes it as a parameter, sourced by the caller from the live
+/// admin-configured <see cref="CertificateOptions.AgentCertificateValidityDays"/>
+/// (updatewatch2-server#9). Proactive renewal before expiry and
+/// admin-mediated re-issuance after a lost/wiped agent certificate are
+/// both implemented too (updatewatch2-server#7/#8) — this class stays
+/// unaware of either, it just issues on request.
 ///
 /// The server's own leaf (<see cref="EnsureServerLeaf"/>) is regenerated
 /// automatically whenever its SAN no longer matches the currently configured
@@ -36,7 +41,6 @@ public class InternalCertificateAuthority : ICertificateAuthority
     private const int RootKeySizeBits = 4096;
     private static readonly TimeSpan RootValidity = TimeSpan.FromDays(365 * 10);
     private static readonly TimeSpan ServerLeafValidity = TimeSpan.FromDays(365 * 2);
-    private static readonly TimeSpan AgentLeafValidity = TimeSpan.FromDays(365 * 2);
 
     // Server Authentication / Client Authentication, per RFC 5280 appendix.
     private static readonly Oid ServerAuthEku = new("1.3.6.1.5.5.7.3.1");
@@ -90,13 +94,13 @@ public class InternalCertificateAuthority : ICertificateAuthority
         return cert;
     }
 
-    public IssuedCertificate IssueAgentLeaf(string hostname)
+    public IssuedCertificate IssueAgentLeaf(string hostname, TimeSpan validity)
     {
         lock (_issueLock)
         {
             var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
-            var notAfter = notBefore.Add(AgentLeafValidity);
-            var (cert, pfxBytes) = CreateLeaf(hostname, [], ClientAuthEku, AgentLeafValidity, notBefore, notAfter);
+            var notAfter = notBefore.Add(validity);
+            var (cert, pfxBytes) = CreateLeaf(hostname, [], ClientAuthEku, validity, notBefore, notAfter);
             var thumbprint = cert.GetCertHashString(HashAlgorithmName.SHA256);
             cert.Dispose();
             return new IssuedCertificate(pfxBytes, thumbprint, notBefore, notAfter);

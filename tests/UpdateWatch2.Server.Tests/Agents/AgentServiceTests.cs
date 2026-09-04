@@ -3,6 +3,7 @@ using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
+using UpdateWatch2.Server.Tests.TestHelpers;
 
 namespace UpdateWatch2.Server.Tests.Agents;
 
@@ -25,7 +26,7 @@ public class AgentServiceTests : IDisposable
         var auditLog = new AuditLogService(_db);
         _service = new AgentService(_db, auditLog);
         var ca = new InternalCertificateAuthority(_certsDirectory);
-        _registrationService = new AgentRegistrationService(_db, ca, auditLog);
+        _registrationService = new AgentRegistrationService(_db, ca, auditLog, new FakeAdminSettingsStore());
     }
 
     public void Dispose()

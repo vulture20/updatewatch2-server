@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
@@ -36,7 +37,7 @@ namespace UpdateWatch2.Server.Agents;
 ///   (updatewatch2-server#7), authenticated by the current certificate
 ///   itself rather than a token — deliberately not part of this method.
 /// </summary>
-public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca, IAuditLogService auditLog) : IAgentRegistrationService
+public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca, IAuditLogService auditLog, IAdminSettingsStore settingsStore) : IAgentRegistrationService
 {
     public async Task<AgentRegistrationOutcome> RegisterAsync(string hostname, AgentRegisterRequest request, CancellationToken ct = default)
     {
@@ -97,7 +98,7 @@ public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca,
         // agent.ClientCertificateThumbprint is guaranteed null here — the
         // early-return at the top of this method already handles the
         // already-delivered case.
-        var issued = ca.IssueAgentLeaf(hostname);
+        var issued = ca.IssueAgentLeaf(hostname, TimeSpan.FromDays(settingsStore.Certificate.AgentCertificateValidityDays));
         agent.ClientCertificateThumbprint = issued.ThumbprintSha256;
         agent.ClientCertificateIssuedAt = issued.IssuedAt;
         agent.ClientCertificateExpiresAt = issued.ExpiresAt;
@@ -135,7 +136,7 @@ public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca,
             return RenewCertificateResult.Failed("Agent is not in a renewable state.");
         }
 
-        var issued = ca.IssueAgentLeaf(hostname);
+        var issued = ca.IssueAgentLeaf(hostname, TimeSpan.FromDays(settingsStore.Certificate.AgentCertificateValidityDays));
         agent.ClientCertificateThumbprint = issued.ThumbprintSha256;
         agent.ClientCertificateIssuedAt = issued.IssuedAt;
         agent.ClientCertificateExpiresAt = issued.ExpiresAt;

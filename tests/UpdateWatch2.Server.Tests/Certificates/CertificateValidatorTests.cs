@@ -42,7 +42,7 @@ public class CertificateValidatorTests : IDisposable
     public async Task Rejects_a_certificate_from_an_unknown_thumbprint()
     {
         var validator = new CertificateValidator(_db);
-        var issued = _ca.IssueAgentLeaf("never-registered-host");
+        var issued = _ca.IssueAgentLeaf("never-registered-host", TimeSpan.FromDays(730));
         using var cert = X509CertificateLoader.LoadPkcs12(issued.PfxBytes, password: null);
 
         var result = await validator.ValidateAsync(cert);
@@ -53,7 +53,7 @@ public class CertificateValidatorTests : IDisposable
     [Fact]
     public async Task Rejects_a_known_but_unapproved_agent()
     {
-        var issued = _ca.IssueAgentLeaf("pending-host");
+        var issued = _ca.IssueAgentLeaf("pending-host", TimeSpan.FromDays(730));
         _db.Agents.Add(new Agent { Hostname = "pending-host", Approved = false, ClientCertificateThumbprint = issued.ThumbprintSha256 });
         await _db.SaveChangesAsync();
         var validator = new CertificateValidator(_db);
@@ -67,7 +67,7 @@ public class CertificateValidatorTests : IDisposable
     [Fact]
     public async Task Accepts_a_known_and_approved_agent_and_returns_its_hostname()
     {
-        var issued = _ca.IssueAgentLeaf("approved-host");
+        var issued = _ca.IssueAgentLeaf("approved-host", TimeSpan.FromDays(730));
         _db.Agents.Add(new Agent { Hostname = "approved-host", Approved = true, ClientCertificateThumbprint = issued.ThumbprintSha256 });
         await _db.SaveChangesAsync();
         var validator = new CertificateValidator(_db);
@@ -88,7 +88,7 @@ public class CertificateValidatorTests : IDisposable
         // match. This asserts the two are actually different for the same
         // cert (proving SHA-1 vs SHA-256 really do diverge here) and that
         // ValidateAsync still succeeds using the SHA-256 value end to end.
-        var issued = _ca.IssueAgentLeaf("sha-check-host");
+        var issued = _ca.IssueAgentLeaf("sha-check-host", TimeSpan.FromDays(730));
         using var cert = X509CertificateLoader.LoadPkcs12(issued.PfxBytes, password: null);
         Assert.NotEqual(cert.Thumbprint, cert.GetCertHashString(HashAlgorithmName.SHA256));
 

@@ -81,7 +81,7 @@ public class InternalCertificateAuthorityTests : IDisposable
     {
         var ca = new InternalCertificateAuthority(_certsDirectory);
 
-        var issued = ca.IssueAgentLeaf("workstation-42");
+        var issued = ca.IssueAgentLeaf("workstation-42", TimeSpan.FromDays(730));
 
         using var cert = X509CertificateLoader.LoadPkcs12(issued.PfxBytes, password: null);
         Assert.Equal("CN=workstation-42", cert.Subject);
@@ -97,12 +97,27 @@ public class InternalCertificateAuthorityTests : IDisposable
     }
 
     [Fact]
+    public void Issued_agent_leaf_honors_the_requested_validity_period()
+    {
+        // Direct proof of the admin-configurable-validity plumbing
+        // (updatewatch2-server#9) — not just that a fixed ~2-year default
+        // still comes out, but that whatever the caller asks for is what
+        // gets stamped onto the certificate.
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+
+        var issued = ca.IssueAgentLeaf("short-lived-host", TimeSpan.FromDays(30));
+
+        var actualValidity = issued.ExpiresAt - issued.IssuedAt;
+        Assert.True(Math.Abs((actualValidity - TimeSpan.FromDays(30)).TotalMinutes) < 1);
+    }
+
+    [Fact]
     public void Two_agent_leaves_for_different_hostnames_get_different_thumbprints()
     {
         var ca = new InternalCertificateAuthority(_certsDirectory);
 
-        var a = ca.IssueAgentLeaf("host-a");
-        var b = ca.IssueAgentLeaf("host-b");
+        var a = ca.IssueAgentLeaf("host-a", TimeSpan.FromDays(730));
+        var b = ca.IssueAgentLeaf("host-b", TimeSpan.FromDays(730));
 
         Assert.NotEqual(a.ThumbprintSha256, b.ThumbprintSha256);
     }

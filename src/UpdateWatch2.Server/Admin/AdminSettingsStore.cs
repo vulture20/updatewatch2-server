@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.Auth;
+using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
 using UpdateWatch2.Server.Notifications;
@@ -12,7 +13,8 @@ public class AdminSettingsStore(
     IOptions<BruteForceOptions> defaultBruteForce,
     IOptions<SmtpOptions> defaultSmtp,
     IOptions<NotificationThresholdOptions> defaultNotificationThresholds,
-    IOptions<AdOptions> defaultAd) : IAdminSettingsStore
+    IOptions<AdOptions> defaultAd,
+    IOptions<CertificateOptions> defaultCertificate) : IAdminSettingsStore
 {
     private readonly object _lock = new();
 
@@ -20,6 +22,7 @@ public class AdminSettingsStore(
     private SmtpOptions _smtp = defaultSmtp.Value;
     private NotificationThresholdOptions _notificationThresholds = defaultNotificationThresholds.Value;
     private AdOptions _ad = defaultAd.Value;
+    private CertificateOptions _certificate = defaultCertificate.Value;
     private string _logLevel = "INFO";
 
     public BruteForceOptions BruteForce
@@ -40,6 +43,11 @@ public class AdminSettingsStore(
     public AdOptions Ad
     {
         get { lock (_lock) return _ad; }
+    }
+
+    public CertificateOptions Certificate
+    {
+        get { lock (_lock) return _certificate; }
     }
 
     public string LogLevel
@@ -103,6 +111,7 @@ public class AdminSettingsStore(
         row.AdBaseDn = request.AdBaseDn;
         row.AdUserSearchFilter = request.AdUserSearchFilter;
         row.AdLoginGroupDn = request.AdLoginGroupDn;
+        row.AgentCertificateValidityDays = request.AgentCertificateValidityDays;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -139,7 +148,8 @@ public class AdminSettingsStore(
                 _ad.BaseDn,
                 _ad.UserSearchFilter,
                 _ad.LoginGroupDn,
-                _ad.IsConfigured);
+                _ad.IsConfigured,
+                _certificate.AgentCertificateValidityDays);
         }
     }
 
@@ -171,6 +181,7 @@ public class AdminSettingsStore(
         AdBaseDn = defaultAd.Value.BaseDn,
         AdUserSearchFilter = defaultAd.Value.UserSearchFilter,
         AdLoginGroupDn = defaultAd.Value.LoginGroupDn,
+        AgentCertificateValidityDays = defaultCertificate.Value.AgentCertificateValidityDays,
     };
 
     private void Apply(AdminSettings row)
@@ -208,6 +219,10 @@ public class AdminSettingsStore(
             UserSearchFilter = row.AdUserSearchFilter,
             LoginGroupDn = row.AdLoginGroupDn,
         };
+        var certificate = new CertificateOptions
+        {
+            AgentCertificateValidityDays = row.AgentCertificateValidityDays,
+        };
 
         lock (_lock)
         {
@@ -215,6 +230,7 @@ public class AdminSettingsStore(
             _smtp = smtp;
             _notificationThresholds = thresholds;
             _ad = ad;
+            _certificate = certificate;
             _logLevel = row.LogLevel;
         }
     }

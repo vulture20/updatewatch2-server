@@ -86,6 +86,7 @@ export interface AdminSettings {
   adUserSearchFilter: string;
   adLoginGroupDn: string;
   adConfigured: boolean;
+  agentCertificateValidityDays: number;
 }
 
 /**

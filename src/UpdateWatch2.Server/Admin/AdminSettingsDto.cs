@@ -29,4 +29,5 @@ public record AdminSettingsDto(
     string AdBaseDn,
     string AdUserSearchFilter,
     string AdLoginGroupDn,
-    bool AdConfigured);
+    bool AdConfigured,
+    int AgentCertificateValidityDays);

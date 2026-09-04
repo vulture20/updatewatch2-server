@@ -55,7 +55,8 @@
     "tabs": {
       "general": "General",
       "notifications": "Notifications",
-      "activeDirectory": "Active Directory"
+      "activeDirectory": "Active Directory",
+      "certificates": "Certificates"
     },
     "logLevel": "Log level",
     "logLevelHint": "Takes effect on the server's next restart.",
@@ -87,6 +88,8 @@
     "adUserSearchFilterHint": "Must contain a {0} placeholder for the submitted username, e.g. (&(objectClass=user)(sAMAccountName={0})).",
     "adLoginGroupDn": "Login group DN",
     "adLoginGroupDnHint": "Only members of this group are granted login — checked via the group's own \"member\" attribute.",
+    "agentCertificateValidityDays": "Agent certificate validity (days)",
+    "agentCertificateValidityDaysHint": "Applies to newly issued or renewed agent certificates only, not retroactively to already-issued ones. The internal CA root and the server's own certificate have a fixed lifetime and aren't configurable here.",
     "save": "Save",
     "saved": "Settings saved."
   },

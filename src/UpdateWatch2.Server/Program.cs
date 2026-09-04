@@ -87,13 +87,14 @@ builder.Services.AddDataProtection()
     .SetApplicationName("UpdateWatch2.Server")
     .PersistKeysToFileSystem(keysDirectory);
 
-// These four are bound purely as the compiled-in defaults AdminSettingsStore
+// These five are bound purely as the compiled-in defaults AdminSettingsStore
 // seeds its DB row from on first run — the database is authoritative after
 // that, not these IOptions<T> snapshots. See each options class's doc comment.
 builder.Services.Configure<BruteForceOptions>(builder.Configuration.GetSection(BruteForceOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.Configure<NotificationThresholdOptions>(builder.Configuration.GetSection(NotificationThresholdOptions.SectionName));
 builder.Services.Configure<AdOptions>(builder.Configuration.GetSection(AdOptions.SectionName));
+builder.Services.Configure<CertificateOptions>(builder.Configuration.GetSection(CertificateOptions.SectionName));
 
 builder.Services.AddScoped<IAgentService, AgentService>();
 builder.Services.AddScoped<IUpdateService, UpdateService>();

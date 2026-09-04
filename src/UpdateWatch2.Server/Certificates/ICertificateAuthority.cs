@@ -35,7 +35,11 @@ public interface ICertificateAuthority
     /// <summary>
     /// Issues a brand-new client certificate for an approved agent, signed by
     /// <see cref="RootCertificate"/>, Subject CN = <paramref name="hostname"/>,
-    /// Enhanced Key Usage = Client Authentication only.
+    /// Enhanced Key Usage = Client Authentication only, valid for
+    /// <paramref name="validity"/> from issuance (updatewatch2-server#9 —
+    /// the caller is responsible for sourcing this, typically from the
+    /// live admin-configured <c>CertificateOptions.AgentCertificateValidityDays</c>;
+    /// this class deliberately stays unaware of admin settings entirely).
     /// </summary>
-    IssuedCertificate IssueAgentLeaf(string hostname);
+    IssuedCertificate IssueAgentLeaf(string hostname, TimeSpan validity);
 }

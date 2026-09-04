@@ -30,4 +30,5 @@ public record UpdateAdminSettingsRequest(
     string? AdBindPassword,
     string AdBaseDn,
     string AdUserSearchFilter,
-    string AdLoginGroupDn);
+    string AdLoginGroupDn,
+    int AgentCertificateValidityDays);

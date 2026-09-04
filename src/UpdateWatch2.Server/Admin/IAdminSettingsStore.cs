@@ -1,4 +1,5 @@
 using UpdateWatch2.Server.Auth;
+using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Notifications;
 
 namespace UpdateWatch2.Server.Admin;
@@ -20,6 +21,9 @@ public interface IAdminSettingsStore
     NotificationThresholdOptions NotificationThresholds { get; }
 
     AdOptions Ad { get; }
+
+    /// <summary>Admin-configurable agent client certificate validity (updatewatch2-server#9).</summary>
+    CertificateOptions Certificate { get; }
 
     /// <summary>
     /// The persisted log level. Reflected here immediately on change, but

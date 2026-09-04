@@ -44,6 +44,7 @@ const baseSettings = {
   adUserSearchFilter: '(&(objectClass=user)(sAMAccountName={0}))',
   adLoginGroupDn: '',
   adConfigured: false,
+  agentCertificateValidityDays: 730,
 };
 
 describe('AdminPage', () => {
@@ -120,6 +121,23 @@ describe('AdminPage', () => {
         adBindPassword: 'ad-secret',
       }),
     );
+  });
+
+  it('switches to the Certificates tab and submits an edited validity period', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, agentCertificateValidityDays: 90 });
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Certificates' }));
+
+    const validity = screen.getByLabelText('Agent certificate validity (days)');
+    await user.clear(validity);
+    await user.type(validity, '90');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ agentCertificateValidityDays: 90 }));
   });
 
   it('keeps General-tab edits when saving after switching to another tab', async () => {

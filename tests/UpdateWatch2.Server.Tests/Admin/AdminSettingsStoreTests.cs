@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Auth;
+using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Notifications;
 
@@ -20,6 +21,7 @@ public class AdminSettingsStoreTests : IDisposable
         services.Configure<BruteForceOptions>(o => { o.MaxAttempts = 6; o.WindowMinutes = 5; o.LockoutMinutes = 30; });
         services.Configure<SmtpOptions>(o => { o.Host = ""; o.Port = 587; o.FromAddress = ""; o.FromName = "UpdateWatch2"; });
         services.Configure<NotificationThresholdOptions>(o => { o.UpdatesPerMachine = 5; o.AffectedMachines = 10; });
+        services.Configure<CertificateOptions>(o => { o.AgentCertificateValidityDays = 730; });
         services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
         _services = services.BuildServiceProvider();
 
@@ -90,7 +92,8 @@ public class AdminSettingsStoreTests : IDisposable
             AdBindPassword: "ad-s3cret!",
             AdBaseDn: "dc=example,dc=com",
             AdUserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
-            AdLoginGroupDn: "cn=admins,dc=example,dc=com");
+            AdLoginGroupDn: "cn=admins,dc=example,dc=com",
+            AgentCertificateValidityDays: 90);
 
         var dto = await store.UpdateAsync(request);
 
@@ -106,6 +109,8 @@ public class AdminSettingsStoreTests : IDisposable
         Assert.Equal(AdEncryption.Ldaps, store.Ad.Encryption);
         Assert.Equal("ad-s3cret!", store.Ad.BindPassword);
         Assert.Equal("cn=admins,dc=example,dc=com", store.Ad.LoginGroupDn);
+        Assert.Equal(90, store.Certificate.AgentCertificateValidityDays);
+        Assert.Equal(90, dto.AgentCertificateValidityDays);
 
         // Neither password ever comes back out through the DTO.
         Assert.True(dto.SmtpPasswordSet);
@@ -170,5 +175,6 @@ public class AdminSettingsStoreTests : IDisposable
         AdBindPassword: null,
         AdBaseDn: "",
         AdUserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
-        AdLoginGroupDn: "");
+        AdLoginGroupDn: "",
+        AgentCertificateValidityDays: 730);
 }

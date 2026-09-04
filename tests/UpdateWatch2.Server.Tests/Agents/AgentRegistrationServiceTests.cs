@@ -3,6 +3,7 @@ using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
+using UpdateWatch2.Server.Tests.TestHelpers;
 
 namespace UpdateWatch2.Server.Tests.Agents;
 
@@ -12,6 +13,7 @@ public class AgentRegistrationServiceTests : IDisposable
     private readonly string _certsDirectory = Path.Combine(Path.GetTempPath(), $"uw2-agent-registration-certs-{Guid.NewGuid()}");
     private readonly AppDbContext _db;
     private readonly AgentRegistrationService _service;
+    private readonly FakeAdminSettingsStore _settingsStore = new();
 
     private static readonly AgentRegisterRequest BareRequest = new(null, null, null, null, null, null);
 
@@ -22,7 +24,7 @@ public class AgentRegistrationServiceTests : IDisposable
         _db.Database.Migrate();
 
         var ca = new InternalCertificateAuthority(_certsDirectory);
-        _service = new AgentRegistrationService(_db, ca, new AuditLogService(_db));
+        _service = new AgentRegistrationService(_db, ca, new AuditLogService(_db), _settingsStore);
     }
 
     public void Dispose()

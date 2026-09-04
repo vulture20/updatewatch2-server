@@ -123,6 +123,14 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
             }
         }
 
+        // Upper bound matches the CA root's fixed 10-year validity — an
+        // agent certificate that outlives the root chaining to it is
+        // nonsensical, not just unusual.
+        if (request.AgentCertificateValidityDays is < 1 or > 3650)
+        {
+            errors.Add("AgentCertificateValidityDays must be between 1 and 3650.");
+        }
+
         return errors;
     }
 }

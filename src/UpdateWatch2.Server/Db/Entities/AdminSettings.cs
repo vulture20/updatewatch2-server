@@ -55,5 +55,8 @@ public class AdminSettings
 
     public required string AdLoginGroupDn { get; set; }
 
+    /// <summary>Days a newly issued/renewed agent client certificate stays valid (updatewatch2-server#9). Not retroactive — applies to future issuance only.</summary>
+    public int AgentCertificateValidityDays { get; set; }
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

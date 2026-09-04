@@ -47,6 +47,7 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal(6, settings.BruteForceMaxAttempts);
         Assert.False(settings.SmtpConfigured);
         Assert.False(settings.SmtpPasswordSet);
+        Assert.Equal(730, settings.AgentCertificateValidityDays);
     }
 
     [Fact]
@@ -100,6 +101,32 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
         var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { SmtpEncryption = "PGP" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_rejects_a_zero_agent_certificate_validity()
+    {
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AgentCertificateValidityDays = 0 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_rejects_an_agent_certificate_validity_beyond_the_root_s_10_year_lifetime()
+    {
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AgentCertificateValidityDays = 3651 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_persists_a_custom_agent_certificate_validity()
+    {
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AgentCertificateValidityDays = 90 });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var settings = await _client.GetFromJsonAsync<AdminSettingsDto>("/api/admin/settings");
+        Assert.Equal(90, settings!.AgentCertificateValidityDays);
     }
 
     [Fact]
@@ -157,5 +184,6 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
         AdBindPassword: null,
         AdBaseDn: "",
         AdUserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
-        AdLoginGroupDn: "");
+        AdLoginGroupDn: "",
+        AgentCertificateValidityDays: 730);
 }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Auth;
+using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Notifications;
 
@@ -73,7 +74,8 @@ public class LegacyAdminSettingsMigrationTests : IDisposable
             FakeOptions.Of(new BruteForceOptions()),
             FakeOptions.Of(new SmtpOptions { FromName = "UpdateWatch2" }),
             FakeOptions.Of(new NotificationThresholdOptions()),
-            FakeOptions.Of(new AdOptions()));
+            FakeOptions.Of(new AdOptions()),
+            FakeOptions.Of(new CertificateOptions()));
 
         // The regression: this must not throw.
         await store.InitializeAsync();
@@ -81,6 +83,16 @@ public class LegacyAdminSettingsMigrationTests : IDisposable
         Assert.Equal(AdEncryption.StartTls, store.Ad.Encryption);
         Assert.Equal(389, store.Ad.Port);
         Assert.Equal("(&(objectClass=user)(sAMAccountName={0}))", store.Ad.UserSearchFilter);
+
+        // Same regression class, proactively guarded against for the new
+        // AddCertificateValiditySettings migration (updatewatch2-server#9):
+        // its AddColumn default (730) must match CertificateOptions' real
+        // default exactly, or an upgrading deployment would silently get
+        // the wrong agent certificate validity applied — not a crash like
+        // the AD case (this is a plain int, no enum-parse step), but just
+        // as real a bug for anyone upgrading from before this column
+        // existed.
+        Assert.Equal(730, store.Certificate.AgentCertificateValidityDays);
     }
 
     private class FakeScopeFactory(DbContextOptions<AppDbContext> options) : IServiceScopeFactory
