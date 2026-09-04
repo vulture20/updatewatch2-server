@@ -28,6 +28,14 @@ export interface AgentDetail {
   rebootRequired: boolean;
   pendingUpdateCount: number;
   lastAliveAt: string | null;
+  clientCertificateThumbprint: string | null;
+  clientCertificateIssuedAt: string | null;
+  clientCertificateExpiresAt: string | null;
+}
+
+/** Response of an admin-initiated certificate re-issuance (updatewatch2-server#8). */
+export interface ReissueCertificateResult {
+  registrationToken: string;
 }
 
 export interface UpdateItem {

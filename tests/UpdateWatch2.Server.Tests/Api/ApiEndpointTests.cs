@@ -51,8 +51,8 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
         var response = await _client.GetFromJsonAsync<VersionResponse>("/api/version");
 
         Assert.NotNull(response);
-        Assert.Equal("0.7.0", response.server);
-        Assert.Equal("0.2.0", response.protocol);
+        Assert.Equal("0.8.0", response.server);
+        Assert.Equal("0.3.0", response.protocol);
         Assert.Equal("0.5.1", response.database);
     }
 
@@ -81,6 +81,43 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
         var response = await anonymousClient.GetAsync("/api/agents");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Renew_rejects_a_request_with_no_client_certificate()
+    {
+        // WebApplicationFactory's in-memory TestServer bypasses Kestrel/real
+        // TLS entirely, so this can only prove the endpoint is gated at all
+        // — a full successful-renewal-over-real-mTLS case needs a live run
+        // (see CLAUDE.md's note on the same limitation for the original
+        // mTLS work). Certificate authentication has no meaningful
+        // "challenge" (you can't ask a client to retroactively present a
+        // TLS client cert after the handshake), so a missing certificate
+        // fails as 403 Forbidden, not 401 Unauthorized — confirmed by
+        // running this test, not assumed.
+        using var anonymousClient = _factory.CreateClient();
+
+        var response = await anonymousClient.PostAsync("/api/agents/some-host/renew", content: null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ReissueCertificate_requires_an_admin_session()
+    {
+        using var anonymousClient = _factory.CreateClient();
+
+        var response = await anonymousClient.PostAsync("/api/agents/some-host/reissue-certificate", content: null);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ReissueCertificate_returns_not_found_for_an_unknown_hostname()
+    {
+        var response = await _client.PostAsync("/api/agents/does-not-exist/reissue-certificate", content: null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     private record VersionResponse(string server, string protocol, string database);

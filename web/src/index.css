@@ -104,6 +104,32 @@ td {
   margin-bottom: 1rem;
 }
 
+.one-time-secret {
+  border: 1px solid var(--color-danger);
+  border-radius: 0.25rem;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+}
+
+.one-time-secret-label {
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.one-time-secret code {
+  display: block;
+  overflow-wrap: anywhere;
+  background: var(--color-surface);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  margin: 0.5rem 0;
+}
+
+.one-time-secret-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .field-hint {
   font-size: 0.875rem;
   opacity: 0.75;

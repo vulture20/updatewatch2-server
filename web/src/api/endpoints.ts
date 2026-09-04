@@ -6,6 +6,7 @@ import type {
   BulkApproveResult,
   LoginResponse,
   MeResponse,
+  ReissueCertificateResult,
   UpdateAdminSettings,
   UpdateItem,
   VersionInfo,
@@ -31,6 +32,8 @@ export const agentsApi = {
     apiClient.post<BulkApproveResult>('/api/agents/approve', { hostnames }),
   updates: (hostname: string) => apiClient.get<UpdateItem[]>(`/api/agents/${encodeURIComponent(hostname)}/updates`),
   triggerInstall: (hostname: string) => apiClient.post<void>(`/api/agents/${encodeURIComponent(hostname)}/install`),
+  reissueCertificate: (hostname: string) =>
+    apiClient.post<ReissueCertificateResult>(`/api/agents/${encodeURIComponent(hostname)}/reissue-certificate`),
 };
 
 export const versionApi = {

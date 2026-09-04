@@ -26,9 +26,15 @@ namespace UpdateWatch2.Server.Agents;
 ///   with none) -> Approved with no certificate. Once delivered, the token
 ///   is cleared (it's done its job) and no longer gates this steady state,
 ///   since disclosing "yes, approved" a second time leaks nothing — the
-///   certificate itself is never handed out again. One-shot delivery: a
-///   lost/wiped agent needs admin-mediated re-issuance, which is a
-///   deliberate follow-up, not implemented here.
+///   certificate itself is never handed out again over THIS endpoint.
+///   A lost/wiped agent gets back in via admin-mediated re-issuance
+///   (<see cref="IAgentService.ReissueCertificateAsync"/>, updatewatch2-server#8),
+///   which clears the thumbprint and mints a fresh registration token — at
+///   that point the state machine above runs again exactly as on first
+///   contact. An agent that still has a valid certificate gets a fresh one
+///   proactively before expiry via the separate <see cref="RenewCertificateAsync"/>
+///   (updatewatch2-server#7), authenticated by the current certificate
+///   itself rather than a token — deliberately not part of this method.
 /// </summary>
 public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca, IAuditLogService auditLog) : IAgentRegistrationService
 {
@@ -113,5 +119,29 @@ public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca,
         agent.LastAliveAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
         return true;
+    }
+
+    public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)
+    {
+        var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
+
+        // Defense in depth only: reaching this method at all already
+        // required presenting a currently-valid client certificate that
+        // CertificateValidator resolved to this exact hostname, which in
+        // turn requires Approved && a non-null thumbprint. This branch
+        // should be unreachable in practice.
+        if (agent is null || !agent.Approved || agent.ClientCertificateThumbprint is null)
+        {
+            return RenewCertificateResult.Failed("Agent is not in a renewable state.");
+        }
+
+        var issued = ca.IssueAgentLeaf(hostname);
+        agent.ClientCertificateThumbprint = issued.ThumbprintSha256;
+        agent.ClientCertificateIssuedAt = issued.IssuedAt;
+        agent.ClientCertificateExpiresAt = issued.ExpiresAt;
+        await db.SaveChangesAsync(ct);
+        await auditLog.LogAsync("agent", "agent.certificate.renew", hostname, ct);
+
+        return RenewCertificateResult.Succeeded(Convert.ToBase64String(issued.PfxBytes));
     }
 }

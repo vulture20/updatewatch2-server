@@ -39,4 +39,22 @@ public class AgentsController(IAgentService agentService) : ControllerBase
         var result = await agentService.ApproveManyAsync(request.Hostnames, approvedBy: User.Identity!.Name!, ct);
         return Ok(result);
     }
+
+    // Admin-mediated recovery for a lost/wiped agent certificate
+    // (updatewatch2-server#8) — the returned token is shown exactly once,
+    // never retrievable again, for the admin to place into the agent's
+    // local configuration.
+    [HttpPost("{hostname}/reissue-certificate")]
+    public async Task<IActionResult> ReissueCertificate(string hostname, CancellationToken ct)
+    {
+        var result = await agentService.ReissueCertificateAsync(hostname, initiatedBy: User.Identity!.Name!, ct);
+        if (result.Success)
+        {
+            return Ok(new { registrationToken = result.RegistrationToken });
+        }
+
+        return result.FailureReason == "Agent not found."
+            ? NotFound()
+            : Conflict(new { message = result.FailureReason });
+    }
 }

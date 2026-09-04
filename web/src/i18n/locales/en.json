@@ -35,7 +35,17 @@
     "approve": "Approve",
     "triggerInstall": "Install updates now",
     "updates": "Pending updates",
-    "noUpdates": "No pending updates."
+    "noUpdates": "No pending updates.",
+    "certificateThumbprint": "Certificate thumbprint",
+    "certificateIssuedAt": "Certificate issued",
+    "certificateExpiresAt": "Certificate expires",
+    "reissueCertificate": "Reissue certificate",
+    "reissueConfirm": "This immediately invalidates the agent's current certificate. Continue?",
+    "reissueTokenTitle": "One-time registration token",
+    "reissueTokenBody": "Copy this token now and place it into the agent's local configuration. It will not be shown again.",
+    "copyToken": "Copy",
+    "copied": "Copied",
+    "close": "Close"
   },
   "admin": {
     "title": "Administration",

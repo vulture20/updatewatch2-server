@@ -122,6 +122,54 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RenewCertificateAsync_issues_a_new_certificate_and_updates_the_thumbprint()
+    {
+        var registered = await _service.RegisterAsync("renew-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "renew-host");
+        agent.Approved = true;
+        await _db.SaveChangesAsync();
+        await _service.RegisterAsync("renew-host", BareRequest with { RegistrationToken = registered.RegistrationToken });
+        var beforeRenewal = await _db.Agents.SingleAsync(a => a.Hostname == "renew-host");
+        // Snapshot the values, not the tracked entity reference — _db's
+        // change tracker returns the SAME instance on a later query, so
+        // capturing beforeRenewal here and re-reading it after
+        // RenewCertificateAsync (which mutates that same tracked instance)
+        // would silently compare a value against itself.
+        var originalThumbprint = beforeRenewal.ClientCertificateThumbprint;
+        var originalIssuedAt = beforeRenewal.ClientCertificateIssuedAt;
+        var originalExpiresAt = beforeRenewal.ClientCertificateExpiresAt;
+
+        var result = await _service.RenewCertificateAsync("renew-host");
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.CertificatePfxBase64);
+
+        var afterRenewal = await _db.Agents.SingleAsync(a => a.Hostname == "renew-host");
+        Assert.NotEqual(originalThumbprint, afterRenewal.ClientCertificateThumbprint);
+        Assert.NotEqual(originalIssuedAt, afterRenewal.ClientCertificateIssuedAt);
+        Assert.NotEqual(originalExpiresAt, afterRenewal.ClientCertificateExpiresAt);
+    }
+
+    [Fact]
+    public async Task RenewCertificateAsync_fails_for_an_unknown_hostname()
+    {
+        var result = await _service.RenewCertificateAsync("does-not-exist");
+
+        Assert.False(result.Success);
+        Assert.Null(result.CertificatePfxBase64);
+    }
+
+    [Fact]
+    public async Task RenewCertificateAsync_fails_for_an_agent_with_no_certificate_yet()
+    {
+        await _service.RegisterAsync("not-yet-certified", BareRequest);
+
+        var result = await _service.RenewCertificateAsync("not-yet-certified");
+
+        Assert.False(result.Success);
+    }
+
+    [Fact]
     public async Task RecordAliveAsync_updates_LastAliveAt_for_a_known_agent_and_returns_false_for_an_unknown_one()
     {
         await _service.RegisterAsync("alive-host", BareRequest);

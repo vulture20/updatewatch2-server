@@ -35,7 +35,17 @@
     "approve": "Bestätigen",
     "triggerInstall": "Updates jetzt installieren",
     "updates": "Ausstehende Updates",
-    "noUpdates": "Keine ausstehenden Updates."
+    "noUpdates": "Keine ausstehenden Updates.",
+    "certificateThumbprint": "Zertifikats-Fingerabdruck",
+    "certificateIssuedAt": "Zertifikat ausgestellt",
+    "certificateExpiresAt": "Zertifikat gültig bis",
+    "reissueCertificate": "Zertifikat neu ausstellen",
+    "reissueConfirm": "Dadurch wird das aktuelle Zertifikat des Agenten sofort ungültig. Fortfahren?",
+    "reissueTokenTitle": "Einmaliges Registrierungstoken",
+    "reissueTokenBody": "Kopieren Sie dieses Token jetzt und tragen Sie es in die lokale Konfiguration des Agenten ein. Es wird nicht erneut angezeigt.",
+    "copyToken": "Kopieren",
+    "copied": "Kopiert",
+    "close": "Schließen"
   },
   "admin": {
     "title": "Administration",

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Audit;
+using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 
 namespace UpdateWatch2.Server.Agents;
@@ -17,7 +18,8 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
             .Where(a => a.Hostname == hostname)
             .Select(a => new AgentDetailDto(
                 a.Hostname, a.DnsName, a.OperatingSystem, a.IpAddress, a.AgentVersion,
-                a.Approved, a.RebootRequired, a.PendingUpdateCount, a.LastAliveAt))
+                a.Approved, a.RebootRequired, a.PendingUpdateCount, a.LastAliveAt,
+                a.ClientCertificateThumbprint, a.ClientCertificateIssuedAt, a.ClientCertificateExpiresAt))
             .SingleOrDefaultAsync(ct);
 
     public async Task<bool> ApproveAsync(string hostname, string approvedBy, CancellationToken ct = default)
@@ -50,5 +52,33 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
         await auditLog.LogAsync(approvedBy, "agent.approve.bulk", string.Join(", ", approvedHostnames), ct);
 
         return new BulkApproveResult(agents.Count, notFound);
+    }
+
+    public async Task<ReissueCertificateResult> ReissueCertificateAsync(string hostname, string initiatedBy, CancellationToken ct = default)
+    {
+        var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
+        if (agent is null)
+        {
+            return ReissueCertificateResult.Failed("Agent not found.");
+        }
+
+        if (!agent.Approved)
+        {
+            // Never had a certificate to lose — guide the admin toward
+            // Approve instead of handing back a confusing/misleading token.
+            return ReissueCertificateResult.Failed("Agent is not approved.");
+        }
+
+        agent.ClientCertificateThumbprint = null;
+        agent.ClientCertificateIssuedAt = null;
+        agent.ClientCertificateExpiresAt = null;
+
+        var (rawToken, hash) = RegistrationTokenHasher.GenerateToken();
+        agent.RegistrationTokenHash = hash;
+
+        await db.SaveChangesAsync(ct);
+        await auditLog.LogAsync(initiatedBy, "agent.certificate.reissue", hostname, ct);
+
+        return ReissueCertificateResult.Succeeded(rawToken);
     }
 }

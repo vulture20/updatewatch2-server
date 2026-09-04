@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
+import { OneTimeSecretDialog } from '../components/OneTimeSecretDialog';
 import { agentsApi } from '../api/endpoints';
 import type { AgentDetail, UpdateItem } from '../api/types';
 
@@ -10,6 +11,7 @@ export function AgentDetailPage() {
   const [agent, setAgent] = useState<AgentDetail | null>(null);
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
   const [notFound, setNotFound] = useState(false);
+  const [reissuedToken, setReissuedToken] = useState<string | null>(null);
 
   const reload = () => {
     if (!hostname) {
@@ -28,6 +30,16 @@ export function AgentDetailPage() {
   };
 
   useEffect(reload, [hostname]);
+
+  const reissueCertificate = () => {
+    if (!agent || !window.confirm(t('agentDetail.reissueConfirm'))) {
+      return;
+    }
+    void agentsApi.reissueCertificate(agent.hostname).then((result) => {
+      setReissuedToken(result.registrationToken);
+      reload();
+    });
+  };
 
   if (notFound) {
     return <p role="alert">Agent not found.</p>;
@@ -51,11 +63,35 @@ export function AgentDetailPage() {
         <dd>{agent.agentVersion ?? '—'}</dd>
         <dt>{t('agentDetail.lastAliveAt')}</dt>
         <dd>{agent.lastAliveAt ? new Date(agent.lastAliveAt).toLocaleString() : t('agentDetail.never')}</dd>
+        <dt>{t('agentDetail.certificateThumbprint')}</dt>
+        <dd>{agent.clientCertificateThumbprint ?? '—'}</dd>
+        <dt>{t('agentDetail.certificateIssuedAt')}</dt>
+        <dd>{agent.clientCertificateIssuedAt ? new Date(agent.clientCertificateIssuedAt).toLocaleString() : '—'}</dd>
+        <dt>{t('agentDetail.certificateExpiresAt')}</dt>
+        <dd>{agent.clientCertificateExpiresAt ? new Date(agent.clientCertificateExpiresAt).toLocaleString() : '—'}</dd>
       </dl>
+
+      {reissuedToken && (
+        <OneTimeSecretDialog
+          label={t('agentDetail.reissueTokenTitle')}
+          body={t('agentDetail.reissueTokenBody')}
+          value={reissuedToken}
+          copyLabel={t('agentDetail.copyToken')}
+          copiedLabel={t('agentDetail.copied')}
+          closeLabel={t('agentDetail.close')}
+          onClose={() => setReissuedToken(null)}
+        />
+      )}
 
       {!agent.approved && (
         <button type="button" onClick={() => void agentsApi.approve(agent.hostname).then(reload)}>
           {t('agentDetail.approve')}
+        </button>
+      )}
+
+      {agent.approved && (
+        <button type="button" onClick={reissueCertificate}>
+          {t('agentDetail.reissueCertificate')}
         </button>
       )}
 

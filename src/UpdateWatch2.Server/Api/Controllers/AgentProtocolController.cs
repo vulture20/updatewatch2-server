@@ -54,6 +54,25 @@ public class AgentProtocolController(IAgentRegistrationService registrationServi
         return found ? NoContent() : NotFound();
     }
 
+    // Distinct from Register: this is how an already-certified agent gets a
+    // fresh certificate before its current one expires (updatewatch2-server#7)
+    // — authenticated by presenting that CURRENT certificate over mTLS, not
+    // a registration token. See AgentRegistrationService.RenewCertificateAsync.
+    [HttpPost("renew")]
+    [Authorize(Policy = CertificateAuthenticationSetup.AgentCertificatePolicy)]
+    public async Task<IActionResult> Renew(string hostname, CancellationToken ct)
+    {
+        if (!string.Equals(User.Identity?.Name, hostname, StringComparison.Ordinal))
+        {
+            return Forbid();
+        }
+
+        var result = await registrationService.RenewCertificateAsync(hostname, ct);
+        return result.Success
+            ? Ok(new { certificate = result.CertificatePfxBase64 })
+            : Conflict(new { message = result.FailureReason });
+    }
+
     // Not per-agent — overrides the controller's route prefix. Anonymous by
     // necessity: this is exactly what an agent bootstraps its trust from
     // before it has anything else to authenticate with. Only ever exposes

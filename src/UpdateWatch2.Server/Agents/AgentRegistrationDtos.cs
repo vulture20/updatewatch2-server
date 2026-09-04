@@ -36,3 +36,18 @@ public record AgentRegistrationOutcome(AgentRegistrationStatus Status, string? R
 
     public static AgentRegistrationOutcome Approved(string? certificatePfxBase64) => new(AgentRegistrationStatus.Approved, null, certificatePfxBase64, null);
 }
+
+/// <summary>
+/// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)
+/// — reached only over the agent-facing mTLS listener, authenticated by the
+/// agent's CURRENT still-valid client certificate rather than a token. Not
+/// to be confused with <see cref="AgentRegistrationOutcome"/>: renewal never
+/// touches <see cref="AgentRegistrationStatus"/> or the registration-token
+/// flow, it only re-issues a leaf for an agent already fully onboarded.
+/// </summary>
+public record RenewCertificateResult(bool Success, string? CertificatePfxBase64, string? FailureReason)
+{
+    public static RenewCertificateResult Failed(string reason) => new(false, null, reason);
+
+    public static RenewCertificateResult Succeeded(string certificatePfxBase64) => new(true, certificatePfxBase64, null);
+}
