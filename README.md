@@ -34,3 +34,9 @@ The image has a `HEALTHCHECK` (unauthenticated `GET /api/health`, checked every 
 Images are built and published to `ghcr.io/vulture20/updatewatch2-server` by `.github/workflows/docker-publish.yml` on every push to `main` and on `v*.*.*` tags, tagged `latest`, `v<VERSION file contents>`, `sha-<short sha>`, and (for tag pushes) the tag itself. Pull requests build the image without pushing, gated on `dotnet test` and `npm test` both passing first.
 
 Companion repository: `updatewatch2-agent`.
+
+## License
+
+Copyright (C) 2026 vulture20.
+
+UpdateWatch2 Server is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE), or <https://www.gnu.org/licenses/agpl-3.0.html> for the full text.
