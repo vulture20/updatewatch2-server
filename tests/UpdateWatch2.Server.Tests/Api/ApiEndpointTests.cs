@@ -53,7 +53,7 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
         Assert.NotNull(response);
         Assert.Equal("0.6.0", response.server);
         Assert.Equal("0.2.0", response.protocol);
-        Assert.Equal("0.5.0", response.database);
+        Assert.Equal("0.5.1", response.database);
     }
 
     [Fact]
