@@ -34,6 +34,12 @@
     "never": "Never",
     "approve": "Approve",
     "triggerInstall": "Install updates now",
+    "installPending": "Install pending…",
+    "lastInstallOutcome": "Last install result",
+    "installOutcome": {
+      "Succeeded": "Succeeded",
+      "Failed": "Failed"
+    },
     "updates": "Pending updates",
     "noUpdates": "No pending updates.",
     "certificateThumbprint": "Certificate thumbprint",

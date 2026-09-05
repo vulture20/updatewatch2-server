@@ -31,6 +31,10 @@ export interface AgentDetail {
   clientCertificateThumbprint: string | null;
   clientCertificateIssuedAt: string | null;
   clientCertificateExpiresAt: string | null;
+  /** Set while a remote install (triggerInstall) has been requested but not yet acknowledged by the agent (updatewatch2-server#10). */
+  pendingInstallRequestedAt: string | null;
+  lastInstallOutcome: 'Succeeded' | 'Failed' | null;
+  lastInstallCompletedAt: string | null;
 }
 
 /** Response of an admin-initiated certificate re-issuance (updatewatch2-server#8). */

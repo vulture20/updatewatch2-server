@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { agentsApi } from '../api/endpoints';
-import type { AgentDetail } from '../api/types';
+import type { AgentDetail, UpdateItem } from '../api/types';
 import { AgentDetailPage } from './AgentDetailPage';
 
 vi.mock('../api/endpoints', () => ({
@@ -19,6 +19,16 @@ vi.mock('../api/endpoints', () => ({
 const mockedGet = vi.mocked(agentsApi.get);
 const mockedUpdates = vi.mocked(agentsApi.updates);
 const mockedReissueCertificate = vi.mocked(agentsApi.reissueCertificate);
+const mockedTriggerInstall = vi.mocked(agentsApi.triggerInstall);
+
+const pendingUpdate: UpdateItem = {
+  id: 1,
+  title: 'Security Update',
+  packageId: 'KB123456',
+  description: null,
+  detectedAt: '2026-01-01T00:00:00Z',
+  installed: false,
+};
 
 const approvedAgent: AgentDetail = {
   hostname: 'host-1',
@@ -33,6 +43,9 @@ const approvedAgent: AgentDetail = {
   clientCertificateThumbprint: 'abc123',
   clientCertificateIssuedAt: '2026-01-01T00:00:00Z',
   clientCertificateExpiresAt: '2028-01-01T00:00:00Z',
+  pendingInstallRequestedAt: null,
+  lastInstallOutcome: null,
+  lastInstallCompletedAt: null,
 };
 
 function renderPage() {
@@ -50,6 +63,7 @@ describe('AgentDetailPage certificate re-issuance', () => {
     mockedGet.mockReset();
     mockedUpdates.mockReset();
     mockedReissueCertificate.mockReset();
+    mockedTriggerInstall.mockReset();
     mockedUpdates.mockResolvedValue([]);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     // navigator.clipboard is a getter-only accessor in jsdom — a plain
@@ -106,5 +120,63 @@ describe('AgentDetailPage certificate re-issuance', () => {
     await user.click(screen.getByRole('button', { name: /reissue certificate/i }));
 
     expect(mockedReissueCertificate).not.toHaveBeenCalled();
+  });
+});
+
+// updatewatch2-server#10: the trigger-install button used to be pure
+// fire-and-forget (no re-fetch, no pending/outcome state shown) — the
+// issue that split out remote-install delivery called this out explicitly
+// as something a real delivery mechanism should fix.
+describe('AgentDetailPage install trigger', () => {
+  beforeEach(() => {
+    mockedGet.mockReset();
+    mockedUpdates.mockReset();
+    mockedTriggerInstall.mockReset();
+    mockedUpdates.mockResolvedValue([pendingUpdate]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('triggers install and reloads the agent afterward', async () => {
+    mockedGet.mockResolvedValueOnce(approvedAgent).mockResolvedValueOnce({
+      ...approvedAgent,
+      pendingInstallRequestedAt: '2026-01-02T00:00:00Z',
+    });
+    mockedTriggerInstall.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    await user.click(screen.getByRole('button', { name: /install updates now/i }));
+
+    await waitFor(() => expect(mockedTriggerInstall).toHaveBeenCalledWith('host-1'));
+    await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('button', { name: /install pending/i })).toBeDisabled();
+  });
+
+  it('disables the button and hides the trigger label while an install is already pending', async () => {
+    mockedGet.mockResolvedValue({ ...approvedAgent, pendingInstallRequestedAt: '2026-01-02T00:00:00Z' });
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    expect(screen.queryByRole('button', { name: /install updates now/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /install pending/i })).toBeDisabled();
+  });
+
+  it('shows the last install outcome once acknowledged', async () => {
+    mockedGet.mockResolvedValue({
+      ...approvedAgent,
+      lastInstallOutcome: 'Succeeded',
+      lastInstallCompletedAt: '2026-01-02T00:00:00Z',
+    });
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    expect(screen.getByText(/succeeded/i)).toBeInTheDocument();
   });
 });

@@ -110,6 +110,32 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Trigger_install_surfaces_as_a_pending_install_request_in_agent_detail()
+    {
+        await SeedAgentAsync("install-detail-host");
+
+        await _client.PostAsync("/api/agents/install-detail-host/install", content: null);
+
+        var detail = await _client.GetFromJsonAsync<AgentDetail>("/api/agents/install-detail-host");
+        Assert.NotNull(detail);
+        Assert.NotNull(detail.PendingInstallRequestedAt);
+    }
+
+    // install-ack is agent-facing (mTLS), the same as ReportUpdates above —
+    // WebApplicationFactory can't present a client certificate, so only the
+    // rejection path is exercised here; the success path is covered by
+    // UpdateServiceTests (the logic) plus a live run (the actual handshake).
+    [Fact]
+    public async Task Acknowledging_install_without_a_client_certificate_is_rejected_even_for_a_logged_in_admin()
+    {
+        var response = await _client.PostAsJsonAsync(
+            "/api/agents/does-not-exist/install-ack",
+            new InstallAckRequest(InstallOutcome.Succeeded));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private async Task SeedAgentAsync(string hostname)
     {
         using var scope = _factory.Services.CreateScope();
@@ -145,5 +171,7 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     private record AgentDetail(string Hostname, string? DnsName, string? OperatingSystem, string? IpAddress,
-        string? AgentVersion, bool Approved, bool RebootRequired, int PendingUpdateCount, DateTimeOffset? LastAliveAt);
+        string? AgentVersion, bool Approved, bool RebootRequired, int PendingUpdateCount, DateTimeOffset? LastAliveAt,
+        string? ClientCertificateThumbprint, DateTimeOffset? ClientCertificateIssuedAt, DateTimeOffset? ClientCertificateExpiresAt,
+        DateTimeOffset? PendingInstallRequestedAt, string? LastInstallOutcome, DateTimeOffset? LastInstallCompletedAt);
 }

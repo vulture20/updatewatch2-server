@@ -55,6 +55,29 @@ public class Agent
 
     public int PendingUpdateCount { get; set; }
 
+    /// <summary>
+    /// Set when an admin triggers a remote install (updatewatch2-server#10);
+    /// cleared once the agent acknowledges having acted on it (see
+    /// <see cref="Updates.IUpdateService.AcknowledgeInstallAsync"/>). Delivery
+    /// is poll-based — surfaced to the agent as part of its regular alive
+    /// heartbeat response, not pushed — since a single pending request is
+    /// all "install everything currently pending for this agent" needs;
+    /// there's no per-update-item selection to make this a queue of
+    /// multiple distinguishable requests.
+    /// </summary>
+    public DateTimeOffset? PendingInstallRequestedAt { get; set; }
+
+    /// <summary>
+    /// The <see cref="Updates.InstallOutcome"/> name (e.g. "Succeeded") from
+    /// the agent's most recent install acknowledgement — a plain string, not
+    /// the enum type itself, matching this codebase's existing convention
+    /// for wire/DB-facing simple enums (see e.g. AdminSettings's
+    /// SmtpEncryption column).
+    /// </summary>
+    public string? LastInstallOutcome { get; set; }
+
+    public DateTimeOffset? LastInstallCompletedAt { get; set; }
+
     public DateTimeOffset? LastAliveAt { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

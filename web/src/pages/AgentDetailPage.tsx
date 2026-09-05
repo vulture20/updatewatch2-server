@@ -69,6 +69,14 @@ export function AgentDetailPage() {
         <dd>{agent.clientCertificateIssuedAt ? new Date(agent.clientCertificateIssuedAt).toLocaleString() : '—'}</dd>
         <dt>{t('agentDetail.certificateExpiresAt')}</dt>
         <dd>{agent.clientCertificateExpiresAt ? new Date(agent.clientCertificateExpiresAt).toLocaleString() : '—'}</dd>
+        <dt>{t('agentDetail.lastInstallOutcome')}</dt>
+        <dd>
+          {agent.pendingInstallRequestedAt
+            ? t('agentDetail.installPending')
+            : agent.lastInstallOutcome
+              ? `${t(`agentDetail.installOutcome.${agent.lastInstallOutcome}`)} (${new Date(agent.lastInstallCompletedAt!).toLocaleString()})`
+              : '—'}
+        </dd>
       </dl>
 
       {reissuedToken && (
@@ -97,10 +105,10 @@ export function AgentDetailPage() {
 
       <button
         type="button"
-        disabled={updates.length === 0}
-        onClick={() => void agentsApi.triggerInstall(agent.hostname)}
+        disabled={updates.length === 0 || Boolean(agent.pendingInstallRequestedAt)}
+        onClick={() => void agentsApi.triggerInstall(agent.hostname).then(reload)}
       >
-        {t('agentDetail.triggerInstall')}
+        {agent.pendingInstallRequestedAt ? t('agentDetail.installPending') : t('agentDetail.triggerInstall')}
       </button>
 
       <h2>{t('agentDetail.updates')}</h2>

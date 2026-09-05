@@ -19,7 +19,8 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
             .Select(a => new AgentDetailDto(
                 a.Hostname, a.DnsName, a.OperatingSystem, a.IpAddress, a.AgentVersion,
                 a.Approved, a.RebootRequired, a.PendingUpdateCount, a.LastAliveAt,
-                a.ClientCertificateThumbprint, a.ClientCertificateIssuedAt, a.ClientCertificateExpiresAt))
+                a.ClientCertificateThumbprint, a.ClientCertificateIssuedAt, a.ClientCertificateExpiresAt,
+                a.PendingInstallRequestedAt, a.LastInstallOutcome, a.LastInstallCompletedAt))
             .SingleOrDefaultAsync(ct);
 
     public async Task<bool> ApproveAsync(string hostname, string approvedBy, CancellationToken ct = default)

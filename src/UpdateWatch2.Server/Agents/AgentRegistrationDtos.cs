@@ -38,6 +38,15 @@ public record AgentRegistrationOutcome(AgentRegistrationStatus Status, string? R
 }
 
 /// <summary>
+/// Result of a recorded alive heartbeat (updatewatch2-server#10) —
+/// <see cref="InstallRequested"/> mirrors <c>Agent.PendingInstallRequestedAt</c>
+/// being set, so <see cref="Api.Controllers.AgentProtocolController.Alive"/>
+/// can hand it back to the agent in the same round-trip rather than needing
+/// a second poll endpoint.
+/// </summary>
+public record AliveRecordResult(bool InstallRequested);
+
+/// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)
 /// — reached only over the agent-facing mTLS listener, authenticated by the
 /// agent's CURRENT still-valid client certificate rather than a token. Not

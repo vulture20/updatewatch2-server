@@ -46,4 +46,22 @@ public class UpdatesController(IUpdateService updateService) : ControllerBase
         var found = await updateService.TriggerInstallAsync(hostname, triggeredBy: User.Identity!.Name!, ct);
         return found ? Accepted() : NotFound();
     }
+
+    // Agent-facing, not admin-facing (mTLS, like ReportUpdates above) — the
+    // agent's acknowledgement that it acted on a pending install request
+    // delivered via its alive heartbeat (updatewatch2-server#10/
+    // updatewatch2-agent#4). See AgentProtocolController.Alive for delivery
+    // and IUpdateService.AcknowledgeInstallAsync for what this clears.
+    [HttpPost("install-ack")]
+    [Authorize(Policy = CertificateAuthenticationSetup.AgentCertificatePolicy)]
+    public async Task<IActionResult> AcknowledgeInstall(string hostname, [FromBody] InstallAckRequest request, CancellationToken ct)
+    {
+        if (!string.Equals(User.Identity?.Name, hostname, StringComparison.Ordinal))
+        {
+            return Forbid();
+        }
+
+        var found = await updateService.AcknowledgeInstallAsync(hostname, request.Outcome, ct);
+        return found ? NoContent() : NotFound();
+    }
 }

@@ -50,8 +50,14 @@ public class AgentProtocolController(IAgentRegistrationService registrationServi
             return Forbid();
         }
 
-        var found = await registrationService.RecordAliveAsync(hostname, ct);
-        return found ? NoContent() : NotFound();
+        var result = await registrationService.RecordAliveAsync(hostname, ct);
+        // Was a bare 204 No Content before installRequested existed to
+        // report (updatewatch2-server#10) — protocol version bumped
+        // alongside this change (see Protocol/ProtocolVersion.cs) since a
+        // pre-#10 agent build only ever checked the status code, never a
+        // body, so this is additive rather than actually breaking, but the
+        // wire shape did change.
+        return result is null ? NotFound() : Ok(new { installRequested = result.InstallRequested });
     }
 
     // Distinct from Register: this is how an already-certified agent gets a

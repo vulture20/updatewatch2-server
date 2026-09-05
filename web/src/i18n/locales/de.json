@@ -34,6 +34,12 @@
     "never": "Nie",
     "approve": "Bestätigen",
     "triggerInstall": "Updates jetzt installieren",
+    "installPending": "Installation ausstehend…",
+    "lastInstallOutcome": "Letztes Installationsergebnis",
+    "installOutcome": {
+      "Succeeded": "Erfolgreich",
+      "Failed": "Fehlgeschlagen"
+    },
     "updates": "Ausstehende Updates",
     "noUpdates": "Keine ausstehenden Updates.",
     "certificateThumbprint": "Zertifikats-Fingerabdruck",

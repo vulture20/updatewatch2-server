@@ -20,7 +20,10 @@ public record AgentDetailDto(
     DateTimeOffset? LastAliveAt,
     string? ClientCertificateThumbprint,
     DateTimeOffset? ClientCertificateIssuedAt,
-    DateTimeOffset? ClientCertificateExpiresAt);
+    DateTimeOffset? ClientCertificateExpiresAt,
+    DateTimeOffset? PendingInstallRequestedAt,
+    string? LastInstallOutcome,
+    DateTimeOffset? LastInstallCompletedAt);
 
 public record BulkApproveRequest(IReadOnlyList<string> Hostnames);
 

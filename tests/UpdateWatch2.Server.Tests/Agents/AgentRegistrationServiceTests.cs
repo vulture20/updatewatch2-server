@@ -172,16 +172,31 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task RecordAliveAsync_updates_LastAliveAt_for_a_known_agent_and_returns_false_for_an_unknown_one()
+    public async Task RecordAliveAsync_updates_LastAliveAt_for_a_known_agent_and_returns_null_for_an_unknown_one()
     {
         await _service.RegisterAsync("alive-host", BareRequest);
 
         var found = await _service.RecordAliveAsync("alive-host");
         var notFound = await _service.RecordAliveAsync("no-such-host");
 
-        Assert.True(found);
-        Assert.False(notFound);
+        Assert.NotNull(found);
+        Assert.False(found.InstallRequested);
+        Assert.Null(notFound);
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == "alive-host");
         Assert.NotNull(agent.LastAliveAt);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_reports_InstallRequested_once_an_install_has_been_triggered()
+    {
+        await _service.RegisterAsync("install-pending-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "install-pending-host");
+        agent.PendingInstallRequestedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var result = await _service.RecordAliveAsync("install-pending-host");
+
+        Assert.NotNull(result);
+        Assert.True(result.InstallRequested);
     }
 }

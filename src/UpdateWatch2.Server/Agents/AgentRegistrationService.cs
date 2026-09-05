@@ -109,17 +109,17 @@ public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca,
         return AgentRegistrationOutcome.Approved(Convert.ToBase64String(issued.PfxBytes));
     }
 
-    public async Task<bool> RecordAliveAsync(string hostname, CancellationToken ct = default)
+    public async Task<AliveRecordResult?> RecordAliveAsync(string hostname, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
         if (agent is null)
         {
-            return false;
+            return null;
         }
 
         agent.LastAliveAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
-        return true;
+        return new AliveRecordResult(agent.PendingInstallRequestedAt is not null);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)
