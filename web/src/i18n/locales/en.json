@@ -96,7 +96,20 @@
     "adLoginGroupDn": "Login group DN",
     "adLoginGroupDnHint": "Only members of this group are granted login — checked via the group's own \"member\" attribute.",
     "agentCertificateValidityDays": "Agent certificate validity (days)",
-    "agentCertificateValidityDaysHint": "Applies to newly issued or renewed agent certificates only, not retroactively to already-issued ones. The internal CA root and the server's own certificate have a fixed lifetime and aren't configurable here.",
+    "agentCertificateValidityDaysHint": "Applies to newly issued or renewed agent certificates only, not retroactively to already-issued ones. Each CA root's own lifetime is fixed and isn't configurable — rotate it below instead once it's due.",
+    "caRotation": {
+      "title": "Certificate authority root rotation",
+      "hint": "Three separate steps, not one \"rotate now\" button: prepare generates a new root without using it for anything yet; activate switches to it and re-issues this server's own certificate immediately (no restart needed); retire drops the old root once every agent has renewed past it. Wait for agents to pick up a prepared root on their own heartbeat cadence before activating — an agent that hasn't yet will briefly lose its connection to the server otherwise.",
+      "current": "Current root",
+      "previous": "Previous root (still trusted)",
+      "pending": "Prepared root (not yet active)",
+      "expires": "expires",
+      "prepare": "Prepare rotation",
+      "activate": "Activate rotation",
+      "retirePrevious": "Retire previous root",
+      "activateConfirm": "Activate the prepared root now? This server's own certificate switches immediately — make sure agents have had time to fetch the prepared root first.",
+      "retireConfirm": "Retire the previous root now? Any agent whose certificate hasn't renewed past it yet will lose its connection until an admin re-issues its certificate."
+    },
     "save": "Save",
     "saved": "Settings saved."
   },

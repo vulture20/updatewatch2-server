@@ -11,6 +11,57 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.12.0] - 2026-09-05
+
+### Added
+
+- Internal CA root rotation (`updatewatch2-server#6`), the one gap
+  deliberately left open when mutual-TLS agent authentication first
+  shipped. Three explicit admin actions, not a single "rotate now"
+  button:
+  - `POST /api/admin/certificate-authority/prepare` generates a new root
+    without using it for anything yet.
+  - `POST .../activate` promotes it to current, demotes the previous
+    root to "still trusted but no longer used to sign anything new" (so
+    an already-issued, not-yet-renewed agent certificate keeps
+    validating), and re-issues the server's own agent-facing TLS leaf
+    under the new root immediately — no restart, via Kestrel's
+    `ServerCertificateSelector` reading the CA's current leaf on every
+    new connection rather than a value captured once at startup.
+  - `POST .../retire-previous` drops the superseded root once an admin
+    is satisfied every agent has renewed past it.
+  - `GET .../` (status) reports current/previous/pending thumbprints and
+    expiries.
+- A new agent-facing `GET /api/agent/ca-certificates` (plural) endpoint
+  publishes every root the CA currently knows about — current, previous,
+  and a prepared-but-not-yet-active pending one — as a PKCS7 bundle, so
+  an already-onboarded agent can pre-trust an upcoming root on its own
+  heartbeat cadence, ahead of an admin activating it. The original
+  singular `GET /api/agent/ca-certificate` (current root only, raw DER)
+  is unchanged, for bootstrap trust-on-first-use.
+- A minimal admin UI panel (Administration → Certificates tab) for the
+  three actions above plus the status display, with confirmation prompts
+  before activating or retiring since both are one-way and can affect
+  live agent connectivity if done before agents have caught up.
+
+### Fixed
+
+- `CertificateRequest.Create`-signed leaves carried no
+  `AuthorityKeyIdentifier` extension binding them to the specific
+  issuing root's key — harmless with only ever one root in existence,
+  but the moment a second one could exist (rotation), two roots sharing
+  a look-alike Subject let `X509Chain.Build()` pick the wrong candidate
+  to verify a leaf's signature against, failing with "certificate
+  signature failure". Reproduced live, not just reasoned about — fixed
+  by adding `X509AuthorityKeyIdentifierExtension` to every issued leaf,
+  plus giving each generated root a unique Subject (a timestamp suffix)
+  as a belt-and-suspenders second fix.
+
+### Changed
+
+- Protocol version bumped to `0.6.0` for the new `ca-certificates`
+  endpoint.
+
 ## [0.11.0] - 2026-09-05
 
 ### Added

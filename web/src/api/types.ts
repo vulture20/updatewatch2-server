@@ -62,6 +62,16 @@ export interface VersionInfo {
   database: string;
 }
 
+/** CA root rotation state (updatewatch2-server#6) — see CertificateAuthorityController. */
+export interface CaRotationStatus {
+  currentThumbprint: string;
+  currentNotAfter: string;
+  previousThumbprint: string | null;
+  previousNotAfter: string | null;
+  pendingThumbprint: string | null;
+  pendingNotAfter: string | null;
+}
+
 export type SmtpEncryption = 'None' | 'SslTls' | 'StartTls';
 export type AdEncryption = 'None' | 'StartTls' | 'Ldaps';
 

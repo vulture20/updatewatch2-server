@@ -15,10 +15,11 @@ namespace UpdateWatch2.Server.Certificates;
 /// is sufficient because the only parties that ever need to trust it are
 /// this server and its own agents, not a public client.
 ///
-/// Root: RSA 4096, 10-year validity — long enough that rotation is a rare,
-/// deliberately out-of-scope, separate concern (see the follow-up issue
-/// opened alongside this feature). Leaves (server + agent): ECDsa P-256,
-/// short-lived by comparison, cheap to generate, cross-signed under the RSA root via
+/// Root: RSA 4096, 10-year validity — long enough that rotation
+/// (updatewatch2-server#6) is a rare, deliberate admin action rather than
+/// something this class does on its own. Leaves (server + agent): ECDsa
+/// P-256, short-lived by comparison, cheap to generate, cross-signed under
+/// the RSA root via
 /// <see cref="CertificateRequest.Create(X509Certificate2, DateTimeOffset, DateTimeOffset, byte[])"/>,
 /// a standard, fully-supported .NET pattern. The server leaf's validity is
 /// still a fixed constant; the agent leaf's is not — <see cref="IssueAgentLeaf"/>
@@ -31,10 +32,24 @@ namespace UpdateWatch2.Server.Certificates;
 ///
 /// The server's own leaf (<see cref="EnsureServerLeaf"/>) is regenerated
 /// automatically whenever its SAN no longer matches the currently configured
-/// hostname, rather than requiring an operator to manually delete
-/// <c>server.pfx</c> — safe to do freely because agents validate the *chain
-/// to the pinned root*, not the leaf's identity/thumbprint, so rotating the
-/// leaf never breaks an already-onboarded agent.
+/// hostname, or it no longer chains to the CURRENT root (which
+/// <see cref="ActivateRotation"/> can change at runtime) — rather than
+/// requiring an operator to manually delete <c>server.pfx</c>. Safe to do
+/// freely because agents validate the *chain to a trusted root*, not the
+/// leaf's identity/thumbprint, so rotating the leaf never breaks an
+/// already-onboarded agent, provided that agent already trusts the new
+/// root — see the class-level remarks on <see cref="ActivateRotation"/> for
+/// why that ordering matters.
+///
+/// Rotation (updatewatch2-server#6) keeps at most three roots on disk at
+/// once: <c>ca.pfx</c> (current, signs everything new), <c>ca-previous.pfx</c>
+/// (superseded but still trusted for already-issued, not-yet-renewed agent
+/// leaves), and <c>ca-next.pfx</c> (prepared but not yet active — published
+/// for agents to pre-trust, signs nothing yet). Only two generations are
+/// ever kept live (current + previous) — activating again while a previous
+/// root still exists discards it outright, on the assumption that any leaf
+/// old enough to have been signed two rotations back has had far longer
+/// than <c>CertificateRenewalLeadTimeDays</c> to renew already.
 /// </summary>
 public class InternalCertificateAuthority : ICertificateAuthority
 {
@@ -59,39 +74,70 @@ public class InternalCertificateAuthority : ICertificateAuthority
     // container = one exclusive certs volume, where that doesn't apply).
     private static readonly Lock RootLock = new();
 
+    private const string CurrentFileName = "ca.pfx";
+    private const string PreviousFileName = "ca-previous.pfx";
+    private const string PendingFileName = "ca-next.pfx";
+
     private readonly string _certsDirectory;
     private readonly Lock _issueLock = new();
+    private readonly Lock _rotationLock = new();
+
+    private X509Certificate2 _current;
+    private X509Certificate2? _previous;
+    private X509Certificate2? _pending;
+    private X509Certificate2? _serverLeaf;
+    private string? _serverLeafSanHostname;
 
     public InternalCertificateAuthority(string certsDirectory)
     {
         _certsDirectory = certsDirectory;
         Directory.CreateDirectory(_certsDirectory);
-        RootCertificate = LoadOrCreateRoot();
+        _current = LoadOrCreateRoot();
+        _previous = TryLoadRoot(PreviousFileName);
+        _pending = TryLoadRoot(PendingFileName);
+
+        TrustedRootCertificates = new X509Certificate2Collection();
+        RebuildTrustedRoots();
     }
 
-    public X509Certificate2 RootCertificate { get; }
+    public X509Certificate2 RootCertificate => _current;
+
+    public X509Certificate2? PreviousRootCertificate => _previous;
+
+    public X509Certificate2? PendingRootCertificate => _pending;
+
+    public X509Certificate2Collection TrustedRootCertificates { get; }
+
+    public X509Certificate2Collection AllKnownRootCertificates
+    {
+        get
+        {
+            var all = new X509Certificate2Collection { _current };
+            if (_previous is not null)
+            {
+                all.Add(_previous);
+            }
+
+            if (_pending is not null)
+            {
+                all.Add(_pending);
+            }
+
+            return all;
+        }
+    }
+
+    public X509Certificate2 CurrentServerLeaf =>
+        _serverLeaf ?? throw new InvalidOperationException("EnsureServerLeaf must be called once at startup before CurrentServerLeaf is read.");
 
     public X509Certificate2 EnsureServerLeaf(string sanHostname)
     {
-        var path = Path.Combine(_certsDirectory, "server.pfx");
-        if (File.Exists(path))
+        lock (_rotationLock)
         {
-            var existing = X509CertificateLoader.LoadPkcs12FromFile(path, password: null, X509KeyStorageFlags.Exportable);
-            if (HasSan(existing, sanHostname))
-            {
-                return existing;
-            }
-
-            // The configured hostname changed since this leaf was issued —
-            // regenerate rather than fail; see the class-level remarks on why
-            // this is always safe.
-            existing.Dispose();
+            _serverLeafSanHostname = sanHostname;
+            _serverLeaf = LoadOrCreateServerLeaf(sanHostname);
+            return _serverLeaf;
         }
-
-        var (cert, pfxBytes) = CreateLeaf(sanHostname, [sanHostname], ServerAuthEku, ServerLeafValidity);
-        File.WriteAllBytes(path, pfxBytes);
-        RestrictToOwner(path);
-        return cert;
     }
 
     public IssuedCertificate IssueAgentLeaf(string hostname, TimeSpan validity)
@@ -100,18 +146,142 @@ public class InternalCertificateAuthority : ICertificateAuthority
         {
             var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
             var notAfter = notBefore.Add(validity);
-            var (cert, pfxBytes) = CreateLeaf(hostname, [], ClientAuthEku, validity, notBefore, notAfter);
+            var (cert, pfxBytes) = CreateLeaf(_current, hostname, [], ClientAuthEku, notBefore, notAfter);
             var thumbprint = cert.GetCertHashString(HashAlgorithmName.SHA256);
             cert.Dispose();
             return new IssuedCertificate(pfxBytes, thumbprint, notBefore, notAfter);
         }
     }
 
+    public CaRotationStatus GetRotationStatus() => new(
+        CurrentThumbprint: _current.GetCertHashString(HashAlgorithmName.SHA256),
+        CurrentNotAfter: _current.NotAfter,
+        PreviousThumbprint: _previous?.GetCertHashString(HashAlgorithmName.SHA256),
+        PreviousNotAfter: _previous?.NotAfter,
+        PendingThumbprint: _pending?.GetCertHashString(HashAlgorithmName.SHA256),
+        PendingNotAfter: _pending?.NotAfter);
+
+    public X509Certificate2 PrepareRotation()
+    {
+        lock (_rotationLock)
+        {
+            var path = Path.Combine(_certsDirectory, PendingFileName);
+            _pending = CreateAndPersistRoot(path);
+            return _pending;
+        }
+    }
+
+    public void ActivateRotation()
+    {
+        lock (_rotationLock)
+        {
+            if (_pending is null)
+            {
+                throw new InvalidOperationException("No pending root to activate — call PrepareRotation first.");
+            }
+
+            var currentPath = Path.Combine(_certsDirectory, CurrentFileName);
+            var previousPath = Path.Combine(_certsDirectory, PreviousFileName);
+            var pendingPath = Path.Combine(_certsDirectory, PendingFileName);
+
+            // Ordered so a crash mid-way never leaves this CA without a
+            // valid current root: the old current is preserved as previous
+            // BEFORE ca.pfx is overwritten, and ca-next.pfx is only removed
+            // AFTER the pending root has already taken over as current — a
+            // process restart interrupted anywhere in this sequence still
+            // finds a fully valid current root on disk, at worst re-reading
+            // a rotation as still "prepared" (harmless — ActivateRotation
+            // just needs calling again).
+            File.Copy(currentPath, previousPath, overwrite: true);
+            RestrictToOwner(previousPath);
+            File.Copy(pendingPath, currentPath, overwrite: true);
+            File.Delete(pendingPath);
+
+            _previous = _current;
+            _current = _pending;
+            _pending = null;
+
+            RebuildTrustedRoots();
+
+            // The server's own leaf must switch to the new current root
+            // immediately — an agent that already pre-trusted the pending
+            // root (via GET /api/agent/ca-certificates on its own heartbeat
+            // cadence) needs to see that trust rewarded right away, and one
+            // that hasn't yet will simply keep retrying on its own poll
+            // cadence, the same self-healing shape as every other
+            // maintenance loop in this project.
+            if (_serverLeafSanHostname is not null)
+            {
+                _serverLeaf = LoadOrCreateServerLeaf(_serverLeafSanHostname);
+            }
+        }
+    }
+
+    public void RetirePreviousRoot()
+    {
+        lock (_rotationLock)
+        {
+            if (_previous is null)
+            {
+                throw new InvalidOperationException("No previous root to retire.");
+            }
+
+            var previousPath = Path.Combine(_certsDirectory, PreviousFileName);
+            if (File.Exists(previousPath))
+            {
+                File.Delete(previousPath);
+            }
+
+            _previous = null;
+            RebuildTrustedRoots();
+        }
+    }
+
+    private void RebuildTrustedRoots()
+    {
+        TrustedRootCertificates.Clear();
+        TrustedRootCertificates.Add(_current);
+        if (_previous is not null)
+        {
+            TrustedRootCertificates.Add(_previous);
+        }
+    }
+
+    private X509Certificate2 LoadOrCreateServerLeaf(string sanHostname)
+    {
+        var path = Path.Combine(_certsDirectory, "server.pfx");
+        if (File.Exists(path))
+        {
+            var existing = X509CertificateLoader.LoadPkcs12FromFile(path, password: null, X509KeyStorageFlags.Exportable);
+            if (HasSan(existing, sanHostname) && ChainsTo(existing, _current))
+            {
+                return existing;
+            }
+
+            // Either the configured hostname changed since this leaf was
+            // issued, or (updatewatch2-server#6) the current root has
+            // rotated since — regenerate rather than fail; see the
+            // class-level remarks on why this is always safe.
+            existing.Dispose();
+        }
+
+        var (cert, pfxBytes) = CreateLeaf(_current, sanHostname, [sanHostname], ServerAuthEku, DateTimeOffset.UtcNow.AddMinutes(-5), null, ServerLeafValidity);
+        File.WriteAllBytes(path, pfxBytes);
+        RestrictToOwner(path);
+        return cert;
+    }
+
+    private X509Certificate2? TryLoadRoot(string fileName)
+    {
+        var path = Path.Combine(_certsDirectory, fileName);
+        return File.Exists(path) ? X509CertificateLoader.LoadPkcs12FromFile(path, password: null, X509KeyStorageFlags.Exportable) : null;
+    }
+
     private X509Certificate2 LoadOrCreateRoot()
     {
         lock (RootLock)
         {
-            var path = Path.Combine(_certsDirectory, "ca.pfx");
+            var path = Path.Combine(_certsDirectory, CurrentFileName);
             if (File.Exists(path))
             {
                 return X509CertificateLoader.LoadPkcs12FromFile(path, password: null, X509KeyStorageFlags.Exportable);
@@ -121,11 +291,23 @@ public class InternalCertificateAuthority : ICertificateAuthority
         }
     }
 
-    private X509Certificate2 CreateAndPersistRoot(string path)
+    private static X509Certificate2 CreateAndPersistRoot(string path)
     {
         using var rsa = RSA.Create(RootKeySizeBits);
+
+        // The generation suffix matters, not just for an operator telling
+        // two roots apart at a glance: X509Chain.Build() matches a leaf's
+        // Issuer field against a candidate root's Subject by DN first —
+        // two roots sharing byte-identical Subject text ("certificate
+        // signature failure" was the actual live symptom this caused
+        // before the suffix was added, i.e. NOT a theoretical concern) can
+        // make chain building pick the wrong candidate to verify a
+        // signature against. The X509AuthorityKeyIdentifierExtension added
+        // to every leaf below (updatewatch2-server#6) is the standards-
+        // compliant fix for that disambiguation; a unique Subject per root
+        // generation is belt-and-suspenders on top of it, not a substitute.
         var request = new CertificateRequest(
-            new X500DistinguishedName("CN=UpdateWatch2 Internal CA"),
+            new X500DistinguishedName($"CN=UpdateWatch2 Internal CA {DateTimeOffset.UtcNow:yyyyMMddHHmmssfff}"),
             rsa,
             HashAlgorithmName.SHA256,
             RSASignaturePadding.Pkcs1);
@@ -147,15 +329,11 @@ public class InternalCertificateAuthority : ICertificateAuthority
         return X509CertificateLoader.LoadPkcs12(pfxBytes, password: null, X509KeyStorageFlags.Exportable);
     }
 
-    private (X509Certificate2 Cert, byte[] PfxBytes) CreateLeaf(
-        string subjectCn, IReadOnlyList<string> sanDnsNames, Oid enhancedKeyUsage, TimeSpan validity) =>
-        CreateLeaf(subjectCn, sanDnsNames, enhancedKeyUsage, validity, DateTimeOffset.UtcNow.AddMinutes(-5), null);
-
-    private (X509Certificate2 Cert, byte[] PfxBytes) CreateLeaf(
-        string subjectCn, IReadOnlyList<string> sanDnsNames, Oid enhancedKeyUsage, TimeSpan validity,
-        DateTimeOffset notBefore, DateTimeOffset? notAfterOverride)
+    private static (X509Certificate2 Cert, byte[] PfxBytes) CreateLeaf(
+        X509Certificate2 issuer, string subjectCn, IReadOnlyList<string> sanDnsNames, Oid enhancedKeyUsage,
+        DateTimeOffset notBefore, DateTimeOffset? notAfterOverride, TimeSpan? validityIfNoOverride = null)
     {
-        var notAfter = notAfterOverride ?? notBefore.Add(validity);
+        var notAfter = notAfterOverride ?? notBefore.Add(validityIfNoOverride!.Value);
 
         using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var request = new CertificateRequest(new X500DistinguishedName($"CN={subjectCn}"), ecdsa, HashAlgorithmName.SHA256);
@@ -166,6 +344,19 @@ public class InternalCertificateAuthority : ICertificateAuthority
             new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, critical: true));
         request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension([enhancedKeyUsage], critical: false));
         request.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(request.PublicKey, critical: false));
+
+        // Binds this leaf to the specific issuing root's key, not just its
+        // Subject name — required once more than one root can be live at
+        // once (updatewatch2-server#6): X509Chain.Build() otherwise matches
+        // a candidate issuer by Subject DN first, and two roots (a rotated
+        // current + a still-trusted previous) sharing a look-alike Subject
+        // could make it try to verify this leaf's signature against the
+        // wrong one. Confirmed live, not theoretical — this was missing
+        // originally (fine with only ever one root in existence) and
+        // reproduced a real "certificate signature failure" the moment a
+        // second root existed, before this extension was added.
+        request.CertificateExtensions.Add(X509AuthorityKeyIdentifierExtension.CreateFromCertificate(
+            issuer, includeKeyIdentifier: true, includeIssuerAndSerial: false));
 
         if (sanDnsNames.Count > 0)
         {
@@ -187,10 +378,10 @@ public class InternalCertificateAuthority : ICertificateAuthority
         // leaf is ECDsa by design — see the class-level remarks). The
         // X509SignatureGenerator overload is the one that actually supports
         // signing an ECDsa leaf with an RSA-keyed issuer.
-        using var issuerKey = RootCertificate.GetRSAPrivateKey()
+        using var issuerKey = issuer.GetRSAPrivateKey()
             ?? throw new InvalidOperationException("Root CA certificate has no RSA private key to sign with.");
         var signatureGenerator = X509SignatureGenerator.CreateForRSA(issuerKey, RSASignaturePadding.Pkcs1);
-        using var publicOnly = request.Create(RootCertificate.SubjectName, signatureGenerator, notBefore, notAfter, serialNumber);
+        using var publicOnly = request.Create(issuer.SubjectName, signatureGenerator, notBefore, notAfter, serialNumber);
         using var withKey = publicOnly.CopyWithPrivateKey(ecdsa);
 
         var pfxBytes = withKey.Export(X509ContentType.Pfx);
@@ -201,6 +392,15 @@ public class InternalCertificateAuthority : ICertificateAuthority
     private static bool HasSan(X509Certificate2 cert, string hostname) =>
         cert.Extensions.OfType<X509SubjectAlternativeNameExtension>()
             .Any(ext => ext.EnumerateDnsNames().Contains(hostname, StringComparer.OrdinalIgnoreCase));
+
+    private static bool ChainsTo(X509Certificate2 leaf, X509Certificate2 root)
+    {
+        using var chain = new X509Chain();
+        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+        chain.ChainPolicy.CustomTrustStore.Add(root);
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        return chain.Build(leaf);
+    }
 
     private static void RestrictToOwner(string path)
     {

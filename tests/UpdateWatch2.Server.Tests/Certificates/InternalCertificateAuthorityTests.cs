@@ -122,6 +122,152 @@ public class InternalCertificateAuthorityTests : IDisposable
         Assert.NotEqual(a.ThumbprintSha256, b.ThumbprintSha256);
     }
 
+    [Fact]
+    public void PrepareRotation_generates_a_pending_root_without_disturbing_the_current_one()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+        var currentBefore = ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256);
+
+        var pending = ca.PrepareRotation();
+
+        Assert.Equal(currentBefore, ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256));
+        Assert.NotEqual(currentBefore, pending.GetCertHashString(HashAlgorithmName.SHA256));
+        Assert.Equal(pending.GetCertHashString(HashAlgorithmName.SHA256), ca.PendingRootCertificate!.GetCertHashString(HashAlgorithmName.SHA256));
+
+        // Not yet trusted for client-cert authentication — nothing is
+        // signed by it yet.
+        Assert.DoesNotContain(ca.TrustedRootCertificates.Cast<X509Certificate2>(),
+            c => c.GetCertHashString(HashAlgorithmName.SHA256) == pending.GetCertHashString(HashAlgorithmName.SHA256));
+
+        // But published in the full bundle, so an agent can pre-trust it.
+        Assert.Contains(ca.AllKnownRootCertificates.Cast<X509Certificate2>(),
+            c => c.GetCertHashString(HashAlgorithmName.SHA256) == pending.GetCertHashString(HashAlgorithmName.SHA256));
+    }
+
+    [Fact]
+    public void ActivateRotation_throws_when_nothing_is_pending()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+
+        Assert.Throws<InvalidOperationException>(() => ca.ActivateRotation());
+    }
+
+    [Fact]
+    public void ActivateRotation_promotes_the_pending_root_and_keeps_the_old_one_trusted_as_previous()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+        var originalRootThumbprint = ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256);
+        var pending = ca.PrepareRotation();
+        var pendingThumbprint = pending.GetCertHashString(HashAlgorithmName.SHA256);
+
+        // An agent leaf issued before activation must keep validating
+        // afterward — this is the entire point of "previous" staying
+        // trusted rather than the CA simply swapping roots outright.
+        var preRotationLeaf = ca.IssueAgentLeaf("pre-rotation-host", TimeSpan.FromDays(730));
+
+        ca.ActivateRotation();
+
+        Assert.Equal(pendingThumbprint, ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256));
+        Assert.Equal(originalRootThumbprint, ca.PreviousRootCertificate!.GetCertHashString(HashAlgorithmName.SHA256));
+        Assert.Null(ca.PendingRootCertificate);
+
+        using var preRotationCert = X509CertificateLoader.LoadPkcs12(preRotationLeaf.PfxBytes, password: null);
+        AssertChainsToAnyOf(preRotationCert, ca.TrustedRootCertificates);
+
+        // A leaf issued AFTER activation is signed by the new current root.
+        var postRotationLeaf = ca.IssueAgentLeaf("post-rotation-host", TimeSpan.FromDays(730));
+        using var postRotationCert = X509CertificateLoader.LoadPkcs12(postRotationLeaf.PfxBytes, password: null);
+        AssertChainsToRoot(postRotationCert, ca.RootCertificate);
+    }
+
+    [Fact]
+    public void ActivateRotation_reissues_the_server_leaf_under_the_new_root_immediately()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+        ca.EnsureServerLeaf("updatewatch2.example.com");
+        var leafBeforeThumbprint = ca.CurrentServerLeaf.GetCertHashString(HashAlgorithmName.SHA256);
+
+        ca.PrepareRotation();
+        ca.ActivateRotation();
+
+        // No EnsureServerLeaf call in between — ActivateRotation itself must
+        // have re-issued it, matching the "no restart required" bar this
+        // project holds re-issuance to.
+        Assert.NotEqual(leafBeforeThumbprint, ca.CurrentServerLeaf.GetCertHashString(HashAlgorithmName.SHA256));
+        AssertChainsToRoot(ca.CurrentServerLeaf, ca.RootCertificate);
+
+        var sanExtension = ca.CurrentServerLeaf.Extensions.OfType<X509SubjectAlternativeNameExtension>().Single();
+        Assert.Contains("updatewatch2.example.com", sanExtension.EnumerateDnsNames());
+    }
+
+    [Fact]
+    public void RetirePreviousRoot_throws_when_there_is_no_previous_root()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+
+        Assert.Throws<InvalidOperationException>(() => ca.RetirePreviousRoot());
+    }
+
+    [Fact]
+    public void RetirePreviousRoot_drops_it_from_trust_and_a_leaf_signed_only_by_it_no_longer_validates()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+        var preRotationLeaf = ca.IssueAgentLeaf("stranded-host", TimeSpan.FromDays(730));
+        ca.PrepareRotation();
+        ca.ActivateRotation();
+
+        using var strandedCert = X509CertificateLoader.LoadPkcs12(preRotationLeaf.PfxBytes, password: null);
+        AssertChainsToAnyOf(strandedCert, ca.TrustedRootCertificates); // still trusted via "previous" so far
+
+        ca.RetirePreviousRoot();
+
+        Assert.Null(ca.PreviousRootCertificate);
+        Assert.False(BuildsChain(strandedCert, ca.TrustedRootCertificates), "A leaf signed only by the retired root must no longer chain-validate.");
+    }
+
+    [Fact]
+    public void ActivateRotation_a_second_time_discards_the_older_previous_root_keeping_only_two_generations()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+        var firstRootThumbprint = ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256);
+        ca.PrepareRotation();
+        ca.ActivateRotation(); // previous = original first root
+
+        ca.PrepareRotation();
+        ca.ActivateRotation(); // previous should now be the SECOND root, not the first
+
+        Assert.NotEqual(firstRootThumbprint, ca.PreviousRootCertificate!.GetCertHashString(HashAlgorithmName.SHA256));
+        Assert.DoesNotContain(ca.TrustedRootCertificates.Cast<X509Certificate2>(),
+            c => c.GetCertHashString(HashAlgorithmName.SHA256) == firstRootThumbprint);
+    }
+
+    [Fact]
+    public void Rotation_state_survives_a_reload_from_disk()
+    {
+        var first = new InternalCertificateAuthority(_certsDirectory);
+        first.PrepareRotation();
+        first.ActivateRotation();
+        var currentAfterActivation = first.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256);
+        var previousAfterActivation = first.PreviousRootCertificate!.GetCertHashString(HashAlgorithmName.SHA256);
+
+        var second = new InternalCertificateAuthority(_certsDirectory);
+
+        Assert.Equal(currentAfterActivation, second.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256));
+        Assert.Equal(previousAfterActivation, second.PreviousRootCertificate!.GetCertHashString(HashAlgorithmName.SHA256));
+    }
+
+    private static void AssertChainsToAnyOf(X509Certificate2 leaf, X509Certificate2Collection roots) =>
+        Assert.True(BuildsChain(leaf, roots), "Expected the leaf to chain to at least one of the given roots.");
+
+    private static bool BuildsChain(X509Certificate2 leaf, X509Certificate2Collection roots)
+    {
+        using var chain = new X509Chain();
+        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+        chain.ChainPolicy.CustomTrustStore.AddRange(roots);
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        return chain.Build(leaf);
+    }
+
     private static void AssertChainsToRoot(X509Certificate2 leaf, X509Certificate2 root)
     {
         using var chain = new X509Chain();

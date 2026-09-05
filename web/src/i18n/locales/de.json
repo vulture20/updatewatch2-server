@@ -96,7 +96,20 @@
     "adLoginGroupDn": "Login-Gruppen-DN",
     "adLoginGroupDnHint": "Nur Mitglieder dieser Gruppe erhalten Login-Berechtigung — geprüft über das \"member\"-Attribut der Gruppe.",
     "agentCertificateValidityDays": "Gültigkeitsdauer Agent-Zertifikat (Tage)",
-    "agentCertificateValidityDaysHint": "Gilt nur für neu ausgestellte oder erneuerte Agent-Zertifikate, nicht rückwirkend für bereits ausgestellte. Die interne CA-Wurzel und das eigene Zertifikat des Servers haben eine feste Laufzeit und sind hier nicht konfigurierbar.",
+    "agentCertificateValidityDaysHint": "Gilt nur für neu ausgestellte oder erneuerte Agent-Zertifikate, nicht rückwirkend für bereits ausgestellte. Die Laufzeit jeder CA-Wurzel selbst ist fest und hier nicht konfigurierbar — bei Bedarf unten rotieren.",
+    "caRotation": {
+      "title": "Rotation der Zertifizierungsstelle (CA-Wurzel)",
+      "hint": "Drei getrennte Schritte statt eines einzigen \"Jetzt rotieren\"-Buttons: Vorbereiten erzeugt eine neue Wurzel, ohne sie sofort zu verwenden; Aktivieren schaltet auf sie um und stellt das eigene Zertifikat des Servers sofort neu aus (kein Neustart nötig); Zurückziehen entfernt die alte Wurzel, sobald jeder Agent über sie hinaus erneuert hat. Vor dem Aktivieren abwarten, bis Agents die vorbereitete Wurzel über ihren eigenen Heartbeat-Zyklus übernommen haben — sonst verliert ein Agent, der das noch nicht getan hat, kurzzeitig die Verbindung zum Server.",
+      "current": "Aktuelle Wurzel",
+      "previous": "Vorherige Wurzel (noch vertrauenswürdig)",
+      "pending": "Vorbereitete Wurzel (noch nicht aktiv)",
+      "expires": "gültig bis",
+      "prepare": "Rotation vorbereiten",
+      "activate": "Rotation aktivieren",
+      "retirePrevious": "Vorherige Wurzel zurückziehen",
+      "activateConfirm": "Vorbereitete Wurzel jetzt aktivieren? Das eigene Zertifikat des Servers wird sofort umgestellt — sicherstellen, dass Agents zuvor Zeit hatten, die vorbereitete Wurzel abzurufen.",
+      "retireConfirm": "Vorherige Wurzel jetzt zurückziehen? Jeder Agent, dessen Zertifikat noch nicht darüber hinaus erneuert wurde, verliert die Verbindung, bis ein Admin sein Zertifikat neu ausstellt."
+    },
     "save": "Speichern",
     "saved": "Einstellungen gespeichert."
   },

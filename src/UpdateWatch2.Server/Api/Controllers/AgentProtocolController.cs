@@ -93,4 +93,21 @@ public class AgentProtocolController(IAgentRegistrationService registrationServi
         var bytes = ca.RootCertificate.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Cert);
         return File(bytes, "application/x-x509-ca-cert");
     }
+
+    // Additive alongside CaCertificate above, not a replacement — that
+    // endpoint's single-DER-cert contract stays exactly as-is for bootstrap
+    // TOFU trust (updatewatch2-agent#1) and any agent build that predates
+    // rotation support (updatewatch2-server#6). This one hands out every
+    // root the CA currently knows about (current + previous + a pending one
+    // not yet active) as a PKCS7 certs-only bundle, so a rotation-aware
+    // agent can pre-trust an upcoming root ahead of an admin activating it —
+    // see ICertificateAuthority.AllKnownRootCertificates. Anonymous, like
+    // the singular endpoint: these are all public certificates.
+    [HttpGet("/api/agent/ca-certificates")]
+    [AllowAnonymous]
+    public IActionResult CaCertificateBundle()
+    {
+        var bytes = ca.AllKnownRootCertificates.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs7)!;
+        return File(bytes, "application/pkcs7-mime");
+    }
 }

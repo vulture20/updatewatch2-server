@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { adminApi, versionApi } from '../api/endpoints';
+import { adminApi, certificateAuthorityApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { AdminPage } from './AdminPage';
 
@@ -13,11 +13,30 @@ vi.mock('../api/endpoints', () => ({
   versionApi: {
     get: vi.fn(),
   },
+  certificateAuthorityApi: {
+    getStatus: vi.fn(),
+    prepareRotation: vi.fn(),
+    activateRotation: vi.fn(),
+    retirePreviousRoot: vi.fn(),
+  },
 }));
 
 const mockedGetSettings = vi.mocked(adminApi.getSettings);
 const mockedUpdateSettings = vi.mocked(adminApi.updateSettings);
 const mockedGetVersion = vi.mocked(versionApi.get);
+const mockedGetCaStatus = vi.mocked(certificateAuthorityApi.getStatus);
+const mockedPrepareRotation = vi.mocked(certificateAuthorityApi.prepareRotation);
+const mockedActivateRotation = vi.mocked(certificateAuthorityApi.activateRotation);
+const mockedRetirePreviousRoot = vi.mocked(certificateAuthorityApi.retirePreviousRoot);
+
+const baseCaStatus = {
+  currentThumbprint: 'AAAA',
+  currentNotAfter: '2036-01-01T00:00:00Z',
+  previousThumbprint: null,
+  previousNotAfter: null,
+  pendingThumbprint: null,
+  pendingNotAfter: null,
+};
 
 const baseSettings = {
   logLevel: 'INFO',
@@ -52,6 +71,10 @@ describe('AdminPage', () => {
     mockedGetSettings.mockReset().mockResolvedValue(baseSettings);
     mockedUpdateSettings.mockReset();
     mockedGetVersion.mockReset().mockResolvedValue({ server: '0.3.0', protocol: '0.1.0', database: '0.3.0' });
+    mockedGetCaStatus.mockReset().mockResolvedValue(baseCaStatus);
+    mockedPrepareRotation.mockReset();
+    mockedActivateRotation.mockReset();
+    mockedRetirePreviousRoot.mockReset();
   });
 
   it('renders the loaded settings into the form fields', async () => {
@@ -169,5 +192,100 @@ describe('AdminPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('SmtpPort must be between 1 and 65535.');
+  });
+});
+
+describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
+  beforeEach(() => {
+    mockedGetSettings.mockReset().mockResolvedValue(baseSettings);
+    mockedUpdateSettings.mockReset();
+    mockedGetVersion.mockReset().mockResolvedValue({ server: '0.3.0', protocol: '0.1.0', database: '0.3.0' });
+    mockedGetCaStatus.mockReset().mockResolvedValue(baseCaStatus);
+    mockedPrepareRotation.mockReset();
+    mockedActivateRotation.mockReset();
+    mockedRetirePreviousRoot.mockReset();
+  });
+
+  const openCertificatesTab = async (user: ReturnType<typeof userEvent.setup>) => {
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Certificates' }));
+  };
+
+  it('shows the current root and disables Activate/Retire when there is nothing pending or previous', async () => {
+    const user = userEvent.setup();
+    await openCertificatesTab(user);
+
+    expect(await screen.findByText('AAAA (expires 1.1.2036)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Activate rotation' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Retire previous root' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Prepare rotation' })).toBeEnabled();
+  });
+
+  it('prepares a rotation and reflects the newly pending root', async () => {
+    mockedPrepareRotation.mockResolvedValue({ ...baseCaStatus, pendingThumbprint: 'BBBB', pendingNotAfter: '2036-06-01T00:00:00Z' });
+    const user = userEvent.setup();
+    await openCertificatesTab(user);
+
+    await user.click(await screen.findByRole('button', { name: 'Prepare rotation' }));
+
+    expect(mockedPrepareRotation).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('BBBB (expires 1.6.2036)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Activate rotation' })).toBeEnabled();
+  });
+
+  it('asks for confirmation before activating and does nothing if declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    mockedGetCaStatus.mockResolvedValue({ ...baseCaStatus, pendingThumbprint: 'BBBB', pendingNotAfter: '2036-06-01T00:00:00Z' });
+    const user = userEvent.setup();
+    await openCertificatesTab(user);
+
+    await user.click(await screen.findByRole('button', { name: 'Activate rotation' }));
+
+    expect(mockedActivateRotation).not.toHaveBeenCalled();
+  });
+
+  it('activates a prepared rotation after confirmation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    mockedGetCaStatus.mockResolvedValue({ ...baseCaStatus, pendingThumbprint: 'BBBB', pendingNotAfter: '2036-06-01T00:00:00Z' });
+    mockedActivateRotation.mockResolvedValue({
+      currentThumbprint: 'BBBB',
+      currentNotAfter: '2036-06-01T00:00:00Z',
+      previousThumbprint: 'AAAA',
+      previousNotAfter: '2036-01-01T00:00:00Z',
+      pendingThumbprint: null,
+      pendingNotAfter: null,
+    });
+    const user = userEvent.setup();
+    await openCertificatesTab(user);
+
+    await user.click(await screen.findByRole('button', { name: 'Activate rotation' }));
+
+    expect(mockedActivateRotation).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('BBBB (expires 1.6.2036)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retire previous root' })).toBeEnabled();
+  });
+
+  it('retires the previous root after confirmation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    mockedGetCaStatus.mockResolvedValue({ ...baseCaStatus, previousThumbprint: 'AAAA', previousNotAfter: '2036-01-01T00:00:00Z' });
+    mockedRetirePreviousRoot.mockResolvedValue(baseCaStatus);
+    const user = userEvent.setup();
+    await openCertificatesTab(user);
+
+    await user.click(await screen.findByRole('button', { name: 'Retire previous root' }));
+
+    expect(mockedRetirePreviousRoot).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('button', { name: 'Retire previous root' })).toBeDisabled();
+  });
+
+  it('shows an error message when a rotation action fails', async () => {
+    mockedPrepareRotation.mockRejectedValue(new ApiError(500, 'Something went wrong.'));
+    const user = userEvent.setup();
+    await openCertificatesTab(user);
+
+    await user.click(await screen.findByRole('button', { name: 'Prepare rotation' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.');
   });
 });

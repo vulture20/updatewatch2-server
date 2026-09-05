@@ -149,7 +149,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 var certsPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["Certs:Path"] ?? "certs"));
 var certificateAuthority = new InternalCertificateAuthority(certsPath);
 var serverHostname = Environment.GetEnvironmentVariable("UPDATEWATCH2_SERVER_HOSTNAME") ?? Environment.MachineName;
-var serverLeafCertificate = certificateAuthority.EnsureServerLeaf(serverHostname);
+certificateAuthority.EnsureServerLeaf(serverHostname);
 builder.Services.AddSingleton<ICertificateAuthority>(certificateAuthority);
 builder.Services.AddScoped<ICertificateValidator, CertificateValidator>();
 builder.Services.AddScoped<IAgentRegistrationService, AgentRegistrationService>();
@@ -181,7 +181,14 @@ builder.WebHost.ConfigureKestrel(options =>
     {
         listenOptions.UseHttps(https =>
         {
-            https.ServerCertificate = serverLeafCertificate;
+            // A selector, not a fixed ServerCertificate captured once at
+            // startup: this reads certificateAuthority.CurrentServerLeaf on
+            // every new TLS connection, so an admin-triggered CA rotation
+            // (updatewatch2-server#6) re-issuing this leaf under a new root
+            // takes effect immediately, with no service restart — the same
+            // "no restart required" bar admin-mediated agent certificate
+            // re-issuance already holds (updatewatch2-server#8).
+            https.ServerCertificateSelector = (_, _) => certificateAuthority.CurrentServerLeaf;
             https.ClientCertificateMode = ClientCertificateMode.AllowCertificate;
 
             // Confirmed by hand, not assumed: without this, Kestrel's own
@@ -244,7 +251,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         // else, and nothing else should be trusted here.
         options.AllowedCertificateTypes = CertificateTypes.Chained;
         options.ChainTrustValidationMode = X509ChainTrustMode.CustomRootTrust;
-        options.CustomTrustStore = [certificateAuthority.RootCertificate];
+        // The CA's own mutable collection, not a snapshot array: a CA
+        // rotation (updatewatch2-server#6) adds/removes roots on this exact
+        // instance, and the certificate-authentication middleware re-reads
+        // Options.CustomTrustStore on every request rather than caching it,
+        // so mutating it here is visible immediately with no options
+        // reload or restart.
+        options.CustomTrustStore = certificateAuthority.TrustedRootCertificates;
         // Revocation is meaningless for a CA with no CRL/OCSP infrastructure
         // (see InternalCertificateAuthority's remarks) — the one-shot
         // delivery + admin-approval model is this project's substitute for

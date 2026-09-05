@@ -4,6 +4,7 @@ import type {
   AgentDetail,
   AgentListItem,
   BulkApproveResult,
+  CaRotationStatus,
   LoginResponse,
   MeResponse,
   ReissueCertificateResult,
@@ -44,4 +45,12 @@ export const adminApi = {
   getSettings: () => apiClient.get<AdminSettings>('/api/admin/settings'),
   updateSettings: (settings: UpdateAdminSettings) =>
     apiClient.put<AdminSettings>('/api/admin/settings', settings),
+};
+
+/** CA root rotation (updatewatch2-server#6) — see CertificateAuthorityController. */
+export const certificateAuthorityApi = {
+  getStatus: () => apiClient.get<CaRotationStatus>('/api/admin/certificate-authority'),
+  prepareRotation: () => apiClient.post<CaRotationStatus>('/api/admin/certificate-authority/prepare'),
+  activateRotation: () => apiClient.post<CaRotationStatus>('/api/admin/certificate-authority/activate'),
+  retirePreviousRoot: () => apiClient.post<CaRotationStatus>('/api/admin/certificate-authority/retire-previous'),
 };

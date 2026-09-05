@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { adminApi, versionApi } from '../api/endpoints';
+import { adminApi, certificateAuthorityApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
-import type { AdEncryption, AdminSettings, SmtpEncryption, VersionInfo } from '../api/types';
+import type { AdEncryption, AdminSettings, CaRotationStatus, SmtpEncryption, VersionInfo } from '../api/types';
 
 const LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const;
 const SMTP_ENCRYPTIONS: SmtpEncryption[] = ['None', 'StartTls', 'SslTls'];
@@ -43,11 +43,33 @@ export function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState(false);
+  const [caStatus, setCaStatus] = useState<CaRotationStatus | null>(null);
+  const [caError, setCaError] = useState<string | null>(null);
+  const [caBusy, setCaBusy] = useState(false);
+
+  const reloadCaStatus = () =>
+    certificateAuthorityApi
+      .getStatus()
+      .then(setCaStatus)
+      .catch(() => setCaStatus(null));
 
   useEffect(() => {
     versionApi.get().then(setVersion).catch(() => setVersion(null));
     adminApi.getSettings().then((settings) => setForm(toFormState(settings)));
+    reloadCaStatus();
   }, []);
+
+  const runCaAction = (confirmKey: string | null, action: () => Promise<CaRotationStatus>) => {
+    if (confirmKey && !window.confirm(t(confirmKey))) {
+      return;
+    }
+    setCaError(null);
+    setCaBusy(true);
+    action()
+      .then(setCaStatus)
+      .catch((err) => setCaError(err instanceof ApiError ? err.message : t('login.genericError')))
+      .finally(() => setCaBusy(false));
+  };
 
   if (!form) {
     return (
@@ -312,6 +334,52 @@ export function AdminPage() {
             />
           </label>
           <p className="field-hint">{t('admin.agentCertificateValidityDaysHint')}</p>
+
+          <h2>{t('admin.caRotation.title')}</h2>
+          <p className="field-hint">{t('admin.caRotation.hint')}</p>
+          {caError && <div role="alert" className="login-error">{caError}</div>}
+          {caStatus && (
+            <>
+              <dl>
+                <dt>{t('admin.caRotation.current')}</dt>
+                <dd>{`${caStatus.currentThumbprint} (${t('admin.caRotation.expires')} ${new Date(caStatus.currentNotAfter).toLocaleDateString()})`}</dd>
+                <dt>{t('admin.caRotation.previous')}</dt>
+                <dd>
+                  {caStatus.previousThumbprint
+                    ? `${caStatus.previousThumbprint} (${t('admin.caRotation.expires')} ${new Date(caStatus.previousNotAfter!).toLocaleDateString()})`
+                    : '—'}
+                </dd>
+                <dt>{t('admin.caRotation.pending')}</dt>
+                <dd>
+                  {caStatus.pendingThumbprint
+                    ? `${caStatus.pendingThumbprint} (${t('admin.caRotation.expires')} ${new Date(caStatus.pendingNotAfter!).toLocaleDateString()})`
+                    : '—'}
+                </dd>
+              </dl>
+
+              <button
+                type="button"
+                disabled={caBusy || caStatus.pendingThumbprint !== null}
+                onClick={() => runCaAction(null, certificateAuthorityApi.prepareRotation)}
+              >
+                {t('admin.caRotation.prepare')}
+              </button>{' '}
+              <button
+                type="button"
+                disabled={caBusy || caStatus.pendingThumbprint === null}
+                onClick={() => runCaAction('admin.caRotation.activateConfirm', certificateAuthorityApi.activateRotation)}
+              >
+                {t('admin.caRotation.activate')}
+              </button>{' '}
+              <button
+                type="button"
+                disabled={caBusy || caStatus.previousThumbprint === null}
+                onClick={() => runCaAction('admin.caRotation.retireConfirm', certificateAuthorityApi.retirePreviousRoot)}
+              >
+                {t('admin.caRotation.retirePrevious')}
+              </button>
+            </>
+          )}
         </div>
 
         <button type="submit" disabled={saving}>
