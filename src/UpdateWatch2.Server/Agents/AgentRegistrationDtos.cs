@@ -38,6 +38,19 @@ public record AgentRegistrationOutcome(AgentRegistrationStatus Status, string? R
 }
 
 /// <summary>
+/// Optional body of <c>POST /api/agents/{hostname}/alive</c>
+/// (updatewatch2-agent#6) — an agent's self-reported metadata can change
+/// after onboarding (DHCP lease renewal, an OS upgrade, a hostname/domain
+/// change, an agent binary upgrade), but <see cref="AgentRegistrationService.RegisterAsync"/>
+/// never runs again for an already-certified agent, so the alive heartbeat
+/// is the only remaining channel to keep it current. Nullable/all-optional
+/// rather than required: an agent built before this field existed sends no
+/// body at all, and that must keep working exactly as before (just with no
+/// metadata refresh), not fail the heartbeat.
+/// </summary>
+public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string? IpAddress, string? AgentVersion);
+
+/// <summary>
 /// Result of a recorded alive heartbeat (updatewatch2-server#10) —
 /// <see cref="InstallRequested"/> mirrors <c>Agent.PendingInstallRequestedAt</c>
 /// being set, so <see cref="Api.Controllers.AgentProtocolController.Alive"/>

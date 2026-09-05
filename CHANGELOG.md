@@ -11,6 +11,27 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.11.0] - 2026-09-05
+
+### Added
+
+- The `alive` heartbeat now accepts an optional body carrying an agent's
+  current `DnsName`/`OperatingSystem`/`IpAddress`/`AgentVersion`
+  (`updatewatch2-agent#6`) and refreshes the stored `Agent` row from it.
+  Closes the gap left by registration alone: once an agent is
+  certified, `AgentRegistrationService.RegisterAsync` never runs again
+  for it, so none of this self-reported metadata was ever updated after
+  onboarding — DHCP lease renewals, OS upgrades, hostname changes, and
+  agent version upgrades all went unreflected in the admin overview.
+  Backward compatible: the body is optional, so an agent build older
+  than this still heartbeats successfully with no metadata refresh.
+
+### Changed
+
+- Protocol version bumped to `0.5.0` — the `alive` request body's shape
+  changed (additive; a pre-existing agent's bodyless heartbeat is
+  unaffected).
+
 ## [0.10.0] - 2026-09-05
 
 ### Added

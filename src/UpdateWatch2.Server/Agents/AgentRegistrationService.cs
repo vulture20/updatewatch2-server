@@ -109,7 +109,7 @@ public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca,
         return AgentRegistrationOutcome.Approved(Convert.ToBase64String(issued.PfxBytes));
     }
 
-    public async Task<AliveRecordResult?> RecordAliveAsync(string hostname, CancellationToken ct = default)
+    public async Task<AliveRecordResult?> RecordAliveAsync(string hostname, AgentAliveRequest? request, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
         if (agent is null)
@@ -118,6 +118,21 @@ public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca,
         }
 
         agent.LastAliveAt = DateTimeOffset.UtcNow;
+
+        // Mirrors the same refresh RegisterAsync does on a pre-approval
+        // poll (see above) — this is the post-approval equivalent, since
+        // RegisterAsync's early-return for an already-certified agent means
+        // registration itself never runs again to catch a later change
+        // (updatewatch2-agent#6). Null request = an agent build that
+        // predates this field — nothing to refresh, not an error.
+        if (request is not null)
+        {
+            agent.DnsName = request.DnsName ?? agent.DnsName;
+            agent.OperatingSystem = request.OperatingSystem ?? agent.OperatingSystem;
+            agent.IpAddress = request.IpAddress ?? agent.IpAddress;
+            agent.AgentVersion = request.AgentVersion ?? agent.AgentVersion;
+        }
+
         await db.SaveChangesAsync(ct);
         return new AliveRecordResult(agent.PendingInstallRequestedAt is not null);
     }

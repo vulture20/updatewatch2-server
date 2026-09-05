@@ -176,8 +176,8 @@ public class AgentRegistrationServiceTests : IDisposable
     {
         await _service.RegisterAsync("alive-host", BareRequest);
 
-        var found = await _service.RecordAliveAsync("alive-host");
-        var notFound = await _service.RecordAliveAsync("no-such-host");
+        var found = await _service.RecordAliveAsync("alive-host", request: null);
+        var notFound = await _service.RecordAliveAsync("no-such-host", request: null);
 
         Assert.NotNull(found);
         Assert.False(found.InstallRequested);
@@ -194,9 +194,49 @@ public class AgentRegistrationServiceTests : IDisposable
         agent.PendingInstallRequestedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync();
 
-        var result = await _service.RecordAliveAsync("install-pending-host");
+        var result = await _service.RecordAliveAsync("install-pending-host", request: null);
 
         Assert.NotNull(result);
         Assert.True(result.InstallRequested);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_refreshes_self_reported_metadata_from_the_heartbeat_body()
+    {
+        // The gap updatewatch2-agent#6 closes: RegisterAsync's early-return
+        // for an already-certified agent means registration itself never
+        // runs again to catch a later change (a DHCP lease renewal, an OS
+        // upgrade, a hostname change, an agent binary upgrade) — the alive
+        // heartbeat is the only remaining channel.
+        await _service.RegisterAsync("stale-metadata-host",
+            new AgentRegisterRequest("old-dns", "Windows Server 2019", "10.0.0.1", "0.6.2", null, null));
+
+        await _service.RecordAliveAsync("stale-metadata-host",
+            new AgentAliveRequest("new-dns", "Windows Server 2025 Standard (Microsoft Windows 10.0.26100)", "10.0.0.2", "0.7.0"));
+
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "stale-metadata-host");
+        Assert.Equal("new-dns", agent.DnsName);
+        Assert.Equal("Windows Server 2025 Standard (Microsoft Windows 10.0.26100)", agent.OperatingSystem);
+        Assert.Equal("10.0.0.2", agent.IpAddress);
+        Assert.Equal("0.7.0", agent.AgentVersion);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_leaves_existing_metadata_untouched_when_a_field_is_absent_from_the_heartbeat()
+    {
+        await _service.RegisterAsync("partial-metadata-host",
+            new AgentRegisterRequest("kept-dns", "Windows 11 24H2", "10.0.0.1", "0.6.2", null, null));
+
+        // A field left null in the heartbeat body must not blank out a
+        // previously known value — same "??" fallback RegisterAsync's own
+        // poll-time refresh already relies on.
+        await _service.RecordAliveAsync("partial-metadata-host",
+            new AgentAliveRequest(DnsName: null, OperatingSystem: null, IpAddress: "10.0.0.2", AgentVersion: null));
+
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "partial-metadata-host");
+        Assert.Equal("kept-dns", agent.DnsName);
+        Assert.Equal("Windows 11 24H2", agent.OperatingSystem);
+        Assert.Equal("10.0.0.2", agent.IpAddress);
+        Assert.Equal("0.6.2", agent.AgentVersion);
     }
 }

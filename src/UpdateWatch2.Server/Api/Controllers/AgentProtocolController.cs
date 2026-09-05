@@ -40,7 +40,7 @@ public class AgentProtocolController(IAgentRegistrationService registrationServi
 
     [HttpPost("alive")]
     [Authorize(Policy = CertificateAuthenticationSetup.AgentCertificatePolicy)]
-    public async Task<IActionResult> Alive(string hostname, CancellationToken ct)
+    public async Task<IActionResult> Alive(string hostname, [FromBody] AgentAliveRequest? request, CancellationToken ct)
     {
         // Defense in depth: a validly-approved agent for host A must not be
         // able to tamper with the URL and post as host B, even though its
@@ -50,7 +50,10 @@ public class AgentProtocolController(IAgentRegistrationService registrationServi
             return Forbid();
         }
 
-        var result = await registrationService.RecordAliveAsync(hostname, ct);
+        // request is nullable and model binding leaves it null when there's
+        // no body at all — an agent build older than updatewatch2-agent#6
+        // still posts alive with no body, and that must keep working.
+        var result = await registrationService.RecordAliveAsync(hostname, request, ct);
         // Was a bare 204 No Content before installRequested existed to
         // report (updatewatch2-server#10) — protocol version bumped
         // alongside this change (see Protocol/ProtocolVersion.cs) since a

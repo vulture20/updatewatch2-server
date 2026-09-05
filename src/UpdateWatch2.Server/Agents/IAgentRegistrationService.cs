@@ -12,11 +12,13 @@ public interface IAgentRegistrationService
     Task<AgentRegistrationOutcome> RegisterAsync(string hostname, AgentRegisterRequest request, CancellationToken ct = default);
 
     /// <summary>
-    /// Records an alive heartbeat and reports whether a remote install is
+    /// Records an alive heartbeat, refreshes this agent's self-reported
+    /// metadata from <paramref name="request"/> if present
+    /// (updatewatch2-agent#6), and reports whether a remote install is
     /// pending for this agent (updatewatch2-server#10). Returns null if no
     /// agent with that hostname exists.
     /// </summary>
-    Task<AliveRecordResult?> RecordAliveAsync(string hostname, CancellationToken ct = default);
+    Task<AliveRecordResult?> RecordAliveAsync(string hostname, AgentAliveRequest? request, CancellationToken ct = default);
 
     /// <summary>
     /// Issues a fresh client certificate for an agent that already has one,
