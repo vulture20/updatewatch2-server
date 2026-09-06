@@ -1,3 +1,5 @@
+using UpdateWatch2.Server.AgentUpdates;
+
 namespace UpdateWatch2.Server.Agents;
 
 /// <summary>
@@ -55,9 +57,12 @@ public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string
 /// <see cref="InstallRequested"/> mirrors <c>Agent.PendingInstallRequestedAt</c>
 /// being set, so <see cref="Api.Controllers.AgentProtocolController.Alive"/>
 /// can hand it back to the agent in the same round-trip rather than needing
-/// a second poll endpoint.
+/// a second poll endpoint. <see cref="UpdateAvailable"/> is the same idea
+/// applied to a newer agent *software* release (updatewatch2-server#14) —
+/// null whenever there's nothing to offer (feature disabled, no known
+/// release, or this agent is already current).
 /// </summary>
-public record AliveRecordResult(bool InstallRequested);
+public record AliveRecordResult(bool InstallRequested, AgentUpdateOffer? UpdateAvailable);
 
 /// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)

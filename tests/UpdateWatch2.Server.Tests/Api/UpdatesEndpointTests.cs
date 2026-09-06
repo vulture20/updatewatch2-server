@@ -19,7 +19,7 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
     public UpdatesEndpointTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory.WithWebHostBuilder(builder =>
-            builder.ConfigureAppConfiguration((_, config) =>
+            builder.WithoutBackgroundWorkers().ConfigureAppConfiguration((_, config) =>
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["Database:Path"] = _dbPath,

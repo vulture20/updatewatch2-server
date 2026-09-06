@@ -54,7 +54,8 @@ COPY --from=web-build /web/dist ./wwwroot
 # merging with it, so setting it here would be silently ignored — removed
 # rather than left as a misleading no-op.
 ENV Database__Path=data/updatewatch2.sqlite \
-    Certs__Path=certs
+    Certs__Path=certs \
+    AgentUpdates__Path=agent-updates
 EXPOSE 8080
 EXPOSE 8443
 
@@ -70,8 +71,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 # volume mount points are created and chowned here, before switching user
 # and declaring VOLUME, since a fresh bind/named-mount otherwise shows up
 # owned by root and "app" can't write into it.
-RUN mkdir -p /app/data /app/certs && chown -R app:app /app/data /app/certs
-VOLUME ["/app/data", "/app/certs"]
+RUN mkdir -p /app/data /app/certs /app/agent-updates && chown -R app:app /app/data /app/certs /app/agent-updates
+VOLUME ["/app/data", "/app/certs", "/app/agent-updates"]
 USER app
 
 ENTRYPOINT ["dotnet", "UpdateWatch2.Server.dll"]

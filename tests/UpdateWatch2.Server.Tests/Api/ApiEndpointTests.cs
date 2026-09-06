@@ -16,7 +16,7 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
     public ApiEndpointTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory.WithWebHostBuilder(builder =>
-            builder.ConfigureAppConfiguration((_, config) =>
+            builder.WithoutBackgroundWorkers().ConfigureAppConfiguration((_, config) =>
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["Database:Path"] = _dbPath,
@@ -51,9 +51,9 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
         var response = await _client.GetFromJsonAsync<VersionResponse>("/api/version");
 
         Assert.NotNull(response);
-        Assert.Equal("0.13.0", response.server);
-        Assert.Equal("0.6.0", response.protocol);
-        Assert.Equal("0.8.0", response.database);
+        Assert.Equal("0.14.0", response.server);
+        Assert.Equal("0.7.0", response.protocol);
+        Assert.Equal("0.9.0", response.database);
     }
 
     [Fact]

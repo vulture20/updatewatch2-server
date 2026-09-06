@@ -16,6 +16,9 @@ data/
 logs/
 *.log
 
+# Downloaded agent release assets (updatewatch2-server#14)
+agent-updates/
+
 # Environment / local config
 .env
 .env.*

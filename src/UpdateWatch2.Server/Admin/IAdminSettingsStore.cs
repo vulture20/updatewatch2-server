@@ -1,3 +1,4 @@
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Notifications;
@@ -24,6 +25,9 @@ public interface IAdminSettingsStore
 
     /// <summary>Admin-configurable agent client certificate validity (updatewatch2-server#9).</summary>
     CertificateOptions Certificate { get; }
+
+    /// <summary>Admin-configurable agent-auto-update toggle and optional GitHub token (updatewatch2-server#14).</summary>
+    AgentAutoUpdateOptions AgentAutoUpdate { get; }
 
     /// <summary>
     /// The persisted log level. Reflected here immediately on change, but

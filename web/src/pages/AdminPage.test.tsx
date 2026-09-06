@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { adminApi, certificateAuthorityApi, versionApi } from '../api/endpoints';
+import { adminApi, agentUpdatesApi, certificateAuthorityApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { AdminPage } from './AdminPage';
 
@@ -19,6 +19,9 @@ vi.mock('../api/endpoints', () => ({
     activateRotation: vi.fn(),
     retirePreviousRoot: vi.fn(),
   },
+  agentUpdatesApi: {
+    getStatus: vi.fn(),
+  },
 }));
 
 const mockedGetSettings = vi.mocked(adminApi.getSettings);
@@ -28,6 +31,7 @@ const mockedGetCaStatus = vi.mocked(certificateAuthorityApi.getStatus);
 const mockedPrepareRotation = vi.mocked(certificateAuthorityApi.prepareRotation);
 const mockedActivateRotation = vi.mocked(certificateAuthorityApi.activateRotation);
 const mockedRetirePreviousRoot = vi.mocked(certificateAuthorityApi.retirePreviousRoot);
+const mockedGetAgentUpdateStatus = vi.mocked(agentUpdatesApi.getStatus);
 
 const baseCaStatus = {
   currentThumbprint: 'AAAA',
@@ -64,6 +68,8 @@ const baseSettings = {
   adLoginGroupDn: '',
   adConfigured: false,
   agentCertificateValidityDays: 730,
+  agentAutoUpdateEnabled: true,
+  gitHubTokenSet: false,
 };
 
 describe('AdminPage', () => {
@@ -75,6 +81,12 @@ describe('AdminPage', () => {
     mockedPrepareRotation.mockReset();
     mockedActivateRotation.mockReset();
     mockedRetirePreviousRoot.mockReset();
+    mockedGetAgentUpdateStatus.mockReset().mockResolvedValue({
+      enabled: true,
+      latestVersion: null,
+      checkedAt: null,
+      lastError: null,
+    });
   });
 
   it('renders the loaded settings into the form fields', async () => {
@@ -163,6 +175,44 @@ describe('AdminPage', () => {
     expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ agentCertificateValidityDays: 90 }));
   });
 
+  it('shows the latest known agent version and toggles auto-update off', async () => {
+    mockedGetAgentUpdateStatus.mockResolvedValue({
+      enabled: true,
+      latestVersion: '0.11.0',
+      checkedAt: '2026-01-01T00:00:00Z',
+      lastError: null,
+    });
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, agentAutoUpdateEnabled: false });
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+
+    expect(await screen.findByText('0.11.0')).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText('Check for and distribute new agent releases'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ agentAutoUpdateEnabled: false }));
+  });
+
+  it('sends a typed GitHub token as gitHubToken, and omits it when left blank', async () => {
+    mockedUpdateSettings.mockResolvedValue(baseSettings);
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ gitHubToken: undefined }));
+
+    await user.type(screen.getByLabelText('GitHub token (optional)'), 'ghp_newtoken');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(mockedUpdateSettings).toHaveBeenLastCalledWith(expect.objectContaining({ gitHubToken: 'ghp_newtoken' }));
+  });
+
   it('keeps General-tab edits when saving after switching to another tab', async () => {
     // Fields on hidden tabs must stay mounted (not unmounted), or edits
     // made before switching tabs would be lost on submit.
@@ -204,6 +254,12 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     mockedPrepareRotation.mockReset();
     mockedActivateRotation.mockReset();
     mockedRetirePreviousRoot.mockReset();
+    mockedGetAgentUpdateStatus.mockReset().mockResolvedValue({
+      enabled: true,
+      latestVersion: null,
+      checkedAt: null,
+      lastError: null,
+    });
   });
 
   const openCertificatesTab = async (user: ReturnType<typeof userEvent.setup>) => {

@@ -1,4 +1,5 @@
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Notifications;
@@ -14,12 +15,14 @@ namespace UpdateWatch2.Server.Tests.TestHelpers;
 /// 730-day value as the real <see cref="CertificateOptions"/>, settable
 /// per test via the constructor.
 /// </summary>
-public class FakeAdminSettingsStore(CertificateOptions? certificate = null) : IAdminSettingsStore
+public class FakeAdminSettingsStore(CertificateOptions? certificate = null, AgentAutoUpdateOptions? agentAutoUpdate = null) : IAdminSettingsStore
 {
     // Settable, not init-only: a test can change this mid-test (e.g. to
     // assert a subsequent issuance/renewal picks up a new validity) rather
     // than needing to reconstruct the service under test.
     public CertificateOptions Certificate { get; set; } = certificate ?? new CertificateOptions();
+
+    public AgentAutoUpdateOptions AgentAutoUpdate { get; set; } = agentAutoUpdate ?? new AgentAutoUpdateOptions();
 
     public BruteForceOptions BruteForce => throw new NotSupportedException();
 

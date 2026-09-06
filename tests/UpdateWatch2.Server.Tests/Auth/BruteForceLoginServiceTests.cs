@@ -1,5 +1,6 @@
 using System.Net;
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Notifications;
@@ -73,6 +74,8 @@ public class BruteForceLoginServiceTests
         public AdOptions Ad => throw new NotSupportedException();
 
         public CertificateOptions Certificate => throw new NotSupportedException();
+
+        public AgentAutoUpdateOptions AgentAutoUpdate => throw new NotSupportedException();
 
         public string LogLevel => throw new NotSupportedException();
 

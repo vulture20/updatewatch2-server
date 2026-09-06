@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
@@ -14,7 +15,8 @@ public class AdminSettingsStore(
     IOptions<SmtpOptions> defaultSmtp,
     IOptions<NotificationThresholdOptions> defaultNotificationThresholds,
     IOptions<AdOptions> defaultAd,
-    IOptions<CertificateOptions> defaultCertificate) : IAdminSettingsStore
+    IOptions<CertificateOptions> defaultCertificate,
+    IOptions<AgentAutoUpdateOptions> defaultAgentAutoUpdate) : IAdminSettingsStore
 {
     private readonly object _lock = new();
 
@@ -23,6 +25,7 @@ public class AdminSettingsStore(
     private NotificationThresholdOptions _notificationThresholds = defaultNotificationThresholds.Value;
     private AdOptions _ad = defaultAd.Value;
     private CertificateOptions _certificate = defaultCertificate.Value;
+    private AgentAutoUpdateOptions _agentAutoUpdate = defaultAgentAutoUpdate.Value;
     private string _logLevel = "INFO";
 
     public BruteForceOptions BruteForce
@@ -48,6 +51,11 @@ public class AdminSettingsStore(
     public CertificateOptions Certificate
     {
         get { lock (_lock) return _certificate; }
+    }
+
+    public AgentAutoUpdateOptions AgentAutoUpdate
+    {
+        get { lock (_lock) return _agentAutoUpdate; }
     }
 
     public string LogLevel
@@ -112,6 +120,11 @@ public class AdminSettingsStore(
         row.AdUserSearchFilter = request.AdUserSearchFilter;
         row.AdLoginGroupDn = request.AdLoginGroupDn;
         row.AgentCertificateValidityDays = request.AgentCertificateValidityDays;
+        row.AgentAutoUpdateEnabled = request.AgentAutoUpdateEnabled;
+        if (request.GitHubToken is not null)
+        {
+            row.GitHubToken = request.GitHubToken.Length == 0 ? null : request.GitHubToken;
+        }
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -149,7 +162,9 @@ public class AdminSettingsStore(
                 _ad.UserSearchFilter,
                 _ad.LoginGroupDn,
                 _ad.IsConfigured,
-                _certificate.AgentCertificateValidityDays);
+                _certificate.AgentCertificateValidityDays,
+                _agentAutoUpdate.Enabled,
+                !string.IsNullOrEmpty(_agentAutoUpdate.GitHubToken));
         }
     }
 
@@ -182,6 +197,8 @@ public class AdminSettingsStore(
         AdUserSearchFilter = defaultAd.Value.UserSearchFilter,
         AdLoginGroupDn = defaultAd.Value.LoginGroupDn,
         AgentCertificateValidityDays = defaultCertificate.Value.AgentCertificateValidityDays,
+        AgentAutoUpdateEnabled = defaultAgentAutoUpdate.Value.Enabled,
+        GitHubToken = defaultAgentAutoUpdate.Value.GitHubToken,
     };
 
     private void Apply(AdminSettings row)
@@ -223,6 +240,11 @@ public class AdminSettingsStore(
         {
             AgentCertificateValidityDays = row.AgentCertificateValidityDays,
         };
+        var agentAutoUpdate = new AgentAutoUpdateOptions
+        {
+            Enabled = row.AgentAutoUpdateEnabled,
+            GitHubToken = row.GitHubToken,
+        };
 
         lock (_lock)
         {
@@ -231,6 +253,7 @@ public class AdminSettingsStore(
             _notificationThresholds = thresholds;
             _ad = ad;
             _certificate = certificate;
+            _agentAutoUpdate = agentAutoUpdate;
             _logLevel = row.LogLevel;
         }
     }

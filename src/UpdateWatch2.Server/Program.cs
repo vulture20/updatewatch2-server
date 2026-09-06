@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Auth;
@@ -95,6 +96,7 @@ builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOpt
 builder.Services.Configure<NotificationThresholdOptions>(builder.Configuration.GetSection(NotificationThresholdOptions.SectionName));
 builder.Services.Configure<AdOptions>(builder.Configuration.GetSection(AdOptions.SectionName));
 builder.Services.Configure<CertificateOptions>(builder.Configuration.GetSection(CertificateOptions.SectionName));
+builder.Services.Configure<AgentAutoUpdateOptions>(builder.Configuration.GetSection(AgentAutoUpdateOptions.SectionName));
 
 builder.Services.AddScoped<IAgentService, AgentService>();
 builder.Services.AddScoped<IUpdateService, UpdateService>();
@@ -106,6 +108,28 @@ builder.Services.AddScoped<IAdminAccountService, AdminAccountService>();
 builder.Services.AddScoped<IActiveDirectoryAuthService, ActiveDirectoryAuthService>();
 builder.Services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
 builder.Services.AddScoped<IDemoDataSeeder, DemoDataSeeder>();
+
+// Where downloaded agent release assets are cached (updatewatch2-server#14)
+// — resolved the same way Certs:Path/Database:Path already are (a
+// relative appsettings.json path resolved against ContentRootPath), not
+// via IOptions<T>, since AgentUpdateService needs the fully-resolved path
+// directly rather than a config section to bind against.
+var agentUpdatesPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["AgentUpdates:Path"] ?? "../../agent-updates"));
+builder.Services.AddSingleton(new AgentUpdateStorageOptions(agentUpdatesPath));
+
+// GitHub requires a User-Agent header on every API request (rejects
+// requests with none) and recommends the versioned Accept header below;
+// the optional per-call bearer token is applied by GitHubReleaseClient
+// itself, not here, since it can change live via the admin settings
+// without a restart — see AdminSettings.GitHubToken's doc comment.
+builder.Services.AddHttpClient<IGitHubReleaseClient, GitHubReleaseClient>(client =>
+{
+    client.BaseAddress = new Uri("https://api.github.com/");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("UpdateWatch2-Server");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
+});
+builder.Services.AddScoped<IAgentUpdateService, AgentUpdateService>();
+builder.Services.AddHostedService<AgentUpdateCheckWorker>();
 
 // The frontend (server/web) is a separate origin in development (its own
 // Vite dev server port) and, even in a same-origin production deployment

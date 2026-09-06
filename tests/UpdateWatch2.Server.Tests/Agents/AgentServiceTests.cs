@@ -26,7 +26,7 @@ public class AgentServiceTests : IDisposable
         var auditLog = new AuditLogService(_db);
         _service = new AgentService(_db, auditLog);
         var ca = new InternalCertificateAuthority(_certsDirectory);
-        _registrationService = new AgentRegistrationService(_db, ca, auditLog, new FakeAdminSettingsStore());
+        _registrationService = new AgentRegistrationService(_db, ca, auditLog, new FakeAdminSettingsStore(), new FakeAgentUpdateService());
     }
 
     public void Dispose()

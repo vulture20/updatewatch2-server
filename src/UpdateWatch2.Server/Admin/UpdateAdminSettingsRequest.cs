@@ -2,11 +2,14 @@ namespace UpdateWatch2.Server.Admin;
 
 /// <summary>
 /// Full replacement of the admin-editable settings (PUT /api/admin/settings).
-/// <see cref="SmtpPassword"/> and <see cref="AdBindPassword"/> are the
-/// exception to "replace everything": null/omitted means "leave the
-/// stored password unchanged" — GET never echoes either back, so there'd
-/// be nothing for the UI to resubmit otherwise. Send an empty string to
-/// clear one.
+/// <see cref="SmtpPassword"/>, <see cref="AdBindPassword"/>, and
+/// <see cref="GitHubToken"/> are the exception to "replace everything":
+/// null/omitted means "leave the stored value unchanged" — GET never
+/// echoes any of them back, so there'd be nothing for the UI to resubmit
+/// otherwise. Send an empty string to clear one. The trailing two
+/// parameters default rather than being required, purely so existing
+/// call sites (tests included) that predate updatewatch2-server#14 don't
+/// all need updating just to keep compiling.
 /// </summary>
 public record UpdateAdminSettingsRequest(
     string LogLevel,
@@ -31,4 +34,6 @@ public record UpdateAdminSettingsRequest(
     string AdBaseDn,
     string AdUserSearchFilter,
     string AdLoginGroupDn,
-    int AgentCertificateValidityDays);
+    int AgentCertificateValidityDays,
+    bool AgentAutoUpdateEnabled = true,
+    string? GitHubToken = null);

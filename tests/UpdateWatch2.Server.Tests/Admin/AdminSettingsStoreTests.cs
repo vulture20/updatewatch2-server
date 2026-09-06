@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
@@ -22,6 +23,7 @@ public class AdminSettingsStoreTests : IDisposable
         services.Configure<SmtpOptions>(o => { o.Host = ""; o.Port = 587; o.FromAddress = ""; o.FromName = "UpdateWatch2"; });
         services.Configure<NotificationThresholdOptions>(o => { o.UpdatesPerMachine = 5; o.AffectedMachines = 10; });
         services.Configure<CertificateOptions>(o => { o.AgentCertificateValidityDays = 730; });
+        services.Configure<AgentAutoUpdateOptions>(o => { o.Enabled = true; });
         services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
         _services = services.BuildServiceProvider();
 
@@ -93,7 +95,9 @@ public class AdminSettingsStoreTests : IDisposable
             AdBaseDn: "dc=example,dc=com",
             AdUserSearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
             AdLoginGroupDn: "cn=admins,dc=example,dc=com",
-            AgentCertificateValidityDays: 90);
+            AgentCertificateValidityDays: 90,
+            AgentAutoUpdateEnabled: false,
+            GitHubToken: "ghp_secret");
 
         var dto = await store.UpdateAsync(request);
 
@@ -111,6 +115,10 @@ public class AdminSettingsStoreTests : IDisposable
         Assert.Equal("cn=admins,dc=example,dc=com", store.Ad.LoginGroupDn);
         Assert.Equal(90, store.Certificate.AgentCertificateValidityDays);
         Assert.Equal(90, dto.AgentCertificateValidityDays);
+        Assert.False(store.AgentAutoUpdate.Enabled);
+        Assert.Equal("ghp_secret", store.AgentAutoUpdate.GitHubToken);
+        Assert.False(dto.AgentAutoUpdateEnabled);
+        Assert.True(dto.GitHubTokenSet);
 
         // Neither password ever comes back out through the DTO.
         Assert.True(dto.SmtpPasswordSet);
@@ -151,6 +159,32 @@ public class AdminSettingsStoreTests : IDisposable
 
         Assert.Null(store.Smtp.Password);
         Assert.False(dto.SmtpPasswordSet);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_with_a_null_GitHubToken_leaves_the_stored_token_unchanged()
+    {
+        var store = _services.GetRequiredService<IAdminSettingsStore>();
+        await store.InitializeAsync();
+        await store.UpdateAsync(BaseRequest() with { GitHubToken = "initial-token" });
+
+        var dto = await store.UpdateAsync(BaseRequest() with { GitHubToken = null });
+
+        Assert.Equal("initial-token", store.AgentAutoUpdate.GitHubToken);
+        Assert.True(dto.GitHubTokenSet);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_with_an_empty_GitHubToken_clears_it()
+    {
+        var store = _services.GetRequiredService<IAdminSettingsStore>();
+        await store.InitializeAsync();
+        await store.UpdateAsync(BaseRequest() with { GitHubToken = "initial-token" });
+
+        var dto = await store.UpdateAsync(BaseRequest() with { GitHubToken = "" });
+
+        Assert.Null(store.AgentAutoUpdate.GitHubToken);
+        Assert.False(dto.GitHubTokenSet);
     }
 
     private static UpdateAdminSettingsRequest BaseRequest() => new(

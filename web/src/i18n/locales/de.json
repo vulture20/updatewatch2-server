@@ -71,6 +71,17 @@
     "bruteForceMaxAttempts": "Max. Fehlversuche",
     "bruteForceWindowMinutes": "Zeitraum (Minuten)",
     "bruteForceLockoutMinutes": "Sperre (Minuten)",
+    "agentAutoUpdate": {
+      "title": "Agent-Auto-Update",
+      "hint": "Prüft regelmäßig auf GitHub nach einer neueren Agent-Version, lädt sie herunter und bietet sie den Agents über deren normalen Heartbeat an — Agents laden dabei ausschließlich von diesem Server herunter, nie direkt von GitHub.",
+      "enabled": "Nach neuen Agent-Versionen suchen und verteilen",
+      "gitHubToken": "GitHub-Token (optional)",
+      "gitHubTokenHint": "Erhöht das anonyme GitHub-Rate-Limit (60 Anfragen/Stunde) auf 5.000/Stunde. Nicht erforderlich.",
+      "latestVersion": "Neueste bekannte Agent-Version",
+      "checkedAt": "Zuletzt geprüft",
+      "lastError": "Fehler bei letzter Prüfung",
+      "noneYet": "Noch keine"
+    },
     "notifications": "Benachrichtigungen",
     "smtpConfigured": "SMTP konfiguriert",
     "smtpHost": "SMTP-Host",

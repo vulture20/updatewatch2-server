@@ -13,10 +13,16 @@ services:
     volumes:
       - data:/app/data
       - certs:/app/certs
+      - agent-updates:/app/agent-updates
     environment:
       # See ../.env.example for the full list. UPDATEWATCH2_TRUSTEDIP is
       # deliberately env-var-only (CLAUDE.md) — not an admin-UI setting.
       UPDATEWATCH2_LOGLEVEL: INFO
+      # Master kill switch for checking GitHub for new agent releases
+      # (updatewatch2-server#14) — overrides the admin-UI toggle
+      # outright, the same env-var-wins-outright pattern
+      # UPDATEWATCH2_DEMOMODE/UPDATEWATCH2_TRUSTEDIP already use.
+      # UPDATEWATCH2_AUTOUPDATE: "false"
       # UPDATEWATCH2_TRUSTEDIP: 10.0.0.0/8
       # The externally-reachable hostname this container is addressed by —
       # becomes the SAN on the agent-facing TLS certificate Kestrel
@@ -35,3 +41,4 @@ services:
 volumes:
   data:
   certs:
+  agent-updates:

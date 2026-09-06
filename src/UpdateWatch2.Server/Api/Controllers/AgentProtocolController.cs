@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Certificates;
 
@@ -13,7 +14,10 @@ namespace UpdateWatch2.Server.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/agents/{hostname}")]
-public class AgentProtocolController(IAgentRegistrationService registrationService, ICertificateAuthority ca) : ControllerBase
+public class AgentProtocolController(
+    IAgentRegistrationService registrationService,
+    ICertificateAuthority ca,
+    IAgentUpdateService agentUpdateService) : ControllerBase
 {
     // Deliberately anonymous: an agent's first contact has no client
     // certificate to authenticate with yet. Bootstrap trust (the token
@@ -59,8 +63,15 @@ public class AgentProtocolController(IAgentRegistrationService registrationServi
         // alongside this change (see Protocol/ProtocolVersion.cs) since a
         // pre-#10 agent build only ever checked the status code, never a
         // body, so this is additive rather than actually breaking, but the
-        // wire shape did change.
-        return result is null ? NotFound() : Ok(new { installRequested = result.InstallRequested });
+        // wire shape did change. agentUpdateAvailable (updatewatch2-server#14)
+        // is the same kind of additive change, hence the further protocol
+        // bump to 0.7.0 — an agent build that predates it (every build as
+        // of this writing; the matching agent-side reaction is
+        // updatewatch2-agent#14, not yet implemented) simply ignores the
+        // extra field.
+        return result is null
+            ? NotFound()
+            : Ok(new { installRequested = result.InstallRequested, agentUpdateAvailable = result.UpdateAvailable });
     }
 
     // Distinct from Register: this is how an already-certified agent gets a
@@ -109,5 +120,29 @@ public class AgentProtocolController(IAgentRegistrationService registrationServi
     {
         var bytes = ca.AllKnownRootCertificates.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs7)!;
         return File(bytes, "application/pkcs7-mime");
+    }
+
+    // Not per-agent, like the CA-certificate routes above — the same file
+    // is offered to every agent of a given platform. Unlike those two,
+    // this is mTLS-gated, not anonymous: the artifact isn't secret, but
+    // there's no reason to make it any more reachable than the rest of
+    // the agent-facing API (see updatewatch2-server#14's pinned issue
+    // comment on why agents fetch this from the server, never from GitHub
+    // directly). fileName is only ever resolved against the currently
+    // known release's own recorded filenames — see
+    // IAgentUpdateService.ResolveDownloadPathAsync's doc comment for why
+    // that's what actually prevents a path-traversal request here, not
+    // any sanitization performed in this method.
+    [HttpGet("/api/agent/updates/{fileName}")]
+    [Authorize(Policy = CertificateAuthenticationSetup.AgentCertificatePolicy)]
+    public async Task<IActionResult> DownloadUpdate(string fileName, CancellationToken ct)
+    {
+        var path = await agentUpdateService.ResolveDownloadPathAsync(fileName, ct);
+        if (path is null)
+        {
+            return NotFound();
+        }
+
+        return PhysicalFile(path, "application/octet-stream", fileName);
     }
 }

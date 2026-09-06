@@ -15,6 +15,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<AdminSettings> AdminSettings => Set<AdminSettings>();
 
+    public DbSet<AgentUpdateState> AgentUpdateStates => Set<AgentUpdateState>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agent>()

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
@@ -14,6 +15,7 @@ public class AgentRegistrationServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly AgentRegistrationService _service;
     private readonly FakeAdminSettingsStore _settingsStore = new();
+    private readonly FakeAgentUpdateService _agentUpdateService = new();
 
     private static readonly AgentRegisterRequest BareRequest = new(null, null, null, null, null, null);
 
@@ -24,7 +26,7 @@ public class AgentRegistrationServiceTests : IDisposable
         _db.Database.Migrate();
 
         var ca = new InternalCertificateAuthority(_certsDirectory);
-        _service = new AgentRegistrationService(_db, ca, new AuditLogService(_db), _settingsStore);
+        _service = new AgentRegistrationService(_db, ca, new AuditLogService(_db), _settingsStore, _agentUpdateService);
     }
 
     public void Dispose()
@@ -181,9 +183,22 @@ public class AgentRegistrationServiceTests : IDisposable
 
         Assert.NotNull(found);
         Assert.False(found.InstallRequested);
+        Assert.Null(found.UpdateAvailable);
         Assert.Null(notFound);
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == "alive-host");
         Assert.NotNull(agent.LastAliveAt);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_surfaces_whatever_IAgentUpdateService_offers_for_this_agents_reported_version()
+    {
+        await _service.RegisterAsync("update-offer-host", BareRequest with { AgentVersion = "0.9.0" });
+        var expectedOffer = new AgentUpdateOffer("0.11.0", null, null, null);
+        _agentUpdateService.Offer = expectedOffer;
+
+        var result = await _service.RecordAliveAsync("update-offer-host", request: null);
+
+        Assert.Same(expectedOffer, result!.UpdateAvailable);
     }
 
     [Fact]

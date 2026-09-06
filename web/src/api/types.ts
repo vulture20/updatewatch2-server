@@ -102,19 +102,30 @@ export interface AdminSettings {
   adLoginGroupDn: string;
   adConfigured: boolean;
   agentCertificateValidityDays: number;
+  agentAutoUpdateEnabled: boolean;
+  gitHubTokenSet: boolean;
 }
 
 /**
- * smtpPassword/adBindPassword: undefined/omitted leaves the stored
- * password unchanged; an empty string clears it. There is no way to read
- * either current password back out (AdminSettings only has the *Set
- * booleans), so the form must default these to undefined and only set one
- * when the admin actually types a new value.
+ * smtpPassword/adBindPassword/gitHubToken: undefined/omitted leaves the
+ * stored value unchanged; an empty string clears it. There is no way to
+ * read any of them back out (AdminSettings only has the *Set booleans),
+ * so the form must default these to undefined and only set one when the
+ * admin actually types a new value.
  */
+/** Read-only companion to AdminSettings.agentAutoUpdateEnabled — see AgentUpdatesController. */
+export interface AgentUpdateStatus {
+  enabled: boolean;
+  latestVersion: string | null;
+  checkedAt: string | null;
+  lastError: string | null;
+}
+
 export type UpdateAdminSettings = Omit<
   AdminSettings,
-  'smtpPasswordSet' | 'smtpConfigured' | 'adBindPasswordSet' | 'adConfigured'
+  'smtpPasswordSet' | 'smtpConfigured' | 'adBindPasswordSet' | 'adConfigured' | 'gitHubTokenSet'
 > & {
   smtpPassword?: string;
   adBindPassword?: string;
+  gitHubToken?: string;
 };

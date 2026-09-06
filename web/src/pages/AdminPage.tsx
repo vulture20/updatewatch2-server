@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { adminApi, certificateAuthorityApi, versionApi } from '../api/endpoints';
+import { adminApi, agentUpdatesApi, certificateAuthorityApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
-import type { AdEncryption, AdminSettings, CaRotationStatus, SmtpEncryption, VersionInfo } from '../api/types';
+import type { AdEncryption, AdminSettings, AgentUpdateStatus, CaRotationStatus, SmtpEncryption, VersionInfo } from '../api/types';
 
 const LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const;
 const SMTP_ENCRYPTIONS: SmtpEncryption[] = ['None', 'StartTls', 'SslTls'];
@@ -12,10 +12,11 @@ type Tab = (typeof TABS)[number];
 
 type FormState = Omit<
   AdminSettings,
-  'smtpPasswordSet' | 'smtpConfigured' | 'adBindPasswordSet' | 'adConfigured'
+  'smtpPasswordSet' | 'smtpConfigured' | 'adBindPasswordSet' | 'adConfigured' | 'gitHubTokenSet'
 > & {
   smtpPassword: string;
   adBindPassword: string;
+  gitHubToken: string;
 };
 
 function toFormState(settings: AdminSettings): FormState {
@@ -24,9 +25,10 @@ function toFormState(settings: AdminSettings): FormState {
     smtpConfigured: _smtpConfigured,
     adBindPasswordSet: _adBindPasswordSet,
     adConfigured: _adConfigured,
+    gitHubTokenSet: _gitHubTokenSet,
     ...rest
   } = settings;
-  return { ...rest, smtpPassword: '', adBindPassword: '' };
+  return { ...rest, smtpPassword: '', adBindPassword: '', gitHubToken: '' };
 }
 
 /**
@@ -46,6 +48,7 @@ export function AdminPage() {
   const [caStatus, setCaStatus] = useState<CaRotationStatus | null>(null);
   const [caError, setCaError] = useState<string | null>(null);
   const [caBusy, setCaBusy] = useState(false);
+  const [agentUpdateStatus, setAgentUpdateStatus] = useState<AgentUpdateStatus | null>(null);
 
   const reloadCaStatus = () =>
     certificateAuthorityApi
@@ -57,6 +60,7 @@ export function AdminPage() {
     versionApi.get().then(setVersion).catch(() => setVersion(null));
     adminApi.getSettings().then((settings) => setForm(toFormState(settings)));
     reloadCaStatus();
+    agentUpdatesApi.getStatus().then(setAgentUpdateStatus).catch(() => setAgentUpdateStatus(null));
   }, []);
 
   const runCaAction = (confirmKey: string | null, action: () => Promise<CaRotationStatus>) => {
@@ -91,9 +95,11 @@ export function AdminPage() {
         ...form,
         smtpPassword: form.smtpPassword === '' ? undefined : form.smtpPassword,
         adBindPassword: form.adBindPassword === '' ? undefined : form.adBindPassword,
+        gitHubToken: form.gitHubToken === '' ? undefined : form.gitHubToken,
       });
       setForm(toFormState(settings));
       setSavedMessage(true);
+      agentUpdatesApi.getStatus().then(setAgentUpdateStatus).catch(() => setAgentUpdateStatus(null));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('login.genericError'));
     } finally {
@@ -179,6 +185,41 @@ export function AdminPage() {
               onChange={(e) => update('bruteForceLockoutMinutes', Number(e.target.value))}
             />
           </label>
+
+          <h2>{t('admin.agentAutoUpdate.title')}</h2>
+          <p className="field-hint">{t('admin.agentAutoUpdate.hint')}</p>
+          <label>
+            <input
+              type="checkbox"
+              checked={form.agentAutoUpdateEnabled}
+              onChange={(e) => update('agentAutoUpdateEnabled', e.target.checked)}
+            />
+            {t('admin.agentAutoUpdate.enabled')}
+          </label>
+          <label>
+            {t('admin.agentAutoUpdate.gitHubToken')}
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder={t('admin.passwordPlaceholder') ?? ''}
+              onChange={(e) => update('gitHubToken', e.target.value)}
+            />
+          </label>
+          <p className="field-hint">{t('admin.agentAutoUpdate.gitHubTokenHint')}</p>
+          {agentUpdateStatus && (
+            <dl>
+              <dt>{t('admin.agentAutoUpdate.latestVersion')}</dt>
+              <dd>{agentUpdateStatus.latestVersion ?? t('admin.agentAutoUpdate.noneYet')}</dd>
+              <dt>{t('admin.agentAutoUpdate.checkedAt')}</dt>
+              <dd>{agentUpdateStatus.checkedAt ? new Date(agentUpdateStatus.checkedAt).toLocaleString(i18n.language) : '—'}</dd>
+              {agentUpdateStatus.lastError && (
+                <>
+                  <dt>{t('admin.agentAutoUpdate.lastError')}</dt>
+                  <dd role="alert">{agentUpdateStatus.lastError}</dd>
+                </>
+              )}
+            </dl>
+          )}
         </div>
 
         <div hidden={tab !== 'notifications'}>

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
@@ -37,7 +38,12 @@ namespace UpdateWatch2.Server.Agents;
 ///   (updatewatch2-server#7), authenticated by the current certificate
 ///   itself rather than a token — deliberately not part of this method.
 /// </summary>
-public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca, IAuditLogService auditLog, IAdminSettingsStore settingsStore) : IAgentRegistrationService
+public class AgentRegistrationService(
+    AppDbContext db,
+    ICertificateAuthority ca,
+    IAuditLogService auditLog,
+    IAdminSettingsStore settingsStore,
+    IAgentUpdateService agentUpdateService) : IAgentRegistrationService
 {
     public async Task<AgentRegistrationOutcome> RegisterAsync(string hostname, AgentRegisterRequest request, CancellationToken ct = default)
     {
@@ -135,7 +141,8 @@ public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca,
         }
 
         await db.SaveChangesAsync(ct);
-        return new AliveRecordResult(agent.PendingInstallRequestedAt is not null);
+        var updateOffer = await agentUpdateService.GetOfferForAsync(agent.AgentVersion, ct);
+        return new AliveRecordResult(agent.PendingInstallRequestedAt is not null, updateOffer);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)

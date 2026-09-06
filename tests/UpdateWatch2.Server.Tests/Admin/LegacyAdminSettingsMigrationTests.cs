@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
@@ -75,7 +76,8 @@ public class LegacyAdminSettingsMigrationTests : IDisposable
             FakeOptions.Of(new SmtpOptions { FromName = "UpdateWatch2" }),
             FakeOptions.Of(new NotificationThresholdOptions()),
             FakeOptions.Of(new AdOptions()),
-            FakeOptions.Of(new CertificateOptions()));
+            FakeOptions.Of(new CertificateOptions()),
+            FakeOptions.Of(new AgentAutoUpdateOptions()));
 
         // The regression: this must not throw.
         await store.InitializeAsync();

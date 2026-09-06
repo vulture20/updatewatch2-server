@@ -30,4 +30,6 @@ public record AdminSettingsDto(
     string AdUserSearchFilter,
     string AdLoginGroupDn,
     bool AdConfigured,
-    int AgentCertificateValidityDays);
+    int AgentCertificateValidityDays,
+    bool AgentAutoUpdateEnabled,
+    bool GitHubTokenSet);

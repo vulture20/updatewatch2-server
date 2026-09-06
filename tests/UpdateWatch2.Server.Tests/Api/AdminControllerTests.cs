@@ -17,7 +17,7 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
     public AdminControllerTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory.WithWebHostBuilder(builder =>
-            builder.ConfigureAppConfiguration((_, config) =>
+            builder.WithoutBackgroundWorkers().ConfigureAppConfiguration((_, config) =>
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["Database:Path"] = _dbPath,

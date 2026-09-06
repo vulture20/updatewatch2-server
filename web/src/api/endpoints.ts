@@ -3,6 +3,7 @@ import type {
   AdminSettings,
   AgentDetail,
   AgentListItem,
+  AgentUpdateStatus,
   BulkApproveResult,
   CaRotationStatus,
   LoginResponse,
@@ -53,4 +54,9 @@ export const certificateAuthorityApi = {
   prepareRotation: () => apiClient.post<CaRotationStatus>('/api/admin/certificate-authority/prepare'),
   activateRotation: () => apiClient.post<CaRotationStatus>('/api/admin/certificate-authority/activate'),
   retirePreviousRoot: () => apiClient.post<CaRotationStatus>('/api/admin/certificate-authority/retire-previous'),
+};
+
+/** Agent auto-update status (updatewatch2-server#14) — see AgentUpdatesController. The enabled/token toggle itself is part of adminApi's settings, not this. */
+export const agentUpdatesApi = {
+  getStatus: () => apiClient.get<AgentUpdateStatus>('/api/admin/agent-update-status'),
 };
