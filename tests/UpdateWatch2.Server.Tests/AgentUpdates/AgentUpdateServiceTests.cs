@@ -119,6 +119,47 @@ public class AgentUpdateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CheckForUpdatesAsync_redownloads_when_a_known_asset_is_missing_from_disk_even_though_the_version_is_unchanged()
+    {
+        _gitHub.Release = SampleRelease;
+        await _service.CheckForUpdatesAsync();
+        var installerPath = Path.Combine(_storageDirectory, "UpdateWatch2Agent-Setup-0.11.0-x64.exe");
+        Assert.True(File.Exists(installerPath));
+
+        // Simulate the AgentUpdates:Path volume losing a file independently
+        // of the DB row that still claims it exists (see CLAUDE.md's note
+        // on that volume).
+        File.Delete(installerPath);
+
+        var outcome = await _service.CheckForUpdatesAsync();
+
+        Assert.Equal(AgentUpdateCheckOutcome.Redownloaded, outcome);
+        Assert.True(File.Exists(installerPath));
+        var state = await _db.AgentUpdateStates.SingleAsync();
+        Assert.Equal("0.11.0", state.LatestVersion);
+        Assert.Null(state.LastError);
+        var auditEntry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "agent-update.assets-redownloaded");
+        Assert.Equal("0.11.0", auditEntry.Details);
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesAsync_returns_UpToDate_without_touching_disk_when_all_known_assets_are_still_present()
+    {
+        _gitHub.Release = SampleRelease;
+        await _service.CheckForUpdatesAsync();
+        var installerPath = Path.Combine(_storageDirectory, "UpdateWatch2Agent-Setup-0.11.0-x64.exe");
+        var writtenAt = File.GetLastWriteTimeUtc(installerPath);
+
+        await Task.Delay(10);
+        var outcome = await _service.CheckForUpdatesAsync();
+
+        Assert.Equal(AgentUpdateCheckOutcome.UpToDate, outcome);
+        // Same mtime proves this wasn't silently re-downloaded — only a
+        // genuinely missing file should trigger that.
+        Assert.Equal(writtenAt, File.GetLastWriteTimeUtc(installerPath));
+    }
+
+    [Fact]
     public async Task CheckForUpdatesAsync_records_the_error_and_reports_Failed_when_the_GitHub_call_throws()
     {
         _gitHub.ThrowOnGetLatestRelease = new HttpRequestException("simulated network failure");

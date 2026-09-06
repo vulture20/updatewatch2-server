@@ -57,11 +57,26 @@ public class AgentUpdateService(
         }
 
         var version = release.TagName.TrimStart('v', 'V');
-        if (string.Equals(version, state.LatestVersion, StringComparison.Ordinal))
+        var isAlreadyKnownVersion = string.Equals(version, state.LatestVersion, StringComparison.Ordinal);
+        if (isAlreadyKnownVersion && AssetsPresentOnDisk(state))
         {
             state.LastError = null;
             await db.SaveChangesAsync(ct);
             return AgentUpdateCheckOutcome.UpToDate;
+        }
+
+        if (isAlreadyKnownVersion)
+        {
+            // GitHub hasn't published anything new, but at least one file
+            // this row claims to have already downloaded is gone from
+            // AgentUpdates:Path — most likely that volume was lost or
+            // recreated (see CLAUDE.md's note on it). Left alone, the row
+            // would keep offering agents a download URL that 404s until
+            // an actual new release eventually ships. Re-download the
+            // same version's assets now instead of waiting for that.
+            logger.LogWarning(
+                "Agent release {Version} is already the newest known version, but one or more of its downloaded assets are missing from local storage — re-downloading.",
+                version);
         }
 
         try
@@ -77,10 +92,34 @@ public class AgentUpdateService(
         state.LatestVersion = version;
         state.LastError = null;
         await db.SaveChangesAsync(ct);
+
+        if (isAlreadyKnownVersion)
+        {
+            await auditLog.LogAsync("system", "agent-update.assets-redownloaded", version, ct);
+            logger.LogInformation("Re-downloaded agent release {Version}'s assets after finding them missing from local storage.", version);
+            return AgentUpdateCheckOutcome.Redownloaded;
+        }
+
         await auditLog.LogAsync("system", "agent-update.detected", version, ct);
         logger.LogInformation("Downloaded new agent release {Version}.", version);
         return AgentUpdateCheckOutcome.Downloaded;
     }
+
+    /// <summary>
+    /// True iff every asset slot this state actually claims to have (a
+    /// null filename means that release never carried that platform's
+    /// package, not a problem) still has its file on disk. Checked on
+    /// every version-unchanged tick, not just at download time, since the
+    /// storage directory can be lost independently of the DB row that
+    /// describes it (a separate Docker volume — see CLAUDE.md).
+    /// </summary>
+    private bool AssetsPresentOnDisk(AgentUpdateState state) =>
+        IsPresentOrNotExpected(state.WindowsInstallerFileName)
+        && IsPresentOrNotExpected(state.LinuxDebFileName)
+        && IsPresentOrNotExpected(state.LinuxRpmFileName);
+
+    private bool IsPresentOrNotExpected(string? fileName) =>
+        fileName is null || File.Exists(Path.Combine(storage.Path, fileName));
 
     public async Task<AgentUpdateOffer?> GetOfferForAsync(string? currentAgentVersion, CancellationToken ct = default)
     {

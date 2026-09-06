@@ -42,6 +42,16 @@ public enum AgentUpdateCheckOutcome
     /// <summary>Found and successfully downloaded a newer release.</summary>
     Downloaded,
 
+    /// <summary>
+    /// GitHub still reports the already-known version, but one or more of
+    /// its previously-downloaded assets were missing from local storage
+    /// (e.g. the <c>AgentUpdates:Path</c> volume was lost/recreated) —
+    /// re-downloaded the same version's assets rather than leaving a
+    /// stale <see cref="Db.Entities.AgentUpdateState"/> row pointing at
+    /// files that no longer exist.
+    /// </summary>
+    Redownloaded,
+
     /// <summary>The GitHub API call or an asset download failed — see the persisted <see cref="AgentUpdateStatusDto.LastError"/>.</summary>
     Failed,
 }
