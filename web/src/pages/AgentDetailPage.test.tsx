@@ -41,6 +41,7 @@ const approvedAgent: AgentDetail = {
   pendingUpdateCount: 0,
   lastAliveAt: null,
   clientCertificateThumbprint: 'abc123',
+  clientCertificateThumbprintSha1: 'def456',
   clientCertificateIssuedAt: '2026-01-01T00:00:00Z',
   clientCertificateExpiresAt: '2028-01-01T00:00:00Z',
   pendingInstallRequestedAt: null,
@@ -78,6 +79,15 @@ describe('AgentDetailPage certificate re-issuance', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('shows both the SHA-256 and SHA-1 certificate thumbprints', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+
+    renderPage();
+
+    expect(await screen.findByText('abc123')).toBeInTheDocument();
+    expect(screen.getByText('def456')).toBeInTheDocument();
   });
 
   it('shows the reissue button only for an approved agent', async () => {

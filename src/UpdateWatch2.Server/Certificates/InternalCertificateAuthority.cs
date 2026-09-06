@@ -147,9 +147,12 @@ public class InternalCertificateAuthority : ICertificateAuthority
             var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
             var notAfter = notBefore.Add(validity);
             var (cert, pfxBytes) = CreateLeaf(_current, hostname, [], ClientAuthEku, notBefore, notAfter);
-            var thumbprint = cert.GetCertHashString(HashAlgorithmName.SHA256);
+            var thumbprintSha256 = cert.GetCertHashString(HashAlgorithmName.SHA256);
+            // SHA-1 only for display purposes (see IssuedCertificate's doc
+            // comment) — every internal comparison still uses SHA-256 only.
+            var thumbprintSha1 = cert.GetCertHashString(HashAlgorithmName.SHA1);
             cert.Dispose();
-            return new IssuedCertificate(pfxBytes, thumbprint, notBefore, notAfter);
+            return new IssuedCertificate(pfxBytes, thumbprintSha256, thumbprintSha1, notBefore, notAfter);
         }
     }
 

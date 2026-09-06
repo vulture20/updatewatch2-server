@@ -2,8 +2,18 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace UpdateWatch2.Server.Certificates;
 
-/// <summary>Result of issuing a new agent client certificate.</summary>
-public record IssuedCertificate(byte[] PfxBytes, string ThumbprintSha256, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt);
+/// <summary>
+/// Result of issuing a new agent client certificate. Carries both
+/// thumbprint algorithms so the admin UI can show the SHA-1 value
+/// alongside the SHA-256 one this codebase actually uses for comparisons
+/// (<see cref="CertificateValidator"/>, <see cref="Windows.WindowsClientCertificateStore"/>)
+/// — SHA-1 is what most OS certificate tools (Windows Certificate
+/// Manager, PowerShell's <c>.Thumbprint</c>, <c>certutil</c>, `openssl
+/// x509 -fingerprint` without `-sha256`) show by default, so an admin
+/// comparing against one of those needs both values, not just the one
+/// this system relies on internally.
+/// </summary>
+public record IssuedCertificate(byte[] PfxBytes, string ThumbprintSha256, string ThumbprintSha1, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt);
 
 /// <summary>
 /// Snapshot of the CA's rotation state (updatewatch2-server#6), returned to

@@ -28,6 +28,17 @@ public class Agent
     /// </summary>
     public string? ClientCertificateThumbprint { get; set; }
 
+    /// <summary>
+    /// SHA-1 thumbprint of the same certificate as <see cref="ClientCertificateThumbprint"/>
+    /// — display-only, alongside it in the admin UI, for an admin comparing
+    /// against a local tool that shows SHA-1 by default (Windows Certificate
+    /// Manager, PowerShell's <c>.Thumbprint</c>, <c>certutil</c>, `openssl
+    /// x509 -fingerprint` without `-sha256`). Never used for any lookup or
+    /// comparison — <see cref="Certificates.CertificateValidator"/> and every
+    /// other internal check still use SHA-256 exclusively.
+    /// </summary>
+    public string? ClientCertificateThumbprintSha1 { get; set; }
+
     /// <summary>When the client certificate identified by <see cref="ClientCertificateThumbprint"/> was issued.</summary>
     public DateTimeOffset? ClientCertificateIssuedAt { get; set; }
 

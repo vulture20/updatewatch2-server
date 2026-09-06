@@ -29,6 +29,7 @@ export interface AgentDetail {
   pendingUpdateCount: number;
   lastAliveAt: string | null;
   clientCertificateThumbprint: string | null;
+  clientCertificateThumbprintSha1: string | null;
   clientCertificateIssuedAt: string | null;
   clientCertificateExpiresAt: string | null;
   /** Set while a remote install (triggerInstall) has been requested but not yet acknowledged by the agent (updatewatch2-server#10). */

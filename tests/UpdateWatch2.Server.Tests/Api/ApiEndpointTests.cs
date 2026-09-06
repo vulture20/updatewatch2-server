@@ -51,9 +51,9 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
         var response = await _client.GetFromJsonAsync<VersionResponse>("/api/version");
 
         Assert.NotNull(response);
-        Assert.Equal("0.12.0", response.server);
+        Assert.Equal("0.13.0", response.server);
         Assert.Equal("0.6.0", response.protocol);
-        Assert.Equal("0.7.0", response.database);
+        Assert.Equal("0.8.0", response.database);
     }
 
     [Fact]

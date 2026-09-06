@@ -19,7 +19,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
             .Select(a => new AgentDetailDto(
                 a.Hostname, a.DnsName, a.OperatingSystem, a.IpAddress, a.AgentVersion,
                 a.Approved, a.RebootRequired, a.PendingUpdateCount, a.LastAliveAt,
-                a.ClientCertificateThumbprint, a.ClientCertificateIssuedAt, a.ClientCertificateExpiresAt,
+                a.ClientCertificateThumbprint, a.ClientCertificateThumbprintSha1, a.ClientCertificateIssuedAt, a.ClientCertificateExpiresAt,
                 a.PendingInstallRequestedAt, a.LastInstallOutcome, a.LastInstallCompletedAt))
             .SingleOrDefaultAsync(ct);
 
@@ -71,6 +71,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
         }
 
         agent.ClientCertificateThumbprint = null;
+        agent.ClientCertificateThumbprintSha1 = null;
         agent.ClientCertificateIssuedAt = null;
         agent.ClientCertificateExpiresAt = null;
 

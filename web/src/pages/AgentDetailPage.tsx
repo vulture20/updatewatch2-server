@@ -63,11 +63,10 @@ export function AgentDetailPage() {
         <dd>{agent.agentVersion ?? '—'}</dd>
         <dt>{t('agentDetail.lastAliveAt')}</dt>
         <dd>{agent.lastAliveAt ? new Date(agent.lastAliveAt).toLocaleString() : t('agentDetail.never')}</dd>
-        <dt>{t('agentDetail.certificateThumbprint')}</dt>
-        <dd>
-          {agent.clientCertificateThumbprint ?? '—'}
-          {agent.clientCertificateThumbprint && <p className="field-hint">{t('agentDetail.certificateThumbprintHint')}</p>}
-        </dd>
+        <dt>{t('agentDetail.certificateThumbprintSha256')}</dt>
+        <dd>{agent.clientCertificateThumbprint ?? '—'}</dd>
+        <dt>{t('agentDetail.certificateThumbprintSha1')}</dt>
+        <dd>{agent.clientCertificateThumbprintSha1 ?? '—'}</dd>
         <dt>{t('agentDetail.certificateIssuedAt')}</dt>
         <dd>{agent.clientCertificateIssuedAt ? new Date(agent.clientCertificateIssuedAt).toLocaleString() : '—'}</dd>
         <dt>{t('agentDetail.certificateExpiresAt')}</dt>

@@ -100,6 +100,7 @@ public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca,
         // already-delivered case.
         var issued = ca.IssueAgentLeaf(hostname, TimeSpan.FromDays(settingsStore.Certificate.AgentCertificateValidityDays));
         agent.ClientCertificateThumbprint = issued.ThumbprintSha256;
+        agent.ClientCertificateThumbprintSha1 = issued.ThumbprintSha1;
         agent.ClientCertificateIssuedAt = issued.IssuedAt;
         agent.ClientCertificateExpiresAt = issued.ExpiresAt;
         agent.RegistrationTokenHash = null;
@@ -153,6 +154,7 @@ public class AgentRegistrationService(AppDbContext db, ICertificateAuthority ca,
 
         var issued = ca.IssueAgentLeaf(hostname, TimeSpan.FromDays(settingsStore.Certificate.AgentCertificateValidityDays));
         agent.ClientCertificateThumbprint = issued.ThumbprintSha256;
+        agent.ClientCertificateThumbprintSha1 = issued.ThumbprintSha1;
         agent.ClientCertificateIssuedAt = issued.IssuedAt;
         agent.ClientCertificateExpiresAt = issued.ExpiresAt;
         await db.SaveChangesAsync(ct);

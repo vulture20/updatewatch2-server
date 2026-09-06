@@ -86,6 +86,10 @@ public class InternalCertificateAuthorityTests : IDisposable
         using var cert = X509CertificateLoader.LoadPkcs12(issued.PfxBytes, password: null);
         Assert.Equal("CN=workstation-42", cert.Subject);
         Assert.Equal(issued.ThumbprintSha256, cert.GetCertHashString(HashAlgorithmName.SHA256));
+        // Display-only alongside the SHA-256 value in the admin UI — see
+        // IssuedCertificate's own doc comment for why both are carried.
+        Assert.Equal(issued.ThumbprintSha1, cert.GetCertHashString(HashAlgorithmName.SHA1));
+        Assert.NotEqual(issued.ThumbprintSha256, issued.ThumbprintSha1);
 
         var eku = cert.Extensions.OfType<X509EnhancedKeyUsageExtension>().Single();
         Assert.Contains(eku.EnhancedKeyUsages.Cast<Oid>(), oid => oid.Value == "1.3.6.1.5.5.7.3.2"); // Client Authentication

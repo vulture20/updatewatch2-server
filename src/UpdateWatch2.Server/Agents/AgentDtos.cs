@@ -19,6 +19,7 @@ public record AgentDetailDto(
     int PendingUpdateCount,
     DateTimeOffset? LastAliveAt,
     string? ClientCertificateThumbprint,
+    string? ClientCertificateThumbprintSha1,
     DateTimeOffset? ClientCertificateIssuedAt,
     DateTimeOffset? ClientCertificateExpiresAt,
     DateTimeOffset? PendingInstallRequestedAt,
