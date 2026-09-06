@@ -212,11 +212,21 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     await user.click(screen.getByRole('tab', { name: 'Certificates' }));
   };
 
+  // AdminPage formats these with `i18n.language` (resolved to 'en' here via
+  // the language detector's navigator fallback, see setupTests.ts) rather
+  // than a hardcoded literal — computing the expected string the same way
+  // keeps this assertion correct regardless of which ICU/date formatting
+  // the machine running the test happens to have (this hardcoded a
+  // European D.M.YYYY-style literal once, which passed wherever it was
+  // authored but failed on GitHub Actions' runner, which formats 'en'
+  // dates as M/D/YYYY — never hardcode a locale-formatted date again).
+  const expiresLabel = (iso: string) => `expires ${new Date(iso).toLocaleDateString('en')}`;
+
   it('shows the current root and disables Activate/Retire when there is nothing pending or previous', async () => {
     const user = userEvent.setup();
     await openCertificatesTab(user);
 
-    expect(await screen.findByText('AAAA (expires 1.1.2036)')).toBeInTheDocument();
+    expect(await screen.findByText(`AAAA (${expiresLabel('2036-01-01T00:00:00Z')})`)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Activate rotation' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Retire previous root' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Prepare rotation' })).toBeEnabled();
@@ -230,7 +240,7 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     await user.click(await screen.findByRole('button', { name: 'Prepare rotation' }));
 
     expect(mockedPrepareRotation).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText('BBBB (expires 1.6.2036)')).toBeInTheDocument();
+    expect(await screen.findByText(`BBBB (${expiresLabel('2036-06-01T00:00:00Z')})`)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Activate rotation' })).toBeEnabled();
   });
 
@@ -262,7 +272,7 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     await user.click(await screen.findByRole('button', { name: 'Activate rotation' }));
 
     expect(mockedActivateRotation).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText('BBBB (expires 1.6.2036)')).toBeInTheDocument();
+    expect(await screen.findByText(`BBBB (${expiresLabel('2036-06-01T00:00:00Z')})`)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retire previous root' })).toBeEnabled();
   });
 

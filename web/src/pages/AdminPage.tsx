@@ -36,7 +36,7 @@ function toFormState(settings: AdminSettings): FormState {
  * settings persistence itself.
  */
 export function AdminPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [version, setVersion] = useState<VersionInfo | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [tab, setTab] = useState<Tab>('general');
@@ -342,17 +342,17 @@ export function AdminPage() {
             <>
               <dl>
                 <dt>{t('admin.caRotation.current')}</dt>
-                <dd>{`${caStatus.currentThumbprint} (${t('admin.caRotation.expires')} ${new Date(caStatus.currentNotAfter).toLocaleDateString()})`}</dd>
+                <dd>{`${caStatus.currentThumbprint} (${t('admin.caRotation.expires')} ${new Date(caStatus.currentNotAfter).toLocaleDateString(i18n.language)})`}</dd>
                 <dt>{t('admin.caRotation.previous')}</dt>
                 <dd>
                   {caStatus.previousThumbprint
-                    ? `${caStatus.previousThumbprint} (${t('admin.caRotation.expires')} ${new Date(caStatus.previousNotAfter!).toLocaleDateString()})`
+                    ? `${caStatus.previousThumbprint} (${t('admin.caRotation.expires')} ${new Date(caStatus.previousNotAfter!).toLocaleDateString(i18n.language)})`
                     : '—'}
                 </dd>
                 <dt>{t('admin.caRotation.pending')}</dt>
                 <dd>
                   {caStatus.pendingThumbprint
-                    ? `${caStatus.pendingThumbprint} (${t('admin.caRotation.expires')} ${new Date(caStatus.pendingNotAfter!).toLocaleDateString()})`
+                    ? `${caStatus.pendingThumbprint} (${t('admin.caRotation.expires')} ${new Date(caStatus.pendingNotAfter!).toLocaleDateString(i18n.language)})`
                     : '—'}
                 </dd>
               </dl>
