@@ -36,4 +36,5 @@ public record UpdateAdminSettingsRequest(
     string AdLoginGroupDn,
     int AgentCertificateValidityDays,
     bool AgentAutoUpdateEnabled = true,
-    string? GitHubToken = null);
+    string? GitHubToken = null,
+    int AgentAutoUpdateCheckIntervalHours = 6);

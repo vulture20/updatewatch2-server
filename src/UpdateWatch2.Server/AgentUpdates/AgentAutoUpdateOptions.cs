@@ -17,4 +17,15 @@ public class AgentAutoUpdateOptions
 
     /// <summary>Optional GitHub personal access token — see <c>AdminSettings.GitHubToken</c>'s doc comment for why.</summary>
     public string? GitHubToken { get; set; }
+
+    /// <summary>
+    /// How often <see cref="AgentUpdateCheckWorker"/> checks GitHub for a
+    /// newer release. Read fresh on every loop iteration (not cached at
+    /// startup), so an admin shortening or lengthening it takes effect on
+    /// the very next check, the same live-reload behavior every other
+    /// admin setting already gets — see <see cref="AgentUpdateCheckWorker"/>'s
+    /// own doc comment. Matches this feature's original hardcoded default
+    /// of 6 hours.
+    /// </summary>
+    public int CheckIntervalHours { get; set; } = 6;
 }

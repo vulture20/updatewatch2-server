@@ -130,6 +130,24 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
+    public async Task Put_rejects_a_zero_agent_auto_update_check_interval()
+    {
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AgentAutoUpdateCheckIntervalHours = 0 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_persists_a_custom_agent_auto_update_check_interval()
+    {
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AgentAutoUpdateCheckIntervalHours = 24 });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var settings = await _client.GetFromJsonAsync<AdminSettingsDto>("/api/admin/settings");
+        Assert.Equal(24, settings!.AgentAutoUpdateCheckIntervalHours);
+    }
+
+    [Fact]
     public async Task Put_requires_an_admin_session()
     {
         using var anonymousClient = _factory.CreateClient();

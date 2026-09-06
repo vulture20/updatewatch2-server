@@ -70,6 +70,7 @@ const baseSettings = {
   agentCertificateValidityDays: 730,
   agentAutoUpdateEnabled: true,
   gitHubTokenSet: false,
+  agentAutoUpdateCheckIntervalHours: 6,
 };
 
 describe('AdminPage', () => {
@@ -195,6 +196,22 @@ describe('AdminPage', () => {
 
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ agentAutoUpdateEnabled: false }));
+  });
+
+  it('submits an edited agent auto-update check interval', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, agentAutoUpdateCheckIntervalHours: 24 });
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+
+    const interval = screen.getByLabelText('Check interval (hours)');
+    await user.clear(interval);
+    await user.type(interval, '24');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ agentAutoUpdateCheckIntervalHours: 24 }));
   });
 
   it('sends a typed GitHub token as gitHubToken, and omits it when left blank', async () => {

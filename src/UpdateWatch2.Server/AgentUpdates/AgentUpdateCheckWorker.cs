@@ -1,3 +1,5 @@
+using UpdateWatch2.Server.Admin;
+
 namespace UpdateWatch2.Server.AgentUpdates;
 
 /// <summary>
@@ -5,10 +7,18 @@ namespace UpdateWatch2.Server.AgentUpdates;
 /// — this project's first server-side <see cref="BackgroundService"/>;
 /// every other piece of periodic background behavior in this codebase
 /// lives on the agent side (<c>HeartbeatWorker</c>/<c>UpdateCheckWorker</c>).
-/// Runs on its own fixed interval, independent of any agent's heartbeat
+/// Runs on its own interval, independent of any agent's heartbeat
 /// cadence, since this checks GitHub, not any particular agent — an
 /// agent only ever learns about the result via <see cref="IAgentUpdateService.GetOfferForAsync"/>
 /// on its own next heartbeat.
+///
+/// The interval itself (<see cref="AgentAutoUpdateOptions.CheckIntervalHours"/>,
+/// admin-configurable) is re-read from <see cref="IAdminSettingsStore"/> —
+/// a singleton, safe to hold directly, unlike <see cref="IAgentUpdateService"/>
+/// below — fresh on every loop iteration rather than captured once at
+/// startup, so an admin shortening or lengthening it takes effect on the
+/// very next wait, the same live-reload behavior every other admin
+/// setting already gets.
 ///
 /// A new <see cref="IServiceScope"/> per tick, resolving
 /// <see cref="IAgentUpdateService"/> from it, since that service depends
@@ -16,10 +26,11 @@ namespace UpdateWatch2.Server.AgentUpdates;
 /// itself is a singleton for the process's whole lifetime, so it can't
 /// hold a scoped dependency directly.
 /// </summary>
-public class AgentUpdateCheckWorker(IServiceScopeFactory scopeFactory, ILogger<AgentUpdateCheckWorker> logger) : BackgroundService
+public class AgentUpdateCheckWorker(
+    IServiceScopeFactory scopeFactory,
+    IAdminSettingsStore settingsStore,
+    ILogger<AgentUpdateCheckWorker> logger) : BackgroundService
 {
-    public static readonly TimeSpan CheckInterval = TimeSpan.FromHours(6);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -41,7 +52,17 @@ public class AgentUpdateCheckWorker(IServiceScopeFactory scopeFactory, ILogger<A
 
             try
             {
-                await Task.Delay(CheckInterval, stoppingToken);
+                // Math.Max, not the raw configured value: PUT /api/admin/settings
+                // already rejects anything below 1, but a negative TimeSpan
+                // makes Task.Delay throw ArgumentOutOfRangeException outside
+                // this method's own try/catch (which only ever catches
+                // OperationCanceledException) — defense in depth against a
+                // stored value the API-level validation didn't produce (a
+                // hand-edited row, a future migration with a bad default),
+                // which would otherwise silently kill this loop for the rest
+                // of the process's lifetime.
+                var intervalHours = Math.Max(0, settingsStore.AgentAutoUpdate.CheckIntervalHours);
+                await Task.Delay(TimeSpan.FromHours(intervalHours), stoppingToken);
             }
             catch (OperationCanceledException)
             {

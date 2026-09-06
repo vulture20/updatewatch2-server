@@ -14,8 +14,15 @@ public class FakeAgentUpdateService : IAgentUpdateService
 
     public AgentUpdateOffer? Offer { get; set; }
 
-    public Task<AgentUpdateCheckOutcome> CheckForUpdatesAsync(CancellationToken ct = default) =>
-        throw new NotSupportedException();
+    public AgentUpdateCheckOutcome CheckOutcome { get; set; } = AgentUpdateCheckOutcome.UpToDate;
+
+    public int CheckCallCount { get; private set; }
+
+    public Task<AgentUpdateCheckOutcome> CheckForUpdatesAsync(CancellationToken ct = default)
+    {
+        CheckCallCount++;
+        return Task.FromResult(CheckOutcome);
+    }
 
     public Task<AgentUpdateOffer?> GetOfferForAsync(string? currentAgentVersion, CancellationToken ct = default) =>
         Task.FromResult(IsEnabled ? Offer : null);

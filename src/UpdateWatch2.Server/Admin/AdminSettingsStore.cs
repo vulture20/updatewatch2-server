@@ -125,6 +125,7 @@ public class AdminSettingsStore(
         {
             row.GitHubToken = request.GitHubToken.Length == 0 ? null : request.GitHubToken;
         }
+        row.AgentAutoUpdateCheckIntervalHours = request.AgentAutoUpdateCheckIntervalHours;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -164,7 +165,8 @@ public class AdminSettingsStore(
                 _ad.IsConfigured,
                 _certificate.AgentCertificateValidityDays,
                 _agentAutoUpdate.Enabled,
-                !string.IsNullOrEmpty(_agentAutoUpdate.GitHubToken));
+                !string.IsNullOrEmpty(_agentAutoUpdate.GitHubToken),
+                _agentAutoUpdate.CheckIntervalHours);
         }
     }
 
@@ -199,6 +201,7 @@ public class AdminSettingsStore(
         AgentCertificateValidityDays = defaultCertificate.Value.AgentCertificateValidityDays,
         AgentAutoUpdateEnabled = defaultAgentAutoUpdate.Value.Enabled,
         GitHubToken = defaultAgentAutoUpdate.Value.GitHubToken,
+        AgentAutoUpdateCheckIntervalHours = defaultAgentAutoUpdate.Value.CheckIntervalHours,
     };
 
     private void Apply(AdminSettings row)
@@ -244,6 +247,7 @@ public class AdminSettingsStore(
         {
             Enabled = row.AgentAutoUpdateEnabled,
             GitHubToken = row.GitHubToken,
+            CheckIntervalHours = row.AgentAutoUpdateCheckIntervalHours,
         };
 
         lock (_lock)

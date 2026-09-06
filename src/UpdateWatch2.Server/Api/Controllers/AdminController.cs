@@ -131,6 +131,11 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
             errors.Add("AgentCertificateValidityDays must be between 1 and 3650.");
         }
 
+        if (request.AgentAutoUpdateCheckIntervalHours < 1)
+        {
+            errors.Add("AgentAutoUpdateCheckIntervalHours must be at least 1.");
+        }
+
         return errors;
     }
 }

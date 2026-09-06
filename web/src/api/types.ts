@@ -104,6 +104,7 @@ export interface AdminSettings {
   agentCertificateValidityDays: number;
   agentAutoUpdateEnabled: boolean;
   gitHubTokenSet: boolean;
+  agentAutoUpdateCheckIntervalHours: number;
 }
 
 /**

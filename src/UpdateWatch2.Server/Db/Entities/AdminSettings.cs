@@ -79,5 +79,8 @@ public class AdminSettings
     /// </summary>
     public string? GitHubToken { get; set; }
 
+    /// <summary>How often (in hours) to check GitHub for a newer agent release — see <see cref="AgentUpdates.AgentAutoUpdateOptions.CheckIntervalHours"/>.</summary>
+    public int AgentAutoUpdateCheckIntervalHours { get; set; } = 6;
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

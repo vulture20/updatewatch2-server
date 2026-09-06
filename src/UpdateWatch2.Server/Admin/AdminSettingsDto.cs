@@ -32,4 +32,5 @@ public record AdminSettingsDto(
     bool AdConfigured,
     int AgentCertificateValidityDays,
     bool AgentAutoUpdateEnabled,
-    bool GitHubTokenSet);
+    bool GitHubTokenSet,
+    int AgentAutoUpdateCheckIntervalHours);

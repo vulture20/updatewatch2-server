@@ -197,6 +197,16 @@ export function AdminPage() {
             {t('admin.agentAutoUpdate.enabled')}
           </label>
           <label>
+            {t('admin.agentAutoUpdate.checkIntervalHours')}
+            <input
+              type="number"
+              min={1}
+              value={form.agentAutoUpdateCheckIntervalHours}
+              onChange={(e) => update('agentAutoUpdateCheckIntervalHours', Number(e.target.value))}
+            />
+          </label>
+          <p className="field-hint">{t('admin.agentAutoUpdate.checkIntervalHoursHint')}</p>
+          <label>
             {t('admin.agentAutoUpdate.gitHubToken')}
             <input
               type="password"
