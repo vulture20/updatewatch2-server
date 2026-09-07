@@ -60,4 +60,9 @@ export const certificateAuthorityApi = {
 /** Agent auto-update status (updatewatch2-server#14) — see AgentUpdatesController. The enabled/token toggle itself is part of adminApi's settings, not this. */
 export const agentUpdatesApi = {
   getStatus: () => apiClient.get<AgentUpdateStatus>('/api/admin/agent-update-status'),
+  // Runs the same check AgentUpdateCheckWorker runs on its own interval,
+  // right now — returns the freshly updated status (same shape as
+  // getStatus) rather than a separate "outcome" type, since the refreshed
+  // checkedAt/latestVersion/lastError already tell the admin what happened.
+  checkNow: () => apiClient.post<AgentUpdateStatus>('/api/admin/agent-update-status/check'),
 };

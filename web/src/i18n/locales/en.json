@@ -84,7 +84,10 @@
       "latestVersion": "Latest known agent version",
       "checkedAt": "Last checked",
       "lastError": "Last check error",
-      "noneYet": "None yet"
+      "noneYet": "None yet",
+      "checkNow": "Check now",
+      "checking": "Checking…",
+      "checkNowDisabledHint": "Enable and save the setting above to check manually."
     },
     "notifications": "Notifications",
     "smtpConfigured": "SMTP configured",

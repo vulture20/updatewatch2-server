@@ -49,6 +49,8 @@ export function AdminPage() {
   const [caError, setCaError] = useState<string | null>(null);
   const [caBusy, setCaBusy] = useState(false);
   const [agentUpdateStatus, setAgentUpdateStatus] = useState<AgentUpdateStatus | null>(null);
+  const [agentUpdateBusy, setAgentUpdateBusy] = useState(false);
+  const [agentUpdateError, setAgentUpdateError] = useState<string | null>(null);
 
   const reloadCaStatus = () =>
     certificateAuthorityApi
@@ -62,6 +64,16 @@ export function AdminPage() {
     reloadCaStatus();
     agentUpdatesApi.getStatus().then(setAgentUpdateStatus).catch(() => setAgentUpdateStatus(null));
   }, []);
+
+  const runAgentUpdateCheck = () => {
+    setAgentUpdateError(null);
+    setAgentUpdateBusy(true);
+    agentUpdatesApi
+      .checkNow()
+      .then(setAgentUpdateStatus)
+      .catch((err) => setAgentUpdateError(err instanceof ApiError ? err.message : t('login.genericError')))
+      .finally(() => setAgentUpdateBusy(false));
+  };
 
   const runCaAction = (
     confirmKey: string | null,
@@ -221,18 +233,29 @@ export function AdminPage() {
           </label>
           <p className="field-hint">{t('admin.agentAutoUpdate.gitHubTokenHint')}</p>
           {agentUpdateStatus && (
-            <dl>
-              <dt>{t('admin.agentAutoUpdate.latestVersion')}</dt>
-              <dd>{agentUpdateStatus.latestVersion ?? t('admin.agentAutoUpdate.noneYet')}</dd>
-              <dt>{t('admin.agentAutoUpdate.checkedAt')}</dt>
-              <dd>{agentUpdateStatus.checkedAt ? new Date(agentUpdateStatus.checkedAt).toLocaleString(i18n.language) : '—'}</dd>
-              {agentUpdateStatus.lastError && (
-                <>
-                  <dt>{t('admin.agentAutoUpdate.lastError')}</dt>
-                  <dd role="alert">{agentUpdateStatus.lastError}</dd>
-                </>
-              )}
-            </dl>
+            <>
+              <dl>
+                <dt>{t('admin.agentAutoUpdate.latestVersion')}</dt>
+                <dd>{agentUpdateStatus.latestVersion ?? t('admin.agentAutoUpdate.noneYet')}</dd>
+                <dt>{t('admin.agentAutoUpdate.checkedAt')}</dt>
+                <dd>{agentUpdateStatus.checkedAt ? new Date(agentUpdateStatus.checkedAt).toLocaleString(i18n.language) : '—'}</dd>
+                {agentUpdateStatus.lastError && (
+                  <>
+                    <dt>{t('admin.agentAutoUpdate.lastError')}</dt>
+                    <dd role="alert">{agentUpdateStatus.lastError}</dd>
+                  </>
+                )}
+              </dl>
+              {agentUpdateError && <div role="alert" className="login-error">{agentUpdateError}</div>}
+              <button
+                type="button"
+                disabled={agentUpdateBusy || !agentUpdateStatus.enabled}
+                onClick={runAgentUpdateCheck}
+              >
+                {agentUpdateBusy ? t('admin.agentAutoUpdate.checking') : t('admin.agentAutoUpdate.checkNow')}
+              </button>
+              {!agentUpdateStatus.enabled && <p className="field-hint">{t('admin.agentAutoUpdate.checkNowDisabledHint')}</p>}
+            </>
           )}
         </div>
 

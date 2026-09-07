@@ -21,6 +21,7 @@ vi.mock('../api/endpoints', () => ({
   },
   agentUpdatesApi: {
     getStatus: vi.fn(),
+    checkNow: vi.fn(),
   },
 }));
 
@@ -32,6 +33,7 @@ const mockedPrepareRotation = vi.mocked(certificateAuthorityApi.prepareRotation)
 const mockedActivateRotation = vi.mocked(certificateAuthorityApi.activateRotation);
 const mockedRetirePreviousRoot = vi.mocked(certificateAuthorityApi.retirePreviousRoot);
 const mockedGetAgentUpdateStatus = vi.mocked(agentUpdatesApi.getStatus);
+const mockedCheckNow = vi.mocked(agentUpdatesApi.checkNow);
 
 const baseCaStatus = {
   currentThumbprint: 'AAAA',
@@ -91,6 +93,7 @@ describe('AdminPage', () => {
       checkedAt: null,
       lastError: null,
     });
+    mockedCheckNow.mockReset();
   });
 
   it('renders the loaded settings into the form fields', async () => {
@@ -201,6 +204,49 @@ describe('AdminPage', () => {
     expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ agentAutoUpdateEnabled: false }));
   });
 
+  it('runs a manual agent-update check and shows the refreshed status', async () => {
+    mockedGetAgentUpdateStatus.mockResolvedValue({
+      enabled: true,
+      latestVersion: '0.11.0',
+      checkedAt: '2026-01-01T00:00:00Z',
+      lastError: null,
+    });
+    mockedCheckNow.mockResolvedValue({
+      enabled: true,
+      latestVersion: '0.12.2',
+      checkedAt: '2026-02-01T00:00:00Z',
+      lastError: null,
+    });
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    expect(await screen.findByText('0.11.0')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Check now' }));
+
+    expect(mockedCheckNow).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('0.12.2')).toBeInTheDocument();
+  });
+
+  it('shows an error message when a manual check fails', async () => {
+    mockedCheckNow.mockRejectedValue(new ApiError(500, 'GitHub is unreachable.'));
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('button', { name: 'Check now' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('GitHub is unreachable.');
+  });
+
+  it('disables Check now while the feature itself is off', async () => {
+    mockedGetAgentUpdateStatus.mockResolvedValue({ enabled: false, latestVersion: null, checkedAt: null, lastError: null });
+
+    render(<AdminPage />);
+
+    expect(await screen.findByRole('button', { name: 'Check now' })).toBeDisabled();
+  });
+
   it('submits an edited agent auto-update check interval', async () => {
     mockedUpdateSettings.mockResolvedValue({ ...baseSettings, agentAutoUpdateCheckIntervalHours: 24 });
     const user = userEvent.setup();
@@ -280,6 +326,7 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
       checkedAt: null,
       lastError: null,
     });
+    mockedCheckNow.mockReset();
   });
 
   const openCertificatesTab = async (user: ReturnType<typeof userEvent.setup>) => {

@@ -84,7 +84,10 @@
       "latestVersion": "Neueste bekannte Agent-Version",
       "checkedAt": "Zuletzt geprüft",
       "lastError": "Fehler bei letzter Prüfung",
-      "noneYet": "Noch keine"
+      "noneYet": "Noch keine",
+      "checkNow": "Jetzt prüfen",
+      "checking": "Wird geprüft…",
+      "checkNowDisabledHint": "Obige Einstellung aktivieren und speichern, um manuell zu prüfen."
     },
     "notifications": "Benachrichtigungen",
     "smtpConfigured": "SMTP konfiguriert",
