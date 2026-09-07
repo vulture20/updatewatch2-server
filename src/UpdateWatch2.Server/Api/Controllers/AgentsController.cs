@@ -57,4 +57,14 @@ public class AgentsController(IAgentService agentService) : ControllerBase
             ? NotFound()
             : Conflict(new { message = result.FailureReason });
     }
+
+    // Permanent — see IAgentService.DeleteAsync's doc comment for why this
+    // is effective immediately (no separate certificate-revocation step
+    // needed) and what happens if the same hostname registers again later.
+    [HttpDelete("{hostname}")]
+    public async Task<IActionResult> Delete(string hostname, CancellationToken ct)
+    {
+        var deleted = await agentService.DeleteAsync(hostname, initiatedBy: User.Identity!.Name!, ct);
+        return deleted ? NoContent() : NotFound();
+    }
 }

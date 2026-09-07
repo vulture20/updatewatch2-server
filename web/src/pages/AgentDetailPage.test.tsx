@@ -13,6 +13,7 @@ vi.mock('../api/endpoints', () => ({
     approve: vi.fn(),
     triggerInstall: vi.fn(),
     reissueCertificate: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -20,6 +21,7 @@ const mockedGet = vi.mocked(agentsApi.get);
 const mockedUpdates = vi.mocked(agentsApi.updates);
 const mockedReissueCertificate = vi.mocked(agentsApi.reissueCertificate);
 const mockedTriggerInstall = vi.mocked(agentsApi.triggerInstall);
+const mockedDelete = vi.mocked(agentsApi.delete);
 
 const pendingUpdate: UpdateItem = {
   id: 1,
@@ -54,6 +56,7 @@ function renderPage() {
     <MemoryRouter initialEntries={['/agents/host-1']}>
       <Routes>
         <Route path="/agents/:hostname" element={<AgentDetailPage />} />
+        <Route path="/agents" element={<div>agents list page</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -188,5 +191,47 @@ describe('AgentDetailPage install trigger', () => {
 
     await screen.findByText('host-1');
     expect(screen.getByText(/succeeded/i)).toBeInTheDocument();
+  });
+});
+
+describe('AgentDetailPage deletion', () => {
+  beforeEach(() => {
+    mockedGet.mockReset();
+    mockedUpdates.mockReset();
+    mockedDelete.mockReset();
+    mockedUpdates.mockResolvedValue([]);
+    mockedGet.mockResolvedValue(approvedAgent);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('deletes the agent after confirmation and navigates back to the agents list', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    mockedDelete.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    await user.click(screen.getByRole('button', { name: /delete agent/i }));
+
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('host-1'));
+    await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith('host-1'));
+    expect(await screen.findByText('agents list page')).toBeInTheDocument();
+  });
+
+  it('does not delete or navigate when the confirmation is declined', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    await user.click(screen.getByRole('button', { name: /delete agent/i }));
+
+    expect(mockedDelete).not.toHaveBeenCalled();
+    expect(screen.getByText('host-1')).toBeInTheDocument();
   });
 });

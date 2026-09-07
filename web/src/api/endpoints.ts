@@ -36,6 +36,7 @@ export const agentsApi = {
   triggerInstall: (hostname: string) => apiClient.post<void>(`/api/agents/${encodeURIComponent(hostname)}/install`),
   reissueCertificate: (hostname: string) =>
     apiClient.post<ReissueCertificateResult>(`/api/agents/${encodeURIComponent(hostname)}/reissue-certificate`),
+  delete: (hostname: string) => apiClient.delete<void>(`/api/agents/${encodeURIComponent(hostname)}`),
 };
 
 export const versionApi = {

@@ -3,6 +3,7 @@ using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
+using UpdateWatch2.Server.Db.Entities;
 using UpdateWatch2.Server.Tests.TestHelpers;
 
 namespace UpdateWatch2.Server.Tests.Agents;
@@ -116,6 +117,53 @@ public class AgentServiceTests : IDisposable
         var afterReissue = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
         Assert.NotNull(afterReissue.ClientCertificateThumbprint);
         Assert.NotEqual(originalThumbprint, afterReissue.ClientCertificateThumbprint);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_removes_the_agent_and_cascades_its_update_items()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("delete-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        _db.UpdateItems.Add(new UpdateItem { AgentId = agent.Id, Title = "Some Update" });
+        await _db.SaveChangesAsync();
+
+        var result = await _service.DeleteAsync(hostname, initiatedBy: "admin");
+
+        Assert.True(result);
+        Assert.False(await _db.Agents.AnyAsync(a => a.Hostname == hostname));
+        Assert.False(await _db.UpdateItems.AnyAsync(u => u.AgentId == agent.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_returns_false_for_an_unknown_hostname()
+    {
+        var result = await _service.DeleteAsync("does-not-exist", initiatedBy: "admin");
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_writes_an_audit_log_entry_with_the_initiating_admin_as_actor()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("audited-delete-host");
+
+        await _service.DeleteAsync(hostname, initiatedBy: "alice");
+
+        var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "agent.delete" && e.Details == hostname);
+        Assert.Equal("alice", entry.Actor);
+    }
+
+    [Fact]
+    public async Task A_deleted_hostname_starts_over_as_a_brand_new_unapproved_agent_on_re_registration()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("re-registering-host");
+        await _service.DeleteAsync(hostname, initiatedBy: "admin");
+
+        var outcome = await _registrationService.RegisterAsync(hostname, BareRequest);
+
+        Assert.Equal(AgentRegistrationStatus.Pending, outcome.Status);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        Assert.False(agent.Approved);
     }
 
     [Fact]

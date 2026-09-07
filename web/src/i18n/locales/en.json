@@ -52,7 +52,9 @@
     "reissueTokenBody": "Copy this token now and place it into the agent's local configuration. It will not be shown again.",
     "copyToken": "Copy",
     "copied": "Copied",
-    "close": "Close"
+    "close": "Close",
+    "delete": "Delete agent",
+    "deleteConfirm": "Permanently delete \"{{hostname}}\"? Its certificate stops being accepted immediately, its update history is removed, and it can only reconnect by registering again from scratch as a new, unapproved agent. This cannot be undone."
   },
   "admin": {
     "title": "Administration",

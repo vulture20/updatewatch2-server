@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { OneTimeSecretDialog } from '../components/OneTimeSecretDialog';
 import { agentsApi } from '../api/endpoints';
 import type { AgentDetail, UpdateItem } from '../api/types';
@@ -8,6 +8,7 @@ import type { AgentDetail, UpdateItem } from '../api/types';
 export function AgentDetailPage() {
   const { t } = useTranslation();
   const { hostname } = useParams<{ hostname: string }>();
+  const navigate = useNavigate();
   const [agent, setAgent] = useState<AgentDetail | null>(null);
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
   const [notFound, setNotFound] = useState(false);
@@ -39,6 +40,13 @@ export function AgentDetailPage() {
       setReissuedToken(result.registrationToken);
       reload();
     });
+  };
+
+  const deleteAgent = () => {
+    if (!agent || !window.confirm(t('agentDetail.deleteConfirm', { hostname: agent.hostname }))) {
+      return;
+    }
+    void agentsApi.delete(agent.hostname).then(() => navigate('/agents'));
   };
 
   if (notFound) {
@@ -111,6 +119,10 @@ export function AgentDetailPage() {
         onClick={() => void agentsApi.triggerInstall(agent.hostname).then(reload)}
       >
         {agent.pendingInstallRequestedAt ? t('agentDetail.installPending') : t('agentDetail.triggerInstall')}
+      </button>{' '}
+
+      <button type="button" className="btn-danger" onClick={deleteAgent}>
+        {t('agentDetail.delete')}
       </button>
 
       <h2>{t('agentDetail.updates')}</h2>

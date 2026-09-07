@@ -34,6 +34,18 @@ describe('apiClient', () => {
     );
   });
 
+  it('sets method DELETE for apiClient.delete', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiClient.delete('/api/agents/host-1');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/agents/host-1',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
   it('throws ApiError with the response status when the request fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
 

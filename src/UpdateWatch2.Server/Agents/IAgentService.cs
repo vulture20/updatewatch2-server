@@ -34,6 +34,24 @@ public interface IAgentService
     Task<ReissueCertificateResult> ReissueCertificateAsync(string hostname, string initiatedBy, CancellationToken ct = default);
 
     /// <summary>
+    /// Permanently removes an agent (and, via the FK cascade configured in
+    /// <see cref="Db.AppDbContext"/>, its <see cref="Db.Entities.UpdateItem"/>
+    /// rows) — for a decommissioned machine or a mistaken/test registration
+    /// an admin never wants to see again, as opposed to
+    /// <see cref="ReissueCertificateAsync"/>, which keeps the agent but
+    /// gives it a fresh identity to reconnect with. Effective immediately,
+    /// not just cosmetically: <c>CertificateValidator.ValidateAsync</c>
+    /// resolves a client certificate to an agent by a DB lookup, so once
+    /// the row is gone, the agent's still-cryptographically-valid
+    /// certificate stops authenticating on its very next request — no
+    /// separate revocation-list mechanism needed. If the same hostname
+    /// registers again later, it starts over as a brand-new, unapproved
+    /// agent, exactly like first contact. Returns false if no agent with
+    /// that hostname exists.
+    /// </summary>
+    Task<bool> DeleteAsync(string hostname, string initiatedBy, CancellationToken ct = default);
+
+    /// <summary>
     /// How many/which approved agents' <see cref="Db.Entities.Agent.IssuingRootThumbprint"/>
     /// still matches <paramref name="previousRootThumbprintSha256"/> — i.e.
     /// would stop authenticating if that root were retired right now.

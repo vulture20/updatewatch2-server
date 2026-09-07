@@ -51,7 +51,7 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
         var response = await _client.GetFromJsonAsync<VersionResponse>("/api/version");
 
         Assert.NotNull(response);
-        Assert.Equal("0.17.0", response.server);
+        Assert.Equal("0.18.0", response.server);
         Assert.Equal("0.8.0", response.protocol);
         Assert.Equal("0.11.0", response.database);
     }
@@ -116,6 +116,24 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
     public async Task ReissueCertificate_returns_not_found_for_an_unknown_hostname()
     {
         var response = await _client.PostAsync("/api/agents/does-not-exist/reissue-certificate", content: null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_requires_an_admin_session()
+    {
+        using var anonymousClient = _factory.CreateClient();
+
+        var response = await anonymousClient.DeleteAsync("/api/agents/some-host");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_returns_not_found_for_an_unknown_hostname()
+    {
+        var response = await _client.DeleteAsync("/api/agents/does-not-exist");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

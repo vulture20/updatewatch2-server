@@ -72,6 +72,14 @@ button:disabled {
   border-radius: var(--radius-lg);
 }
 
+/* A destructive, hard-to-reverse action (deleting an agent) — reuses the
+   same --color-danger token the SMTP warning banner/one-time-secret box
+   already use, rather than introducing a new color for "this is risky". */
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+}
+
 input,
 select {
   background: var(--color-background);

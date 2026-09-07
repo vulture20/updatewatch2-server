@@ -85,6 +85,21 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
         return ReissueCertificateResult.Succeeded(rawToken);
     }
 
+    public async Task<bool> DeleteAsync(string hostname, string initiatedBy, CancellationToken ct = default)
+    {
+        var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
+        if (agent is null)
+        {
+            return false;
+        }
+
+        db.Agents.Remove(agent);
+        await db.SaveChangesAsync(ct);
+        await auditLog.LogAsync(initiatedBy, "agent.delete", hostname, ct);
+
+        return true;
+    }
+
     // Capped so a large fleet's confirm dialog/admin panel never has to
     // render an unbounded list — StillOnPreviousRootCount still reports the
     // true total even when the hostname list itself is truncated.

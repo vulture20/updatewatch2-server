@@ -52,7 +52,9 @@
     "reissueTokenBody": "Kopieren Sie dieses Token jetzt und tragen Sie es in die lokale Konfiguration des Agenten ein. Es wird nicht erneut angezeigt.",
     "copyToken": "Kopieren",
     "copied": "Kopiert",
-    "close": "Schließen"
+    "close": "Schließen",
+    "delete": "Agent löschen",
+    "deleteConfirm": "\"{{hostname}}\" endgültig löschen? Sein Zertifikat wird sofort nicht mehr akzeptiert, sein Update-Verlauf wird entfernt, und er kann sich nur wieder verbinden, indem er sich als neuer, nicht bestätigter Agent komplett neu registriert. Dies kann nicht rückgängig gemacht werden."
   },
   "admin": {
     "title": "Administration",
