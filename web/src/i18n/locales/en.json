@@ -121,7 +121,10 @@
       "activate": "Activate rotation",
       "retirePrevious": "Retire previous root",
       "activateConfirm": "Activate the prepared root now? This server's own certificate switches immediately — make sure agents have had time to fetch the prepared root first.",
-      "retireConfirm": "Retire the previous root now? Any agent whose certificate hasn't renewed past it yet will lose its connection until an admin re-issues its certificate."
+      "retireConfirm": "Retire the previous root now? {{count}} agent(s) haven't renewed past it yet and will lose their connection until an admin re-issues their certificate.",
+      "stillOnPreviousRoot": "Agents still on the previous root: {{count}}",
+      "stillOnPreviousRootMore": "(+{{count}} more)",
+      "unknownRootAgents": "{{count}} agent(s) have a certificate issued before this could be tracked and can't be confirmed either way."
     },
     "save": "Save",
     "saved": "Settings saved."

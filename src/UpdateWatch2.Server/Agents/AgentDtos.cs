@@ -26,6 +26,26 @@ public record AgentDetailDto(
     string? LastInstallOutcome,
     DateTimeOffset? LastInstallCompletedAt);
 
+/// <summary>
+/// How many/which agents would stop authenticating if the CA's previous
+/// root were retired right now (updatewatch2-server#6 follow-up) —
+/// composed by <see cref="Api.Controllers.CertificateAuthorityController"/>
+/// alongside <see cref="Certificates.ICertificateAuthority.GetRotationStatus"/>
+/// so an admin sees a real number/list before clicking "Retire Previous
+/// Root", not just generic warning text. <see cref="StillOnPreviousRootHostnames"/>
+/// is capped (see <see cref="AgentService.GetCaRotationImpactAsync"/>) —
+/// <see cref="StillOnPreviousRootCount"/> is always the true total, even
+/// when the list itself is truncated. <see cref="UnknownRootAgentCount"/>
+/// counts agents with a certificate but no recorded issuing root (issued
+/// before <c>Agent.IssuingRootThumbprint</c> existed) — these can't be
+/// confirmed either way, so they're surfaced separately rather than folded
+/// into (or silently dropped from) the confirmed count.
+/// </summary>
+public record CaRotationImpactDto(int StillOnPreviousRootCount, IReadOnlyList<string> StillOnPreviousRootHostnames, int UnknownRootAgentCount)
+{
+    public static readonly CaRotationImpactDto None = new(0, [], 0);
+}
+
 public record BulkApproveRequest(IReadOnlyList<string> Hostnames);
 
 public record BulkApproveResult(int ApprovedCount, IReadOnlyList<string> NotFoundHostnames);

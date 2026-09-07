@@ -13,7 +13,16 @@ namespace UpdateWatch2.Server.Certificates;
 /// comparing against one of those needs both values, not just the one
 /// this system relies on internally.
 /// </summary>
-public record IssuedCertificate(byte[] PfxBytes, string ThumbprintSha256, string ThumbprintSha1, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt);
+/// <param name="IssuingRootThumbprintSha256">
+/// The SHA-256 thumbprint of the CA root that actually signed this leaf —
+/// captured at issuance time so a caller can later tell whether a given
+/// agent's stored leaf still chains to the CA's CURRENT root or to a since-
+/// superseded one (CA root rotation, updatewatch2-server#6, never reissues
+/// an already-onboarded agent's own leaf — see <c>Agents.AgentRegistrationService.RecordAliveAsync</c>,
+/// which uses this to prompt an eager, out-of-band renewal instead of
+/// waiting for the agent's own expiry-driven schedule).
+/// </param>
+public record IssuedCertificate(byte[] PfxBytes, string ThumbprintSha256, string ThumbprintSha1, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt, string IssuingRootThumbprintSha256);
 
 /// <summary>
 /// Snapshot of the CA's rotation state (updatewatch2-server#6), returned to

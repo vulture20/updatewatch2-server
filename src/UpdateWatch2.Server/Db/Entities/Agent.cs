@@ -46,6 +46,20 @@ public class Agent
     public DateTimeOffset? ClientCertificateExpiresAt { get; set; }
 
     /// <summary>
+    /// SHA-256 thumbprint of the CA root that signed <see cref="ClientCertificateThumbprint"/>
+    /// — captured at issuance/renewal time (see <see cref="Certificates.IssuedCertificate.IssuingRootThumbprintSha256"/>).
+    /// Null for a certificate issued before this field existed (an unknown,
+    /// not-verifiable value, deliberately never backfilled by guessing) as
+    /// well as for an agent with no certificate at all. Lets
+    /// <c>AgentRegistrationService.RecordAliveAsync</c> tell whether an
+    /// agent's leaf still chains to the CA's CURRENT root — CA root
+    /// rotation (updatewatch2-server#6) never reissues an already-onboarded
+    /// agent's own leaf on its own, so without this there would be no way
+    /// to know which agents are still relying on a since-superseded root.
+    /// </summary>
+    public string? IssuingRootThumbprint { get; set; }
+
+    /// <summary>
     /// SHA-256 hash of the opaque registration token handed to this agent on
     /// first contact (never the raw token — same secret-hygiene convention as
     /// password/AD-bind-password storage elsewhere in this codebase). Used to

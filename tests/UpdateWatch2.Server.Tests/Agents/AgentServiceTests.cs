@@ -13,6 +13,7 @@ public class AgentServiceTests : IDisposable
     private readonly string _certsDirectory = Path.Combine(Path.GetTempPath(), $"uw2-agent-service-certs-{Guid.NewGuid()}");
     private readonly AppDbContext _db;
     private readonly AgentService _service;
+    private readonly InternalCertificateAuthority _ca;
     private readonly AgentRegistrationService _registrationService;
 
     private static readonly AgentRegisterRequest BareRequest = new(null, null, null, null, null, null);
@@ -25,8 +26,8 @@ public class AgentServiceTests : IDisposable
 
         var auditLog = new AuditLogService(_db);
         _service = new AgentService(_db, auditLog);
-        var ca = new InternalCertificateAuthority(_certsDirectory);
-        _registrationService = new AgentRegistrationService(_db, ca, auditLog, new FakeAdminSettingsStore(), new FakeAgentUpdateService());
+        _ca = new InternalCertificateAuthority(_certsDirectory);
+        _registrationService = new AgentRegistrationService(_db, _ca, auditLog, new FakeAdminSettingsStore(), new FakeAgentUpdateService());
     }
 
     public void Dispose()
@@ -115,5 +116,56 @@ public class AgentServiceTests : IDisposable
         var afterReissue = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
         Assert.NotNull(afterReissue.ClientCertificateThumbprint);
         Assert.NotEqual(originalThumbprint, afterReissue.ClientCertificateThumbprint);
+    }
+
+    [Fact]
+    public async Task GetCaRotationImpactAsync_returns_an_empty_summary_when_there_is_no_previous_root()
+    {
+        await RegisterApproveAndCertifyAsync("some-host");
+
+        var impact = await _service.GetCaRotationImpactAsync(previousRootThumbprintSha256: null);
+
+        Assert.Equal(0, impact.StillOnPreviousRootCount);
+        Assert.Empty(impact.StillOnPreviousRootHostnames);
+        Assert.Equal(0, impact.UnknownRootAgentCount);
+    }
+
+    [Fact]
+    public async Task GetCaRotationImpactAsync_counts_and_lists_agents_still_on_the_previous_root_but_not_ones_already_renewed()
+    {
+        var stillOnOldRoot = await RegisterApproveAndCertifyAsync("still-on-old-root");
+        var oldRootThumbprint = _ca.RootCertificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256);
+
+        _ca.PrepareRotation();
+        _ca.ActivateRotation();
+        await RegisterApproveAndCertifyAsync("already-on-new-root"); // issued after rotation
+
+        var impact = await _service.GetCaRotationImpactAsync(oldRootThumbprint);
+
+        Assert.Equal(1, impact.StillOnPreviousRootCount);
+        Assert.Equal([stillOnOldRoot], impact.StillOnPreviousRootHostnames);
+    }
+
+    [Fact]
+    public async Task GetCaRotationImpactAsync_counts_agents_with_no_recorded_issuing_root_separately_from_confirmed_ones()
+    {
+        // Simulates a certificate issued before Agent.IssuingRootThumbprint
+        // existed — "can't verify" must never be silently folded into
+        // "confirmed still on the old root" (a false positive) or dropped
+        // entirely (hiding a real risk from the admin).
+        await RegisterApproveAndCertifyAsync("pre-feature-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "pre-feature-host");
+        agent.IssuingRootThumbprint = null;
+        await _db.SaveChangesAsync();
+        var oldRootThumbprint = _ca.RootCertificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256);
+
+        _ca.PrepareRotation();
+        _ca.ActivateRotation();
+
+        var impact = await _service.GetCaRotationImpactAsync(oldRootThumbprint);
+
+        Assert.Equal(0, impact.StillOnPreviousRootCount);
+        Assert.Empty(impact.StillOnPreviousRootHostnames);
+        Assert.Equal(1, impact.UnknownRootAgentCount);
     }
 }

@@ -13,6 +13,7 @@ public class AgentRegistrationServiceTests : IDisposable
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"updatewatch2-agent-registration-test-{Guid.NewGuid()}.sqlite");
     private readonly string _certsDirectory = Path.Combine(Path.GetTempPath(), $"uw2-agent-registration-certs-{Guid.NewGuid()}");
     private readonly AppDbContext _db;
+    private readonly InternalCertificateAuthority _ca;
     private readonly AgentRegistrationService _service;
     private readonly FakeAdminSettingsStore _settingsStore = new();
     private readonly FakeAgentUpdateService _agentUpdateService = new();
@@ -25,8 +26,8 @@ public class AgentRegistrationServiceTests : IDisposable
         _db = new AppDbContext(options);
         _db.Database.Migrate();
 
-        var ca = new InternalCertificateAuthority(_certsDirectory);
-        _service = new AgentRegistrationService(_db, ca, new AuditLogService(_db), _settingsStore, _agentUpdateService);
+        _ca = new InternalCertificateAuthority(_certsDirectory);
+        _service = new AgentRegistrationService(_db, _ca, new AuditLogService(_db), _settingsStore, _agentUpdateService);
     }
 
     public void Dispose()
@@ -107,6 +108,7 @@ public class AgentRegistrationServiceTests : IDisposable
         Assert.NotNull(reloaded.ClientCertificateThumbprint);
         Assert.NotNull(reloaded.ClientCertificateIssuedAt);
         Assert.NotNull(reloaded.ClientCertificateExpiresAt);
+        Assert.Equal(_ca.RootCertificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256), reloaded.IssuingRootThumbprint);
         Assert.Null(reloaded.RegistrationTokenHash); // cleared — no longer needed once delivered
 
         // Re-polling with the same (now-stale, no-longer-persisted) token:
@@ -152,6 +154,7 @@ public class AgentRegistrationServiceTests : IDisposable
         Assert.NotEqual(originalThumbprint, afterRenewal.ClientCertificateThumbprint);
         Assert.NotEqual(originalIssuedAt, afterRenewal.ClientCertificateIssuedAt);
         Assert.NotEqual(originalExpiresAt, afterRenewal.ClientCertificateExpiresAt);
+        Assert.Equal(_ca.RootCertificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256), afterRenewal.IssuingRootThumbprint);
     }
 
     [Fact]
@@ -184,6 +187,7 @@ public class AgentRegistrationServiceTests : IDisposable
         Assert.NotNull(found);
         Assert.False(found.InstallRequested);
         Assert.Null(found.UpdateAvailable);
+        Assert.False(found.CertificateRotationPending);
         Assert.Null(notFound);
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == "alive-host");
         Assert.NotNull(agent.LastAliveAt);
@@ -213,6 +217,69 @@ public class AgentRegistrationServiceTests : IDisposable
 
         Assert.NotNull(result);
         Assert.True(result.InstallRequested);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_reports_CertificateRotationPending_once_this_agents_leaf_is_signed_under_a_superseded_root()
+    {
+        // updatewatch2-server#6 follow-up: CA rotation never reissues an
+        // already-onboarded agent's own leaf on its own — this is what lets
+        // the agent notice and renew eagerly instead of waiting on its own
+        // expiry-driven schedule.
+        var registered = await _service.RegisterAsync("rotation-pending-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "rotation-pending-host");
+        agent.Approved = true;
+        await _db.SaveChangesAsync();
+        await _service.RegisterAsync("rotation-pending-host", BareRequest with { RegistrationToken = registered.RegistrationToken });
+
+        var beforeRotation = await _service.RecordAliveAsync("rotation-pending-host", request: null);
+        Assert.False(beforeRotation!.CertificateRotationPending);
+
+        _ca.PrepareRotation();
+        _ca.ActivateRotation();
+
+        var afterRotation = await _service.RecordAliveAsync("rotation-pending-host", request: null);
+        Assert.True(afterRotation!.CertificateRotationPending);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_self_corrects_CertificateRotationPending_once_the_agent_has_renewed()
+    {
+        var registered = await _service.RegisterAsync("rotation-then-renewed-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "rotation-then-renewed-host");
+        agent.Approved = true;
+        await _db.SaveChangesAsync();
+        await _service.RegisterAsync("rotation-then-renewed-host", BareRequest with { RegistrationToken = registered.RegistrationToken });
+
+        _ca.PrepareRotation();
+        _ca.ActivateRotation();
+        Assert.True((await _service.RecordAliveAsync("rotation-then-renewed-host", request: null))!.CertificateRotationPending);
+
+        await _service.RenewCertificateAsync("rotation-then-renewed-host");
+
+        var afterRenewal = await _service.RecordAliveAsync("rotation-then-renewed-host", request: null);
+        Assert.False(afterRenewal!.CertificateRotationPending);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_does_not_report_CertificateRotationPending_for_an_agent_with_no_known_issuing_root()
+    {
+        // A certificate issued before Agent.IssuingRootThumbprint existed
+        // (or an agent with no certificate at all) must never be flagged —
+        // "unknown" is a separate bucket from "confirmed still on the old
+        // root" (see CaRotationImpactDto), not folded into a false positive.
+        await _service.RegisterAsync("unknown-root-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "unknown-root-host");
+        agent.ClientCertificateThumbprint = "simulated-pre-existing-thumbprint";
+        agent.IssuingRootThumbprint = null;
+        await _db.SaveChangesAsync();
+
+        _ca.PrepareRotation();
+        _ca.ActivateRotation();
+
+        var result = await _service.RecordAliveAsync("unknown-root-host", request: null);
+
+        Assert.False(result!.CertificateRotationPending);
     }
 
     [Fact]

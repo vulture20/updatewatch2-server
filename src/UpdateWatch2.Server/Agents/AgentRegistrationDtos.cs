@@ -61,8 +61,16 @@ public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string
 /// applied to a newer agent *software* release (updatewatch2-server#14) —
 /// null whenever there's nothing to offer (feature disabled, no known
 /// release, or this agent is already current).
+/// <see cref="CertificateRotationPending"/> is the same shape again, applied
+/// to CA root rotation (updatewatch2-server#6): true whenever this agent's
+/// stored <c>Agent.IssuingRootThumbprint</c> is known and no longer matches
+/// the CA's CURRENT root, prompting the agent to renew immediately instead
+/// of waiting for its own expiry-driven schedule — see
+/// <c>AgentRegistrationService.RecordAliveAsync</c> for how it's computed.
+/// Self-correcting with no acknowledgement needed: once the agent renews,
+/// its next heartbeat computes this as false on its own.
 /// </summary>
-public record AliveRecordResult(bool InstallRequested, AgentUpdateOffer? UpdateAvailable);
+public record AliveRecordResult(bool InstallRequested, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending);
 
 /// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)

@@ -32,4 +32,14 @@ public interface IAgentService
     /// never had a certificate to lose).
     /// </summary>
     Task<ReissueCertificateResult> ReissueCertificateAsync(string hostname, string initiatedBy, CancellationToken ct = default);
+
+    /// <summary>
+    /// How many/which approved agents' <see cref="Db.Entities.Agent.IssuingRootThumbprint"/>
+    /// still matches <paramref name="previousRootThumbprintSha256"/> — i.e.
+    /// would stop authenticating if that root were retired right now.
+    /// Returns <see cref="CaRotationImpactDto.None"/> without querying when
+    /// <paramref name="previousRootThumbprintSha256"/> is null (no active
+    /// rotation overlap window, per <see cref="Certificates.ICertificateAuthority.PreviousRootCertificate"/>).
+    /// </summary>
+    Task<CaRotationImpactDto> GetCaRotationImpactAsync(string? previousRootThumbprintSha256, CancellationToken ct = default);
 }

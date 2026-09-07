@@ -63,8 +63,12 @@ export function AdminPage() {
     agentUpdatesApi.getStatus().then(setAgentUpdateStatus).catch(() => setAgentUpdateStatus(null));
   }, []);
 
-  const runCaAction = (confirmKey: string | null, action: () => Promise<CaRotationStatus>) => {
-    if (confirmKey && !window.confirm(t(confirmKey))) {
+  const runCaAction = (
+    confirmKey: string | null,
+    action: () => Promise<CaRotationStatus>,
+    confirmOptions?: Record<string, unknown>,
+  ) => {
+    if (confirmKey && !window.confirm(t(confirmKey, confirmOptions))) {
       return;
     }
     setCaError(null);
@@ -408,6 +412,18 @@ export function AdminPage() {
                 </dd>
               </dl>
 
+              {caStatus.previousThumbprint && (
+                <div role="status" className="field-hint">
+                  <p>
+                    {t('admin.caRotation.stillOnPreviousRoot', { count: caStatus.stillOnPreviousRootCount })}
+                    {caStatus.stillOnPreviousRootHostnames.length > 0 && `: ${caStatus.stillOnPreviousRootHostnames.join(', ')}`}
+                    {caStatus.stillOnPreviousRootCount > caStatus.stillOnPreviousRootHostnames.length &&
+                      ` ${t('admin.caRotation.stillOnPreviousRootMore', { count: caStatus.stillOnPreviousRootCount - caStatus.stillOnPreviousRootHostnames.length })}`}
+                  </p>
+                  {caStatus.unknownRootAgentCount > 0 && <p>{t('admin.caRotation.unknownRootAgents', { count: caStatus.unknownRootAgentCount })}</p>}
+                </div>
+              )}
+
               <button
                 type="button"
                 disabled={caBusy || caStatus.pendingThumbprint !== null}
@@ -425,7 +441,11 @@ export function AdminPage() {
               <button
                 type="button"
                 disabled={caBusy || caStatus.previousThumbprint === null}
-                onClick={() => runCaAction('admin.caRotation.retireConfirm', certificateAuthorityApi.retirePreviousRoot)}
+                onClick={() =>
+                  runCaAction('admin.caRotation.retireConfirm', certificateAuthorityApi.retirePreviousRoot, {
+                    count: caStatus.stillOnPreviousRootCount,
+                  })
+                }
               >
                 {t('admin.caRotation.retirePrevious')}
               </button>

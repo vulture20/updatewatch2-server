@@ -63,7 +63,18 @@ export interface VersionInfo {
   database: string;
 }
 
-/** CA root rotation state (updatewatch2-server#6) — see CertificateAuthorityController. */
+/**
+ * CA root rotation state (updatewatch2-server#6) — see CertificateAuthorityController.
+ * stillOnPreviousRootCount/unknownRootAgentCount are the updatewatch2-server#6
+ * follow-up: how many/which approved agents' own client leaf would stop
+ * authenticating if the previous root were retired right now (0/empty
+ * whenever previousThumbprint is null), so "Retire Previous Root" shows a
+ * real number instead of only generic warning text.
+ * stillOnPreviousRootHostnames may be capped short of stillOnPreviousRootCount
+ * for a large fleet — the count is always the true total.
+ * unknownRootAgentCount is a separate "can't verify" bucket (a certificate
+ * issued before this tracking existed) — never folded into the confirmed count.
+ */
 export interface CaRotationStatus {
   currentThumbprint: string;
   currentNotAfter: string;
@@ -71,6 +82,9 @@ export interface CaRotationStatus {
   previousNotAfter: string | null;
   pendingThumbprint: string | null;
   pendingNotAfter: string | null;
+  stillOnPreviousRootCount: number;
+  stillOnPreviousRootHostnames: string[];
+  unknownRootAgentCount: number;
 }
 
 export type SmtpEncryption = 'None' | 'SslTls' | 'StartTls';

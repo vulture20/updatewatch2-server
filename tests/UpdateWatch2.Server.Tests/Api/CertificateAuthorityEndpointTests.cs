@@ -83,11 +83,22 @@ public class CertificateAuthorityEndpointTests : IClassFixture<WebApplicationFac
         var status = await response.Content.ReadFromJsonAsync<RotationStatus>();
         Assert.NotNull(status);
         Assert.False(string.IsNullOrEmpty(status!.currentThumbprint));
-        // Not asserting these are null: another test class sharing the same
-        // real certs directory (see class remarks) may have already run a
-        // live rotation walkthrough against it. Just confirming the shape
-        // deserializes and a current root is always reported.
+        // Not asserting previous/pending are null: another test class
+        // sharing the same real certs directory (see class remarks) may
+        // have already run a live rotation walkthrough against it. Just
+        // confirming the shape deserializes and a current root is always
+        // reported. stillOnPreviousRootCount/unknownRootAgentCount ARE safe
+        // to assert on though — this test class's own isolated DB (its own
+        // _dbPath) never registers any agent, so the impact summary is
+        // always empty regardless of the shared CA's own rotation state.
+        Assert.Equal(0, status.stillOnPreviousRootCount);
+        Assert.Empty(status.stillOnPreviousRootHostnames);
+        Assert.Equal(0, status.unknownRootAgentCount);
     }
 
-    private record RotationStatus(string currentThumbprint, DateTimeOffset currentNotAfter, string? previousThumbprint, DateTimeOffset? previousNotAfter, string? pendingThumbprint, DateTimeOffset? pendingNotAfter);
+    private record RotationStatus(
+        string currentThumbprint, DateTimeOffset currentNotAfter,
+        string? previousThumbprint, DateTimeOffset? previousNotAfter,
+        string? pendingThumbprint, DateTimeOffset? pendingNotAfter,
+        int stillOnPreviousRootCount, IReadOnlyList<string> stillOnPreviousRootHostnames, int unknownRootAgentCount);
 }

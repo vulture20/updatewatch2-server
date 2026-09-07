@@ -121,7 +121,10 @@
       "activate": "Rotation aktivieren",
       "retirePrevious": "Vorherige Wurzel zurückziehen",
       "activateConfirm": "Vorbereitete Wurzel jetzt aktivieren? Das eigene Zertifikat des Servers wird sofort umgestellt — sicherstellen, dass Agents zuvor Zeit hatten, die vorbereitete Wurzel abzurufen.",
-      "retireConfirm": "Vorherige Wurzel jetzt zurückziehen? Jeder Agent, dessen Zertifikat noch nicht darüber hinaus erneuert wurde, verliert die Verbindung, bis ein Admin sein Zertifikat neu ausstellt."
+      "retireConfirm": "Vorherige Wurzel jetzt zurückziehen? {{count}} Agent(s) haben noch nicht darüber hinaus erneuert und verlieren die Verbindung, bis ein Admin ihr Zertifikat neu ausstellt.",
+      "stillOnPreviousRoot": "Agents noch auf der vorherigen Wurzel: {{count}}",
+      "stillOnPreviousRootMore": "(+{{count}} weitere)",
+      "unknownRootAgents": "{{count}} Agent(s) haben ein Zertifikat, das ausgestellt wurde, bevor dies nachverfolgt werden konnte, und lassen sich nicht eindeutig zuordnen."
     },
     "save": "Speichern",
     "saved": "Einstellungen gespeichert."

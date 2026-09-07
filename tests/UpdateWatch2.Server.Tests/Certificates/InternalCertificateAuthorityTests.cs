@@ -127,6 +127,35 @@ public class InternalCertificateAuthorityTests : IDisposable
     }
 
     [Fact]
+    public void Issued_agent_leaf_records_the_current_roots_own_thumbprint_as_its_issuing_root()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+
+        var issued = ca.IssueAgentLeaf("workstation-42", TimeSpan.FromDays(730));
+
+        Assert.Equal(ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256), issued.IssuingRootThumbprintSha256);
+    }
+
+    [Fact]
+    public void A_leaf_issued_after_ActivateRotation_records_the_new_roots_thumbprint_not_the_old_one()
+    {
+        // Direct proof of the updatewatch2-server#6 follow-up: this is what
+        // lets AgentRegistrationService later tell "still on the old root"
+        // apart from "already renewed under the new one" per agent.
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+        var preRotationLeaf = ca.IssueAgentLeaf("pre-rotation-host", TimeSpan.FromDays(730));
+        var originalRootThumbprint = ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256);
+
+        ca.PrepareRotation();
+        ca.ActivateRotation();
+        var postRotationLeaf = ca.IssueAgentLeaf("post-rotation-host", TimeSpan.FromDays(730));
+
+        Assert.Equal(originalRootThumbprint, preRotationLeaf.IssuingRootThumbprintSha256);
+        Assert.Equal(ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256), postRotationLeaf.IssuingRootThumbprintSha256);
+        Assert.NotEqual(preRotationLeaf.IssuingRootThumbprintSha256, postRotationLeaf.IssuingRootThumbprintSha256);
+    }
+
+    [Fact]
     public void PrepareRotation_generates_a_pending_root_without_disturbing_the_current_one()
     {
         var ca = new InternalCertificateAuthority(_certsDirectory);

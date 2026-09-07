@@ -40,6 +40,9 @@ const baseCaStatus = {
   previousNotAfter: null,
   pendingThumbprint: null,
   pendingNotAfter: null,
+  stillOnPreviousRootCount: 0,
+  stillOnPreviousRootHostnames: [] as string[],
+  unknownRootAgentCount: 0,
 };
 
 const baseSettings = {
@@ -332,6 +335,7 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockedGetCaStatus.mockResolvedValue({ ...baseCaStatus, pendingThumbprint: 'BBBB', pendingNotAfter: '2036-06-01T00:00:00Z' });
     mockedActivateRotation.mockResolvedValue({
+      ...baseCaStatus,
       currentThumbprint: 'BBBB',
       currentNotAfter: '2036-06-01T00:00:00Z',
       previousThumbprint: 'AAAA',
@@ -360,6 +364,29 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
 
     expect(mockedRetirePreviousRoot).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole('button', { name: 'Retire previous root' })).toBeDisabled();
+  });
+
+  it('shows how many agents are still on the previous root, and asks for confirmation with that live count', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    mockedGetCaStatus.mockResolvedValue({
+      ...baseCaStatus,
+      previousThumbprint: 'AAAA',
+      previousNotAfter: '2036-01-01T00:00:00Z',
+      stillOnPreviousRootCount: 2,
+      stillOnPreviousRootHostnames: ['host-a', 'host-b'],
+      unknownRootAgentCount: 1,
+    });
+    mockedRetirePreviousRoot.mockResolvedValue(baseCaStatus);
+    const user = userEvent.setup();
+    await openCertificatesTab(user);
+
+    expect(await screen.findByText(/Agents still on the previous root: 2/)).toBeInTheDocument();
+    expect(screen.getByText(/host-a, host-b/)).toBeInTheDocument();
+    expect(screen.getByText(/1 agent\(s\) have a certificate issued before this could be tracked/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Retire previous root' }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('2 agent(s)'));
   });
 
   it('shows an error message when a rotation action fails', async () => {

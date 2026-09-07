@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.AgentUpdates;
@@ -109,6 +110,7 @@ public class AgentRegistrationService(
         agent.ClientCertificateThumbprintSha1 = issued.ThumbprintSha1;
         agent.ClientCertificateIssuedAt = issued.IssuedAt;
         agent.ClientCertificateExpiresAt = issued.ExpiresAt;
+        agent.IssuingRootThumbprint = issued.IssuingRootThumbprintSha256;
         agent.RegistrationTokenHash = null;
         await db.SaveChangesAsync(ct);
         await auditLog.LogAsync("agent", "agent.certificate.issued", hostname, ct);
@@ -142,7 +144,20 @@ public class AgentRegistrationService(
 
         await db.SaveChangesAsync(ct);
         var updateOffer = await agentUpdateService.GetOfferForAsync(agent.AgentVersion, ct);
-        return new AliveRecordResult(agent.PendingInstallRequestedAt is not null, updateOffer);
+
+        // True only when the issuing root is actually known (never for a
+        // pre-this-feature or never-issued agent, per Agent.IssuingRootThumbprint's
+        // doc comment) AND it no longer matches the CA's CURRENT root — i.e.
+        // this agent's leaf was signed under a root a rotation has since
+        // superseded. Computed fresh every heartbeat, not stored, so it
+        // self-corrects the moment the agent actually renews (same
+        // reasoning as agentUpdateService.GetOfferForAsync's version
+        // comparison above) — no separate "renewal requested"/acknowledgement
+        // flag needed.
+        var certificateRotationPending = agent.IssuingRootThumbprint is not null
+            && !string.Equals(agent.IssuingRootThumbprint, ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256), StringComparison.Ordinal);
+
+        return new AliveRecordResult(agent.PendingInstallRequestedAt is not null, updateOffer, certificateRotationPending);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)
@@ -164,6 +179,7 @@ public class AgentRegistrationService(
         agent.ClientCertificateThumbprintSha1 = issued.ThumbprintSha1;
         agent.ClientCertificateIssuedAt = issued.IssuedAt;
         agent.ClientCertificateExpiresAt = issued.ExpiresAt;
+        agent.IssuingRootThumbprint = issued.IssuingRootThumbprintSha256;
         await db.SaveChangesAsync(ct);
         await auditLog.LogAsync("agent", "agent.certificate.renew", hostname, ct);
 

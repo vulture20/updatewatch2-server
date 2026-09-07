@@ -64,14 +64,21 @@ public class AgentProtocolController(
         // pre-#10 agent build only ever checked the status code, never a
         // body, so this is additive rather than actually breaking, but the
         // wire shape did change. agentUpdateAvailable (updatewatch2-server#14)
-        // is the same kind of additive change, hence the further protocol
-        // bump to 0.7.0 — an agent build that predates it (every build as
-        // of this writing; the matching agent-side reaction is
-        // updatewatch2-agent#14, not yet implemented) simply ignores the
-        // extra field.
+        // and certificateRotationPending (updatewatch2-server#6 follow-up:
+        // CA root rotation never reissues an already-onboarded agent's own
+        // leaf on its own, so this prompts an eager renewal instead of
+        // relying solely on the agent's own expiry-driven schedule) are the
+        // same kind of additive change, hence the further protocol bumps —
+        // an agent build that predates either simply ignores the extra
+        // field.
         return result is null
             ? NotFound()
-            : Ok(new { installRequested = result.InstallRequested, agentUpdateAvailable = result.UpdateAvailable });
+            : Ok(new
+            {
+                installRequested = result.InstallRequested,
+                agentUpdateAvailable = result.UpdateAvailable,
+                certificateRotationPending = result.CertificateRotationPending,
+            });
     }
 
     // Distinct from Register: this is how an already-certified agent gets a

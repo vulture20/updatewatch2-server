@@ -144,15 +144,26 @@ public class InternalCertificateAuthority : ICertificateAuthority
     {
         lock (_issueLock)
         {
+            // Captured once, up front, and used for BOTH signing and the
+            // returned IssuingRootThumbprintSha256 — not re-read from
+            // _current afterward. _issueLock and _rotationLock are
+            // deliberately separate locks (issuing and rotating don't
+            // otherwise contend), so a concurrent ActivateRotation could in
+            // principle swap _current mid-call; anchoring both uses to the
+            // same local reference guarantees the recorded thumbprint always
+            // matches whatever actually signed this leaf, regardless of
+            // that race.
+            var signingRoot = _current;
             var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
             var notAfter = notBefore.Add(validity);
-            var (cert, pfxBytes) = CreateLeaf(_current, hostname, [], ClientAuthEku, notBefore, notAfter);
+            var (cert, pfxBytes) = CreateLeaf(signingRoot, hostname, [], ClientAuthEku, notBefore, notAfter);
             var thumbprintSha256 = cert.GetCertHashString(HashAlgorithmName.SHA256);
             // SHA-1 only for display purposes (see IssuedCertificate's doc
             // comment) — every internal comparison still uses SHA-256 only.
             var thumbprintSha1 = cert.GetCertHashString(HashAlgorithmName.SHA1);
+            var issuingRootThumbprintSha256 = signingRoot.GetCertHashString(HashAlgorithmName.SHA256);
             cert.Dispose();
-            return new IssuedCertificate(pfxBytes, thumbprintSha256, thumbprintSha1, notBefore, notAfter);
+            return new IssuedCertificate(pfxBytes, thumbprintSha256, thumbprintSha1, notBefore, notAfter, issuingRootThumbprintSha256);
         }
     }
 

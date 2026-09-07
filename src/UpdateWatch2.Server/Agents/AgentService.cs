@@ -74,6 +74,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
         agent.ClientCertificateThumbprintSha1 = null;
         agent.ClientCertificateIssuedAt = null;
         agent.ClientCertificateExpiresAt = null;
+        agent.IssuingRootThumbprint = null;
 
         var (rawToken, hash) = RegistrationTokenHasher.GenerateToken();
         agent.RegistrationTokenHash = hash;
@@ -82,5 +83,31 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
         await auditLog.LogAsync(initiatedBy, "agent.certificate.reissue", hostname, ct);
 
         return ReissueCertificateResult.Succeeded(rawToken);
+    }
+
+    // Capped so a large fleet's confirm dialog/admin panel never has to
+    // render an unbounded list — StillOnPreviousRootCount still reports the
+    // true total even when the hostname list itself is truncated.
+    private const int MaxAffectedHostnamesReturned = 20;
+
+    public async Task<CaRotationImpactDto> GetCaRotationImpactAsync(string? previousRootThumbprintSha256, CancellationToken ct = default)
+    {
+        if (previousRootThumbprintSha256 is null)
+        {
+            return CaRotationImpactDto.None;
+        }
+
+        var stillOnPreviousRoot = db.Agents.Where(a => a.IssuingRootThumbprint == previousRootThumbprintSha256);
+        var count = await stillOnPreviousRoot.CountAsync(ct);
+        var hostnames = await stillOnPreviousRoot
+            .OrderBy(a => a.Hostname)
+            .Take(MaxAffectedHostnamesReturned)
+            .Select(a => a.Hostname)
+            .ToListAsync(ct);
+
+        var unknownRootCount = await db.Agents
+            .CountAsync(a => a.ClientCertificateThumbprint != null && a.IssuingRootThumbprint == null, ct);
+
+        return new CaRotationImpactDto(count, hostnames, unknownRootCount);
     }
 }
