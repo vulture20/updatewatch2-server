@@ -3,6 +3,9 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using UpdateWatch2.Server;
+using UpdateWatch2.Server.Db;
+using UpdateWatch2.Server.Protocol;
 using UpdateWatch2.Server.Tests.TestHelpers;
 
 namespace UpdateWatch2.Server.Tests.Api;
@@ -51,9 +54,15 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
         var response = await _client.GetFromJsonAsync<VersionResponse>("/api/version");
 
         Assert.NotNull(response);
-        Assert.Equal("0.18.0", response.server);
-        Assert.Equal("0.8.0", response.protocol);
-        Assert.Equal("0.11.0", response.database);
+        // Asserted against the version constants themselves, not hardcoded
+        // literals — the previous literal-string version broke CI on every
+        // routine version bump (caught live: it broke the 0.18.0 -> 0.18.1
+        // push for the manual agent-update-check feature), since nothing
+        // about a version bump itself should ever need this test file
+        // touched.
+        Assert.Equal(AppVersion.Current, response.server);
+        Assert.Equal(ProtocolVersion.Current, response.protocol);
+        Assert.Equal(SchemaVersion.Current, response.database);
     }
 
     [Fact]
