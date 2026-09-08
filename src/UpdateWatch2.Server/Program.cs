@@ -143,7 +143,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
         policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
-// The browser/admin-UI port (8080, below) almost never terminates TLS
+// The browser/admin-UI port (8795, below) almost never terminates TLS
 // itself (see docker/Dockerfile — a reverse proxy in front is expected to
 // terminate HTTPS, per CLAUDE.md/.env.example). Trusting X-Forwarded-Proto
 // from any proxy (not just loopback, the default) is what lets
@@ -152,7 +152,7 @@ builder.Services.AddCors(options =>
 // Kestrel itself only ever sees HTTP on that port. The real security
 // boundary here is network-level (only the reverse proxy can reach this
 // container), not this middleware's proxy allowlist. This has no bearing
-// on the agent-facing 8443 port below, which Kestrel terminates directly.
+// on the agent-facing 8796 port below, which Kestrel terminates directly.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -178,8 +178,8 @@ builder.Services.AddSingleton<ICertificateAuthority>(certificateAuthority);
 builder.Services.AddScoped<ICertificateValidator, CertificateValidator>();
 builder.Services.AddScoped<IAgentRegistrationService, AgentRegistrationService>();
 
-// Two listeners, not one: 8080 stays plain HTTP for the browser-facing
-// admin UI/API, unchanged, still reverse-proxy-terminated (see above). 8443
+// Two listeners, not one: 8795 stays plain HTTP for the browser-facing
+// admin UI/API, unchanged, still reverse-proxy-terminated (see above). 8796
 // is new — Kestrel-direct-TLS-terminated, no proxy in front, dedicated to
 // agent traffic (matches AgentOptions.ServerPort's existing default on the
 // agent side, not a coincidence). ClientCertificateMode.AllowCertificate
@@ -193,11 +193,14 @@ builder.Services.AddScoped<IAgentRegistrationService, AgentRegistrationService>(
 // merging with it (confirmed by hand) — so ASPNETCORE_URLS is no longer
 // used at all; see docker/Dockerfile's comment on removing it. Ports are
 // configurable (Kestrel:HttpPort / Kestrel:AgentPort, defaulting to the
-// documented 8080/8443) purely so local/CI runs can avoid a port already
-// taken on the host — the Docker image's EXPOSE/compose port mappings
-// assume the defaults and were not designed to be reconfigured routinely.
-var httpPort = builder.Configuration.GetValue("Kestrel:HttpPort", 8080);
-var agentPort = builder.Configuration.GetValue("Kestrel:AgentPort", 8443);
+// documented 8795/8796 — deliberately chosen as uncommon, rarely-preassigned
+// ports rather than the more conventional 8080/8443, to reduce the odds of
+// colliding with something else already listening on a host) purely so
+// local/CI runs can avoid a port already taken on the host — the Docker
+// image's EXPOSE/compose port mappings assume the defaults and were not
+// designed to be reconfigured routinely.
+var httpPort = builder.Configuration.GetValue("Kestrel:HttpPort", 8795);
+var agentPort = builder.Configuration.GetValue("Kestrel:AgentPort", 8796);
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(httpPort);
@@ -350,11 +353,11 @@ app.UseForwardedHeaders();
 // Deliberately no app.UseHttpsRedirection() here: this app now has two
 // listeners with very different purposes (see ConfigureKestrel above), and
 // this middleware has no way to know it should redirect only the
-// browser/admin-UI port (8080) toward its external reverse-proxy HTTPS URL
-// and never touch the agent-only 8443 port. 8080 was always meant to stay
+// browser/admin-UI port (8795) toward its external reverse-proxy HTTPS URL
+// and never touch the agent-only 8796 port. 8795 was always meant to stay
 // plain HTTP directly (TLS is the reverse proxy's job, per
 // CookieSecurePolicy.SameAsRequest above) — this middleware was never
-// doing real work for that path even before 8443 existed.
+// doing real work for that path even before 8796 existed.
 
 // Serves the built web/ SPA from wwwroot when present (the Docker image
 // copies it in — see docker/Dockerfile) so the API and admin UI ship as

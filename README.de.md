@@ -55,8 +55,8 @@ UpdateWatch2 Server wird als ein einzelnes, in sich geschlossenes Docker-Image a
 ```bash
 docker run -d \
   --name updatewatch2-server \
-  -p 8080:8080 \
-  -p 8443:8443 \
+  -p 8795:8795 \
+  -p 8796:8796 \
   -e UPDATEWATCH2_SERVER_HOSTNAME=updatewatch2.example.com \
   -v uw2-data:/app/data \
   -v uw2-certs:/app/certs \
@@ -65,9 +65,9 @@ docker run -d \
   ghcr.io/vulture20/updatewatch2-server:latest
 ```
 
-Danach **http://localhost:8080** öffnen und als `admin` einloggen — das zufällig erzeugte Passwort des ersten Starts steht im Container-Log (`docker logs updatewatch2-server`); danach über die Oberfläche ändern.
+Danach **http://localhost:8795** öffnen und als `admin` einloggen — das zufällig erzeugte Passwort des ersten Starts steht im Container-Log (`docker logs updatewatch2-server`); danach über die Oberfläche ändern.
 
-**Ports:** `8080` ist reines HTTP für Admin-Oberfläche und API, gedacht für den Betrieb hinter einem TLS-terminierenden Reverse Proxy. `8443` ist ausschließlich für Agents — Kestrel terminiert dort direkt TLS mit gegenseitiger Zertifikatsauthentifizierung, ohne Proxy davor. `UPDATEWATCH2_SERVER_HOSTNAME` wird zum SAN des auf `8443` präsentierten Zertifikats und **muss** exakt der `ServerAddress` entsprechen, mit der Agents konfiguriert sind — sonst schlägt jede Agent-Verbindung an der Zertifikatsprüfung fehl.
+**Ports:** `8795` ist reines HTTP für Admin-Oberfläche und API, gedacht für den Betrieb hinter einem TLS-terminierenden Reverse Proxy. `8796` ist ausschließlich für Agents — Kestrel terminiert dort direkt TLS mit gegenseitiger Zertifikatsauthentifizierung, ohne Proxy davor. `UPDATEWATCH2_SERVER_HOSTNAME` wird zum SAN des auf `8796` präsentierten Zertifikats und **muss** exakt der `ServerAddress` entsprechen, mit der Agents konfiguriert sind — sonst schlägt jede Agent-Verbindung an der Zertifikatsprüfung fehl.
 
 **Volumes — immer mounten, sonst geht beim nächsten Neustart alles verloren:**
 - `/app/data` — die SQLite-Datenbank sowie die Data-Protection-Schlüssel, die Admin-Session-Cookies signieren. Verlust bedeutet eine leere Datenbank und alle Admins ausgeloggt.
@@ -118,7 +118,7 @@ certs/, data/, logs/, agent-updates/   Nur zur Laufzeit, gitignored — niemals 
 Erfordert das .NET-10-SDK und Node 22.
 
 ```bash
-# API — standardmäßig http://localhost:8080
+# API — standardmäßig http://localhost:8795
 dotnet build
 dotnet test
 dotnet run --project src/UpdateWatch2.Server   # SQLite-DB wird unter server/data/updatewatch2.sqlite angelegt/migriert

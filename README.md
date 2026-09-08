@@ -55,8 +55,8 @@ UpdateWatch2 Server ships as a single, self-contained Docker image — the API a
 ```bash
 docker run -d \
   --name updatewatch2-server \
-  -p 8080:8080 \
-  -p 8443:8443 \
+  -p 8795:8795 \
+  -p 8796:8796 \
   -e UPDATEWATCH2_SERVER_HOSTNAME=updatewatch2.example.com \
   -v uw2-data:/app/data \
   -v uw2-certs:/app/certs \
@@ -65,9 +65,9 @@ docker run -d \
   ghcr.io/vulture20/updatewatch2-server:latest
 ```
 
-Then open **http://localhost:8080** and log in as `admin` — the randomly generated first-start password is printed to the container's log (`docker logs updatewatch2-server`); change it from the UI afterward.
+Then open **http://localhost:8795** and log in as `admin` — the randomly generated first-start password is printed to the container's log (`docker logs updatewatch2-server`); change it from the UI afterward.
 
-**Ports:** `8080` is plain HTTP for the admin UI and its API, meant to sit behind a TLS-terminating reverse proxy. `8443` is agent-only — Kestrel terminates TLS directly there with mutual-certificate authentication, no reverse proxy in front. `UPDATEWATCH2_SERVER_HOSTNAME` becomes the SAN on the certificate presented on `8443` and **must match** the `ServerAddress` agents are configured to dial, or every agent connection fails certificate validation.
+**Ports:** `8795` is plain HTTP for the admin UI and its API, meant to sit behind a TLS-terminating reverse proxy. `8796` is agent-only — Kestrel terminates TLS directly there with mutual-certificate authentication, no reverse proxy in front. `UPDATEWATCH2_SERVER_HOSTNAME` becomes the SAN on the certificate presented on `8796` and **must match** the `ServerAddress` agents are configured to dial, or every agent connection fails certificate validation.
 
 **Volumes — always mount these, or you lose everything on the next restart:**
 - `/app/data` — the SQLite database and the Data Protection keys that sign admin session cookies. Losing it means an empty database and every admin logged out.
@@ -118,7 +118,7 @@ certs/, data/, logs/, agent-updates/   Runtime-only, gitignored — never commit
 Requires the .NET 10 SDK and Node 22.
 
 ```bash
-# API — http://localhost:8080 by default
+# API — http://localhost:8795 by default
 dotnet build
 dotnet test
 dotnet run --project src/UpdateWatch2.Server   # SQLite db created/migrated at server/data/updatewatch2.sqlite

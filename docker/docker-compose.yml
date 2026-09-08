@@ -5,11 +5,11 @@ services:
       dockerfile: docker/Dockerfile
     image: updatewatch2-server:local
     ports:
-      - "8080:8080"
+      - "8795:8795"
       # Agent-facing mutual-TLS port (updatewatch2-server#1) — Kestrel
       # terminates TLS directly here, no reverse proxy in front, unlike
-      # 8080.
-      - "8443:8443"
+      # 8795.
+      - "8796:8796"
     volumes:
       - data:/app/data
       - certs:/app/certs
@@ -36,7 +36,7 @@ services:
       # Seeds a handful of dummy agents/updates for demos — idempotent,
       # env-var-only, never set this on a real production instance.
       # UPDATEWATCH2_DEMOMODE: "true"
-      Cors__AllowedOrigins__0: http://localhost:8080
+      Cors__AllowedOrigins__0: http://localhost:8795
 
 volumes:
   data:

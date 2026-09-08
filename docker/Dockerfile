@@ -56,8 +56,8 @@ COPY --from=web-build /web/dist ./wwwroot
 ENV Database__Path=data/updatewatch2.sqlite \
     Certs__Path=certs \
     AgentUpdates__Path=agent-updates
-EXPOSE 8080
-EXPOSE 8443
+EXPOSE 8795
+EXPOSE 8796
 
 # /api/health is unauthenticated and just confirms the process is up and
 # serving requests (no DB check — a hiccup there shouldn't make an
@@ -65,7 +65,7 @@ EXPOSE 8443
 # issue). start-period gives EF Core migrations + admin-account/settings
 # seeding room to finish before a slow first response counts as a failure.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl -fsS http://localhost:8080/api/health || exit 1
+    CMD curl -fsS http://localhost:8795/api/health || exit 1
 
 # Runs as the non-root "app" user the aspnet base image already provides —
 # volume mount points are created and chowned here, before switching user
