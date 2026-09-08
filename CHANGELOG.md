@@ -11,6 +11,183 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.19.0] - 2026-09-08
+
+### Changed
+
+- Default ports renumbered from 8080/8443 to 8795/8796 project-wide
+  (`Kestrel:HttpPort`/`Kestrel:AgentPort` defaults, the Dockerfile's
+  `EXPOSE`/healthcheck, `docker-compose.yml`, both `.env.example`
+  files, README examples) — 8080/8443 are common enough to collide
+  with something else already running on a host; both remain fully
+  overridable. An already-deployed instance relying on the old
+  defaults needs its external port mapping updated on the next
+  redeploy.
+
+### Fixed
+
+- CI: `Version_returns_all_four_version_numbers` asserted the server
+  version against a hardcoded literal, so every routine version bump
+  broke the test even though nothing about the bump itself needed the
+  test file touched. Now asserts against `AppVersion.Current`/
+  `ProtocolVersion.Current`/`SchemaVersion.Current` directly.
+
+## [0.18.2] - 2026-09-08
+
+### Added
+
+- `AgentsListPage`/`AgentDetailPage` now auto-refresh every 5 seconds
+  (`setInterval`, cleared on unmount) instead of only re-fetching once
+  on a button click — watching an agent finish onboarding (approval
+  settling, a certificate arriving, updates list changing) no longer
+  requires repeatedly reloading the browser by hand. A background poll
+  failure deliberately does not flip the page into its hard error/
+  not-found state; only the very first load failing does that, so a
+  transient network hiccup doesn't blank out an already-rendered
+  list/agent.
+
+## [0.18.1] - 2026-09-08
+
+### Added
+
+- A "Check now" button next to the agent-auto-update status display
+  lets an admin force an immediate GitHub check
+  (`POST /api/admin/agent-update-status/check`) rather than waiting for
+  `AgentUpdateCheckWorker`'s own interval — safe to call anytime, since
+  the underlying check is already a no-op when nothing changed on
+  GitHub. Audit-logged separately (`agent-update.manual-check`) from
+  the periodic worker's own entries.
+
+### Changed
+
+- README rewritten with badges, a feature overview grouped by area, an
+  explicit project-status section calling out which pieces aren't yet
+  live-verified, and a full German translation (`README.de.md`).
+
+## [0.18.0] - 2026-09-07
+
+### Added
+
+- Agents can now be permanently deleted
+  (`DELETE /api/agents/{hostname}`, plus a "Delete agent" button on
+  `AgentDetailPage`), for decommissioned machines or mistaken/test
+  registrations. Takes effect immediately, even against a still-
+  cryptographically-valid certificate — `CertificateValidator`
+  resolves a presented client certificate to an agent via a DB lookup,
+  so a deleted row's certificate simply stops authenticating on its
+  next request, no separate revocation-list mechanism needed. A
+  re-registration under the same hostname starts over as a brand-new,
+  unapproved agent. `UpdateItem` rows cascade-delete via the existing
+  FK.
+
+## [0.17.0] - 2026-09-07
+
+### Added
+
+- CA root rotation now tracks which root actually signed each agent's
+  leaf (`Agent.IssuingRootThumbprint`, captured at issuance) and
+  compares it against the CA's current root on every heartbeat,
+  surfacing a new additive `certificateRotationPending` field on the
+  `alive` response when they differ — closing the gap where rotating
+  the CA never rotated an already-onboarded agent's own leaf, only the
+  server's. The admin UI's Certificates tab now shows a real
+  `stillOnPreviousRootCount`/`stillOnPreviousRootHostnames` (plus a
+  separate `unknownRootAgentCount` "can't verify" bucket for
+  certificates issued before this tracking existed) instead of only
+  generic warning text before Retire Previous Root, and the confirm
+  dialog is interpolated with the live count.
+
+### Changed
+
+- Protocol version bumped to `0.8.0` for the new
+  `certificateRotationPending` field. DB schema bumped to `0.11.0` for
+  the new nullable `Agent.IssuingRootThumbprint` column (left `null`
+  for a certificate issued before this shipped, never backfilled by
+  guessing).
+
+## [0.16.0] - 2026-09-06
+
+### Fixed
+
+- `AgentUpdateService.CheckForUpdatesAsync` now also verifies its
+  recorded release assets are still present in `AgentUpdates:Path` on
+  every check, not only when GitHub reports a version change —
+  closing the gap where losing that storage directory without an
+  intervening GitHub release left a stale `AgentUpdateState` row
+  404ing every agent's download indefinitely, with nothing to notice
+  or self-heal it. A missing asset now triggers a re-download
+  (outcome `Redownloaded`, audit-logged as
+  `agent-update.assets-redownloaded`, distinct from a genuine new
+  release's `agent-update.detected`).
+
+## [0.15.0] - 2026-09-06
+
+### Added
+
+- The agent-update GitHub check interval is now admin-configurable
+  (`AgentAutoUpdateCheckIntervalHours`, default 6 — matching the prior
+  hardcoded value), live-reloaded on every `AgentUpdateCheckWorker`
+  loop iteration rather than only at startup.
+
+## [0.14.0] - 2026-09-06
+
+### Added
+
+- `AgentUpdates/AgentUpdateCheckWorker` — this project's first
+  server-side `BackgroundService` — checks GitHub's Releases API every
+  6 hours and downloads a newer release's `.exe`/`.deb`/`.rpm` assets
+  into a new `AgentUpdates:Path`-configured storage directory,
+  recording each asset's filename/SHA-256/size. `alive` now surfaces
+  an `agentUpdateAvailable` offer when it differs from the requesting
+  agent's own reported version (`updatewatch2-server#14`); no agent
+  build acts on it yet (`updatewatch2-agent#14`, tracked separately).
+  Agents fetch the actual bytes from this server
+  (`GET /api/agent/updates/{fileName}`, mTLS-gated) and never from
+  GitHub directly, a design decision pinned before implementation
+  started. Admin-configurable on/off toggle (`AgentAutoUpdateEnabled`,
+  default on) and an optional GitHub personal access token
+  (`GitHubToken`, raises the anonymous rate limit), plus the
+  env-var-only master kill switch `UPDATEWATCH2_AUTOUPDATE=false`.
+
+### Changed
+
+- Protocol version bumped to `0.7.0`. DB schema bumped to `0.9.0` for
+  the new `AgentUpdateState` table.
+
+### Fixed
+
+- None of the `WebApplicationFactory<Program>`-based integration test
+  classes ever had a reason to stop a real `BackgroundService` before
+  this feature added the first one — a routine `dotnet test` was
+  silently hitting the live GitHub API and writing real multi-megabyte
+  release assets to the repo's working directory. Fixed with a shared
+  `WithoutBackgroundWorkers()` test extension, applied across all
+  affected test classes.
+
+## [0.13.0] - 2026-09-06
+
+### Changed
+
+- The agent certificate detail view now shows both the SHA-256 and
+  SHA-1 thumbprints side by side, replacing the previous labeled-
+  field-plus-hint approach — an admin can compare against whichever
+  value their local tool (Certificate Manager, PowerShell, `certutil`,
+  plain `openssl x509 -fingerprint`) happens to print, with no hint
+  text needed. `Agent.ClientCertificateThumbprintSha1` is
+  display-only; every internal lookup/comparison still uses SHA-256
+  exclusively.
+- DB schema bumped to `0.8.0` for the new
+  `Agent.ClientCertificateThumbprintSha1` column.
+
+### Fixed
+
+- CA-rotation expiry dates now format via the app's own active UI
+  language (`i18n.language`) instead of the runtime's default locale
+  — fixes a CI failure where `ubuntu-latest`'s `en` locale formatted
+  dates differently than the locale the feature was authored/tested
+  against, which had silently stopped the Docker-publish CI job's
+  image build from running since CA rotation shipped.
+
 ## [0.12.0] - 2026-09-05
 
 ### Added
