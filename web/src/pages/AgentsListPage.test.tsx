@@ -69,4 +69,55 @@ describe('AgentsListPage', () => {
     await waitFor(() => expect(mockedApproveMany).toHaveBeenCalledWith(['host-1']));
     expect(mockedList).toHaveBeenCalledTimes(2); // initial load + reload after approve
   });
+
+  it('polls the list periodically, so a state change from elsewhere shows up without a manual reload', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockedList
+        .mockResolvedValueOnce([{ hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 0 }])
+        .mockResolvedValueOnce([{ hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 5 }]);
+
+      render(
+        <MemoryRouter>
+          <AgentsListPage />
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('host-1')).toBeInTheDocument();
+      expect(mockedList).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
+      expect(await screen.findByText('5')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not replace an already-rendered list with the error state when a background poll fails', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockedList
+        .mockResolvedValueOnce([{ hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 0 }])
+        .mockRejectedValueOnce(new Error('transient network error'));
+
+      render(
+        <MemoryRouter>
+          <AgentsListPage />
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('host-1')).toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(5000);
+      await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
+
+      // Still showing the last known-good list, not the hard error state.
+      expect(screen.getByText('host-1')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

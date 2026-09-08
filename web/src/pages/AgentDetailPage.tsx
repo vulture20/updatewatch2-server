@@ -1,9 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { OneTimeSecretDialog } from '../components/OneTimeSecretDialog';
 import { agentsApi } from '../api/endpoints';
 import type { AgentDetail, UpdateItem } from '../api/types';
+
+// Same reasoning as AgentsListPage's own constant — approving an agent,
+// then watching its certificate/updates actually arrive, shouldn't need a
+// manual browser reload to see progress.
+const POLL_INTERVAL_MS = 5000;
 
 export function AgentDetailPage() {
   const { t } = useTranslation();
@@ -13,6 +18,10 @@ export function AgentDetailPage() {
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [reissuedToken, setReissuedToken] = useState<string | null>(null);
+  // Ref, not state — see AgentsListPage's identical use for why: a
+  // background poll failure must not replace an already-rendered agent
+  // with the not-found state, only the very first load failing should.
+  const hasLoadedOnceRef = useRef(false);
 
   const reload = () => {
     if (!hostname) {
@@ -20,8 +29,15 @@ export function AgentDetailPage() {
     }
     agentsApi
       .get(hostname)
-      .then(setAgent)
-      .catch(() => setNotFound(true));
+      .then((data) => {
+        hasLoadedOnceRef.current = true;
+        setAgent(data);
+      })
+      .catch(() => {
+        if (!hasLoadedOnceRef.current) {
+          setNotFound(true);
+        }
+      });
     agentsApi
       .updates(hostname)
       .then(setUpdates)
@@ -30,7 +46,12 @@ export function AgentDetailPage() {
       });
   };
 
-  useEffect(reload, [hostname]);
+  useEffect(() => {
+    hasLoadedOnceRef.current = false;
+    reload();
+    const id = setInterval(reload, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [hostname]);
 
   const reissueCertificate = () => {
     if (!agent || !window.confirm(t('agentDetail.reissueConfirm'))) {

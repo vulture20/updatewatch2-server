@@ -194,6 +194,50 @@ describe('AgentDetailPage install trigger', () => {
   });
 });
 
+describe('AgentDetailPage polling', () => {
+  beforeEach(() => {
+    mockedGet.mockReset();
+    mockedUpdates.mockReset();
+    mockedUpdates.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('polls periodically, so a certificate arriving after approval shows up without a manual reload', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockedGet
+      .mockResolvedValueOnce({ ...approvedAgent, clientCertificateThumbprint: null })
+      .mockResolvedValueOnce(approvedAgent);
+
+    renderPage();
+
+    expect(await screen.findByText('host-1')).toBeInTheDocument();
+    expect(mockedGet).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(5000);
+
+    await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('abc123')).toBeInTheDocument();
+  });
+
+  it('does not replace an already-rendered agent with the not-found state when a background poll fails', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockedGet.mockResolvedValueOnce(approvedAgent).mockRejectedValueOnce(new Error('transient network error'));
+
+    renderPage();
+
+    expect(await screen.findByText('host-1')).toBeInTheDocument();
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
+
+    expect(screen.getByText('host-1')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
 describe('AgentDetailPage deletion', () => {
   beforeEach(() => {
     mockedGet.mockReset();
