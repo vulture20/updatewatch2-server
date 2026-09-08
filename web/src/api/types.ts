@@ -170,3 +170,23 @@ export interface UpsertUpdateFilter {
   name: string;
   pattern: string;
 }
+
+/**
+ * One rejected agent client certificate attempt — see
+ * CertificateRejectionsController. `reason` is one of
+ * CertificateRejectionReason's values ("Expired", "NotYetValid",
+ * "NotTrusted", "UnknownAgent", "AgentNotApproved"), kept as a raw string
+ * here rather than a union type since new reasons may be added server-side
+ * without a matching web release.
+ */
+export interface CertificateRejection {
+  timestamp: string;
+  reason: string;
+  details: string | null;
+}
+
+/** Backs the admin UI's rejected-certificate warning banner — recentCount is the true total even if recent itself is capped. */
+export interface CertificateRejectionStatus {
+  recentCount: number;
+  recent: CertificateRejection[];
+}

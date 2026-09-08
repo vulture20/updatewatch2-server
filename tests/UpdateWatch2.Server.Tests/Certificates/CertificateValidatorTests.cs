@@ -48,6 +48,7 @@ public class CertificateValidatorTests : IDisposable
         var result = await validator.ValidateAsync(cert);
 
         Assert.False(result.Success);
+        Assert.Equal(CertificateRejectionReason.UnknownAgent, result.RejectionReason);
     }
 
     [Fact]
@@ -62,6 +63,7 @@ public class CertificateValidatorTests : IDisposable
         var result = await validator.ValidateAsync(cert);
 
         Assert.False(result.Success);
+        Assert.Equal(CertificateRejectionReason.AgentNotApproved, result.RejectionReason);
     }
 
     [Fact]

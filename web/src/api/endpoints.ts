@@ -6,6 +6,7 @@ import type {
   AgentUpdateStatus,
   BulkApproveResult,
   CaRotationStatus,
+  CertificateRejectionStatus,
   LoginResponse,
   MeResponse,
   ReissueCertificateResult,
@@ -75,4 +76,9 @@ export const updateFiltersApi = {
   create: (filter: UpsertUpdateFilter) => apiClient.post<UpdateFilter>('/api/admin/update-filters', filter),
   update: (id: number, filter: UpsertUpdateFilter) => apiClient.put<UpdateFilter>(`/api/admin/update-filters/${id}`, filter),
   delete: (id: number) => apiClient.delete<void>(`/api/admin/update-filters/${id}`),
+};
+
+/** Rejected agent client certificate attempts — see CertificateRejectionsController. */
+export const certificateRejectionsApi = {
+  getStatus: () => apiClient.get<CertificateRejectionStatus>('/api/admin/certificate-rejections'),
 };

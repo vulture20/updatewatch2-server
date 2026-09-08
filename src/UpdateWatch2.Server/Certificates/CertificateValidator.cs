@@ -14,7 +14,7 @@ public class CertificateValidator(AppDbContext db) : ICertificateValidator
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.ClientCertificateThumbprint == thumbprint, ct);
         if (agent is null)
         {
-            return CertificateValidationResult.Failed("Certificate does not match any known agent.");
+            return CertificateValidationResult.Failed("Certificate does not match any known agent.", CertificateRejectionReason.UnknownAgent);
         }
 
         if (!agent.Approved)
@@ -24,7 +24,7 @@ public class CertificateValidator(AppDbContext db) : ICertificateValidator
             // AgentRegistrationService) — but an admin could in principle
             // revoke approval after the fact, so this is checked explicitly
             // rather than assumed from the thumbprint's mere presence.
-            return CertificateValidationResult.Failed($"Agent '{agent.Hostname}' is not approved.");
+            return CertificateValidationResult.Failed($"Agent '{agent.Hostname}' is not approved.", CertificateRejectionReason.AgentNotApproved);
         }
 
         return CertificateValidationResult.Succeeded(agent.Hostname);

@@ -11,7 +11,27 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
-## [Unreleased]
+## [0.22.0] - 2026-09-08
+
+### Added
+
+- Rejected agent client certificates (invalid or expired) are now
+  immediately visible in the admin UI (a red warning banner, polled
+  every 15s, shown on every page once logged in) and logged at
+  Warning level, in addition to an audit log entry — high-priority/
+  security-relevant per this project's own requirements, closing a
+  gap where any failed agent mTLS handshake was previously silent:
+  neither logged, audited, nor surfaced anywhere. Covers both a
+  certificate that fails chain/validity-period validation outright
+  (`OnAuthenticationFailed`, classified as `Expired`/`NotYetValid`/
+  `NotTrusted` from the certificate's own dates) and a
+  cryptographically valid, CA-signed certificate that just doesn't
+  match a known/approved agent (`ICertificateValidator`'s existing
+  failure path, now also reported — `UnknownAgent`/`AgentNotApproved`).
+  Reuses the existing audit log table rather than a new one; the
+  admin-facing status (`GET /api/admin/certificate-rejections`) looks
+  back 24 hours, the same "no dismiss button, it just ages out"
+  approach the existing SMTP warning banner already uses.
 
 ### Fixed
 
@@ -23,6 +43,22 @@ changelogs.
   contention on a loaded runner. Fixed by polling for the actual
   condition instead of sleeping a fixed duration, across all four tests
   in that class. No production code changed.
+
+### Note
+
+- Building this surfaced three separate, previously-undiscovered EF
+  Core 10.0.11-on-SQLite query-translation gaps — no earlier query in
+  this codebase filtered or ordered by a `DateTimeOffset` column, so
+  none of this had shown up before: a plain `string.StartsWith` in a
+  LINQ predicate doesn't translate (worked around with
+  `EF.Functions.Like`); no `DateTimeOffset` comparison operator
+  (`>=`/`<`/...) translates either; and neither does an `OrderBy` on a
+  `DateTimeOffset` column. All three were found by actually running the
+  query, not by reasoning about it. Worked around by pushing only the
+  translatable prefix filter to SQL and doing the recency-window
+  filter/ordering client-side on the already-narrowed result set — a
+  pattern worth reusing (or revisiting once the provider improves) if
+  a future query needs to filter/order by a timestamp column.
 
 ## [0.21.0] - 2026-09-08
 

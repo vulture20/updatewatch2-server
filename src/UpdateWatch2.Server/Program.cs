@@ -178,6 +178,7 @@ var serverHostname = Environment.GetEnvironmentVariable("UPDATEWATCH2_SERVER_HOS
 certificateAuthority.EnsureServerLeaf(serverHostname);
 builder.Services.AddSingleton<ICertificateAuthority>(certificateAuthority);
 builder.Services.AddScoped<ICertificateValidator, CertificateValidator>();
+builder.Services.AddScoped<ICertificateRejectionService, CertificateRejectionService>();
 builder.Services.AddScoped<IAgentRegistrationService, AgentRegistrationService>();
 
 // Two listeners, not one: 8795 stays plain HTTP for the browser-facing
@@ -306,8 +307,36 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                 }
                 else
                 {
+                    // Cryptographically valid, CA-signed certificate that
+                    // just doesn't belong to a known/approved agent
+                    // (UnknownAgent/AgentNotApproved) — reported the same
+                    // way an outright invalid/expired one is below, so an
+                    // admin sees both classes of rejection in one place.
+                    var rejectionService = context.HttpContext.RequestServices.GetRequiredService<ICertificateRejectionService>();
+                    await rejectionService.RecordAsync(
+                        result.RejectionReason ?? CertificateRejectionReason.NotTrusted,
+                        context.ClientCertificate,
+                        context.HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        context.HttpContext.RequestAborted);
                     context.Fail(result.FailureReason ?? "Certificate rejected.");
                 }
+            },
+            // Fires when the certificate itself fails the handler's own
+            // chain-build/validity-period check — expired, not yet valid,
+            // or doesn't chain to a currently trusted internal CA root —
+            // before ICertificateValidator/OnCertificateValidated above is
+            // ever reached. High-priority/security-relevant per CLAUDE.md:
+            // must be immediately visible in the admin UI and logged, not
+            // just silently 401/403'd as before this existed.
+            OnAuthenticationFailed = async context =>
+            {
+                var rejectionService = context.HttpContext.RequestServices.GetRequiredService<ICertificateRejectionService>();
+                var certificate = context.HttpContext.Connection.ClientCertificate;
+                await rejectionService.RecordAsync(
+                    CertificateRejectionClassifier.Classify(certificate),
+                    certificate,
+                    context.HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    context.HttpContext.RequestAborted);
             },
         };
     });

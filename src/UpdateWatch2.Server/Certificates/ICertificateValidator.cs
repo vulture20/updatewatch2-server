@@ -2,9 +2,9 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace UpdateWatch2.Server.Certificates;
 
-public record CertificateValidationResult(bool Success, string? Hostname, string? FailureReason)
+public record CertificateValidationResult(bool Success, string? Hostname, string? FailureReason, CertificateRejectionReason? RejectionReason = null)
 {
-    public static CertificateValidationResult Failed(string reason) => new(false, null, reason);
+    public static CertificateValidationResult Failed(string reason, CertificateRejectionReason rejectionReason) => new(false, null, reason, rejectionReason);
 
     public static CertificateValidationResult Succeeded(string hostname) => new(true, hostname, null);
 }
