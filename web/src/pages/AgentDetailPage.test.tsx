@@ -49,6 +49,7 @@ const approvedAgent: AgentDetail = {
   pendingInstallRequestedAt: null,
   lastInstallOutcome: null,
   lastInstallCompletedAt: null,
+  issuingRootThumbprint: 'root-thumb-1',
 };
 
 function renderPage() {
@@ -91,6 +92,23 @@ describe('AgentDetailPage certificate re-issuance', () => {
 
     expect(await screen.findByText('abc123')).toBeInTheDocument();
     expect(screen.getByText('def456')).toBeInTheDocument();
+  });
+
+  it('shows the issuing CA root thumbprint', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+
+    renderPage();
+
+    expect(await screen.findByText('root-thumb-1')).toBeInTheDocument();
+  });
+
+  it('shows a placeholder when the issuing CA root is unknown', async () => {
+    mockedGet.mockResolvedValue({ ...approvedAgent, issuingRootThumbprint: null });
+
+    renderPage();
+
+    await screen.findByText('abc123');
+    expect(screen.getByText('Issuing CA root (SHA-256)').nextElementSibling).toHaveTextContent('—');
   });
 
   it('shows the reissue button only for an approved agent', async () => {

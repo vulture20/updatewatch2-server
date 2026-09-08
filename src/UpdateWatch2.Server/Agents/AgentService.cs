@@ -36,7 +36,8 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
             agent.Hostname, agent.DnsName, agent.OperatingSystem, agent.IpAddress, agent.AgentVersion,
             agent.Approved, agent.RebootRequired, countsByAgent.GetValueOrDefault(agent.Id), agent.LastAliveAt,
             agent.ClientCertificateThumbprint, agent.ClientCertificateThumbprintSha1, agent.ClientCertificateIssuedAt, agent.ClientCertificateExpiresAt,
-            agent.PendingInstallRequestedAt, agent.LastInstallOutcome, agent.LastInstallCompletedAt);
+            agent.PendingInstallRequestedAt, agent.LastInstallOutcome, agent.LastInstallCompletedAt,
+            agent.IssuingRootThumbprint);
     }
 
     /// <summary>

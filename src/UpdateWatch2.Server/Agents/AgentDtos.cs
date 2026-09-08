@@ -24,7 +24,17 @@ public record AgentDetailDto(
     DateTimeOffset? ClientCertificateExpiresAt,
     DateTimeOffset? PendingInstallRequestedAt,
     string? LastInstallOutcome,
-    DateTimeOffset? LastInstallCompletedAt);
+    DateTimeOffset? LastInstallCompletedAt,
+    /// <summary>
+    /// SHA-256 thumbprint of the internal CA root that actually signed this
+    /// agent's current client certificate (<see cref="Db.Entities.Agent.IssuingRootThumbprint"/>)
+    /// — compare against Administration → Certificates' current/previous
+    /// root thumbprints to see whether this agent has renewed past a CA
+    /// root rotation yet. Null for a certificate issued before this was
+    /// tracked (updatewatch2-server#6 follow-up) or for an agent with no
+    /// certificate at all.
+    /// </summary>
+    string? IssuingRootThumbprint);
 
 /// <summary>
 /// How many/which agents would stop authenticating if the CA's previous

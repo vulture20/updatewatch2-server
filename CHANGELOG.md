@@ -11,6 +11,20 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.21.0] - 2026-09-08
+
+### Added
+
+- The agent detail view now shows which internal CA root
+  (`Agent.IssuingRootThumbprint`) actually signed that agent's current
+  client certificate, alongside the existing SHA-256/SHA-1 leaf
+  thumbprints — an admin can compare it against Administration →
+  Certificates' current/previous root thumbprints to see whether a
+  specific agent has renewed past a CA root rotation yet, rather than
+  only the fleet-wide aggregate count already shown there. Shows "—"
+  for a certificate issued before this was tracked, or no certificate
+  at all.
+
 ## [0.20.0] - 2026-09-08
 
 ### Added

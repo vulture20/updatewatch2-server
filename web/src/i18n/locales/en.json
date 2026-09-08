@@ -46,6 +46,7 @@
     "certificateThumbprintSha1": "Certificate thumbprint (SHA-1)",
     "certificateIssuedAt": "Certificate issued",
     "certificateExpiresAt": "Certificate expires",
+    "issuingCaRoot": "Issuing CA root (SHA-256)",
     "reissueCertificate": "Reissue certificate",
     "reissueConfirm": "This immediately invalidates the agent's current certificate. Continue?",
     "reissueTokenTitle": "One-time registration token",

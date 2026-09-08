@@ -100,6 +100,8 @@ export function AgentDetailPage() {
         <dd>{agent.clientCertificateIssuedAt ? new Date(agent.clientCertificateIssuedAt).toLocaleString() : '—'}</dd>
         <dt>{t('agentDetail.certificateExpiresAt')}</dt>
         <dd>{agent.clientCertificateExpiresAt ? new Date(agent.clientCertificateExpiresAt).toLocaleString() : '—'}</dd>
+        <dt>{t('agentDetail.issuingCaRoot')}</dt>
+        <dd>{agent.issuingRootThumbprint ?? '—'}</dd>
         <dt>{t('agentDetail.lastInstallOutcome')}</dt>
         <dd>
           {agent.pendingInstallRequestedAt

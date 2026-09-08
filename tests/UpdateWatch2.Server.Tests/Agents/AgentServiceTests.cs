@@ -218,6 +218,27 @@ public class AgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetByHostnameAsync_surfaces_the_issuing_CA_root_thumbprint()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("ca-root-host");
+        var rootThumbprint = _ca.RootCertificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256);
+
+        var detail = await _service.GetByHostnameAsync(hostname);
+
+        Assert.Equal(rootThumbprint, detail!.IssuingRootThumbprint);
+    }
+
+    [Fact]
+    public async Task GetByHostnameAsync_returns_a_null_issuing_root_for_an_agent_with_no_certificate()
+    {
+        await _registrationService.RegisterAsync("no-cert-host", BareRequest);
+
+        var detail = await _service.GetByHostnameAsync("no-cert-host");
+
+        Assert.Null(detail!.IssuingRootThumbprint);
+    }
+
+    [Fact]
     public async Task GetAllAsync_excludes_updates_matching_an_active_filter_from_the_pending_count()
     {
         var hostname = await RegisterApproveAndCertifyAsync("filtered-host");

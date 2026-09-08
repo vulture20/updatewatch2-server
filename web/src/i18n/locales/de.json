@@ -46,6 +46,7 @@
     "certificateThumbprintSha1": "Zertifikats-Fingerabdruck (SHA-1)",
     "certificateIssuedAt": "Zertifikat ausgestellt",
     "certificateExpiresAt": "Zertifikat gültig bis",
+    "issuingCaRoot": "Ausstellende CA-Wurzel (SHA-256)",
     "reissueCertificate": "Zertifikat neu ausstellen",
     "reissueConfirm": "Dadurch wird das aktuelle Zertifikat des Agenten sofort ungültig. Fortfahren?",
     "reissueTokenTitle": "Einmaliges Registrierungstoken",

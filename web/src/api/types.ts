@@ -36,6 +36,14 @@ export interface AgentDetail {
   pendingInstallRequestedAt: string | null;
   lastInstallOutcome: 'Succeeded' | 'Failed' | null;
   lastInstallCompletedAt: string | null;
+  /**
+   * SHA-256 thumbprint of the internal CA root that signed this agent's
+   * current client certificate — compare against the Administration →
+   * Certificates tab's current/previous root thumbprints to see whether
+   * this agent has renewed past a CA root rotation yet. Null for a
+   * certificate issued before this was tracked, or no certificate at all.
+   */
+  issuingRootThumbprint: string | null;
 }
 
 /** Response of an admin-initiated certificate re-issuance (updatewatch2-server#8). */
