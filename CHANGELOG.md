@@ -11,6 +11,19 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [Unreleased]
+
+### Fixed
+
+- A CI-only flaky test in `AgentUpdateCheckWorkerTests` (found by the
+  `v0.21.0` tag's own CI run, not locally): `BackgroundService.StartAsync`
+  only schedules `ExecuteAsync`, it doesn't wait for that task to
+  actually get CPU time, so a short fixed `Task.Delay` before asserting
+  could elapse before the loop's first iteration had run at all under
+  contention on a loaded runner. Fixed by polling for the actual
+  condition instead of sleeping a fixed duration, across all four tests
+  in that class. No production code changed.
+
 ## [0.21.0] - 2026-09-08
 
 ### Added

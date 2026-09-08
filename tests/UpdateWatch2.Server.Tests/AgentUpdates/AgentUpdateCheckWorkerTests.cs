@@ -25,9 +25,12 @@ public class AgentUpdateCheckWorkerTests
         var worker = CreateWorker();
 
         await worker.StartAsync(CancellationToken.None);
-        await Task.Delay(50);
+        await WaitUntilAsync(() => _agentUpdateService.CheckCallCount >= 1);
         await worker.StopAsync(CancellationToken.None);
 
+        // Exact, not just >= 1: CheckIntervalHours = 999 means no second
+        // check can plausibly land within this test's lifetime, so once the
+        // first has landed the count is stable.
         Assert.Equal(1, _agentUpdateService.CheckCallCount);
     }
 
@@ -43,7 +46,7 @@ public class AgentUpdateCheckWorkerTests
         var worker = CreateWorker();
 
         await worker.StartAsync(CancellationToken.None);
-        await Task.Delay(50);
+        await WaitUntilAsync(() => _agentUpdateService.CheckCallCount > 1);
         await worker.StopAsync(CancellationToken.None);
 
         // More than one call proves the loop actually used the small
@@ -58,7 +61,11 @@ public class AgentUpdateCheckWorkerTests
         var worker = CreateWorker();
 
         await worker.StartAsync(CancellationToken.None);
-        await Task.Delay(20);
+        // Wait for the first check to actually land before stopping, so
+        // this genuinely cancels mid-Task.Delay (the "mid_wait" in this
+        // test's own name) rather than possibly racing ahead of the loop
+        // ever starting on a slow/loaded runner.
+        await WaitUntilAsync(() => _agentUpdateService.CheckCallCount >= 1);
         await worker.StopAsync(CancellationToken.None);
 
         // No exception propagating out of Start/StopAsync is the assertion —
@@ -78,7 +85,7 @@ public class AgentUpdateCheckWorkerTests
         var worker = new AgentUpdateCheckWorker(provider.GetRequiredService<IServiceScopeFactory>(), _settingsStore, NullLogger<AgentUpdateCheckWorker>.Instance);
 
         await worker.StartAsync(CancellationToken.None);
-        await Task.Delay(50);
+        await WaitUntilAsync(() => throwingService.CallCount > 1);
         await worker.StopAsync(CancellationToken.None);
 
         Assert.True(throwingService.CallCount > 1, $"Expected the loop to keep running after a throw, got {throwingService.CallCount} calls.");
@@ -86,6 +93,28 @@ public class AgentUpdateCheckWorkerTests
 
     private AgentUpdateCheckWorker CreateWorker() =>
         new(_services.GetRequiredService<IServiceScopeFactory>(), _settingsStore, NullLogger<AgentUpdateCheckWorker>.Instance);
+
+    /// <summary>
+    /// Polls <paramref name="condition"/> instead of a single fixed
+    /// <c>Task.Delay</c> — found by a real CI-only flake (this class's own
+    /// "Checks_immediately_on_startup..." test, passing every time locally
+    /// but occasionally landing "Expected: 1, Actual: 0" on a loaded GitHub
+    /// Actions runner): <c>BackgroundService.StartAsync</c> only schedules
+    /// <c>ExecuteAsync</c>, it doesn't wait for that task to actually get
+    /// CPU time, so a short fixed delay can elapse before the loop's first
+    /// iteration has run at all under contention. Times out silently
+    /// (returns without throwing) rather than asserting itself, so the
+    /// caller's own assertion is what reports a genuine failure with a
+    /// useful message instead of this helper's.
+    /// </summary>
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+        while (!condition() && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(5);
+        }
+    }
 
     private class ThrowingAgentUpdateService : IAgentUpdateService
     {
