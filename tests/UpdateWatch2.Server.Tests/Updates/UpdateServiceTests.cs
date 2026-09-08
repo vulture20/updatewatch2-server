@@ -98,4 +98,37 @@ public class UpdateServiceTests : IDisposable
 
         Assert.False(found);
     }
+
+    [Fact]
+    public async Task GetForAgentAsync_excludes_updates_matching_an_active_filter()
+    {
+        var agent = new Agent { Hostname = "filter-list-host", Approved = true };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        _db.UpdateItems.AddRange(
+            new UpdateItem { AgentId = agent.Id, Title = "Security Intelligence-Update für Microsoft Defender Antivirus" },
+            new UpdateItem { AgentId = agent.Id, Title = "2026-08 Kumulatives Update für Windows 11" });
+        _db.UpdateFilters.Add(new UpdateFilter { Name = "Defender", Pattern = "Security Intelligence-Update" });
+        await _db.SaveChangesAsync();
+
+        var items = await _service.GetForAgentAsync("filter-list-host");
+
+        var item = Assert.Single(items!);
+        Assert.Equal("2026-08 Kumulatives Update für Windows 11", item.Title);
+    }
+
+    [Fact]
+    public async Task GetForAgentAsync_returns_everything_when_no_filter_matches()
+    {
+        var agent = new Agent { Hostname = "unfiltered-host", Approved = true };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        _db.UpdateItems.Add(new UpdateItem { AgentId = agent.Id, Title = "openssl Sicherheitsaktualisierung" });
+        _db.UpdateFilters.Add(new UpdateFilter { Name = "Defender", Pattern = "Security Intelligence-Update" });
+        await _db.SaveChangesAsync();
+
+        var items = await _service.GetForAgentAsync("unfiltered-host");
+
+        Assert.Single(items!);
+    }
 }

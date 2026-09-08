@@ -65,7 +65,8 @@
       "general": "General",
       "notifications": "Notifications",
       "activeDirectory": "Active Directory",
-      "certificates": "Certificates"
+      "certificates": "Certificates",
+      "updateFilters": "Update filters"
     },
     "logLevel": "Log level",
     "logLevelHint": "Takes effect on the server's next restart.",
@@ -130,6 +131,21 @@
       "stillOnPreviousRoot": "Agents still on the previous root: {{count}}",
       "stillOnPreviousRootMore": "(+{{count}} more)",
       "unknownRootAgents": "{{count}} agent(s) have a certificate issued before this could be tracked and can't be confirmed either way."
+    },
+    "updateFilters": {
+      "title": "Update filters",
+      "hint": "Any update whose title matches one of these regular expressions is excluded from the pending-updates count and list everywhere it's shown, and (once implemented) from the threshold email notification. Changes take effect immediately, no restart or new agent report needed.",
+      "none": "No filters defined.",
+      "name": "Name",
+      "pattern": "Pattern (regular expression)",
+      "patternHint": "Matched case-insensitively against the update title. Plain text works as a literal match — no regex syntax required unless you need one.",
+      "addTitle": "Add a filter",
+      "add": "Add filter",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleteConfirm": "Delete the filter \"{{name}}\"? Updates it currently hides will reappear in the pending-updates display immediately."
     },
     "save": "Save",
     "saved": "Settings saved."

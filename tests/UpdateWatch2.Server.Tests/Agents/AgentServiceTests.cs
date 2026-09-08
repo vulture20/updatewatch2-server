@@ -216,4 +216,55 @@ public class AgentServiceTests : IDisposable
         Assert.Empty(impact.StillOnPreviousRootHostnames);
         Assert.Equal(1, impact.UnknownRootAgentCount);
     }
+
+    [Fact]
+    public async Task GetAllAsync_excludes_updates_matching_an_active_filter_from_the_pending_count()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("filtered-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        _db.UpdateItems.AddRange(
+            new UpdateItem { AgentId = agent.Id, Title = "Security Intelligence-Update für Microsoft Defender Antivirus" },
+            new UpdateItem { AgentId = agent.Id, Title = "2026-08 Kumulatives Update für Windows 11" });
+        _db.UpdateFilters.Add(new UpdateFilter { Name = "Defender", Pattern = "Security Intelligence-Update" });
+        await _db.SaveChangesAsync();
+
+        var list = await _service.GetAllAsync();
+
+        var item = Assert.Single(list, a => a.Hostname == hostname);
+        Assert.Equal(1, item.PendingUpdateCount);
+    }
+
+    [Fact]
+    public async Task GetByHostnameAsync_excludes_updates_matching_an_active_filter_from_the_pending_count()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("filtered-detail-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        _db.UpdateItems.AddRange(
+            new UpdateItem { AgentId = agent.Id, Title = "Security Intelligence-Update für Microsoft Defender Antivirus" },
+            new UpdateItem { AgentId = agent.Id, Title = "2026-08 Kumulatives Update für Windows 11" });
+        _db.UpdateFilters.Add(new UpdateFilter { Name = "Defender", Pattern = "Security Intelligence-Update" });
+        await _db.SaveChangesAsync();
+
+        var detail = await _service.GetByHostnameAsync(hostname);
+
+        Assert.Equal(1, detail!.PendingUpdateCount);
+    }
+
+    [Fact]
+    public async Task Filtered_pending_count_updates_immediately_when_a_filter_is_added_no_re_report_needed()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("live-filter-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        _db.UpdateItems.Add(new UpdateItem { AgentId = agent.Id, Title = "Some Update" });
+        await _db.SaveChangesAsync();
+
+        var before = await _service.GetByHostnameAsync(hostname);
+        Assert.Equal(1, before!.PendingUpdateCount);
+
+        _db.UpdateFilters.Add(new UpdateFilter { Name = "Catch-all", Pattern = "Some Update" });
+        await _db.SaveChangesAsync();
+
+        var after = await _service.GetByHostnameAsync(hostname);
+        Assert.Equal(0, after!.PendingUpdateCount);
+    }
 }

@@ -17,6 +17,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<AgentUpdateState> AgentUpdateStates => Set<AgentUpdateState>();
 
+    public DbSet<UpdateFilter> UpdateFilters => Set<UpdateFilter>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agent>()
@@ -25,6 +27,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<AdminAccount>()
             .HasIndex(a => a.Username)
+            .IsUnique();
+
+        modelBuilder.Entity<UpdateFilter>()
+            .HasIndex(f => f.Name)
             .IsUnique();
 
         modelBuilder.Entity<UpdateItem>()

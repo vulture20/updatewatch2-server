@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { adminApi, agentUpdatesApi, certificateAuthorityApi, versionApi } from '../api/endpoints';
+import { adminApi, agentUpdatesApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { AdminPage } from './AdminPage';
 
@@ -23,6 +23,12 @@ vi.mock('../api/endpoints', () => ({
     getStatus: vi.fn(),
     checkNow: vi.fn(),
   },
+  updateFiltersApi: {
+    list: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
 }));
 
 const mockedGetSettings = vi.mocked(adminApi.getSettings);
@@ -34,6 +40,10 @@ const mockedActivateRotation = vi.mocked(certificateAuthorityApi.activateRotatio
 const mockedRetirePreviousRoot = vi.mocked(certificateAuthorityApi.retirePreviousRoot);
 const mockedGetAgentUpdateStatus = vi.mocked(agentUpdatesApi.getStatus);
 const mockedCheckNow = vi.mocked(agentUpdatesApi.checkNow);
+const mockedListUpdateFilters = vi.mocked(updateFiltersApi.list);
+const mockedCreateUpdateFilter = vi.mocked(updateFiltersApi.create);
+const mockedUpdateUpdateFilter = vi.mocked(updateFiltersApi.update);
+const mockedDeleteUpdateFilter = vi.mocked(updateFiltersApi.delete);
 
 const baseCaStatus = {
   currentThumbprint: 'AAAA',
@@ -94,6 +104,10 @@ describe('AdminPage', () => {
       lastError: null,
     });
     mockedCheckNow.mockReset();
+    mockedListUpdateFilters.mockReset().mockResolvedValue([]);
+    mockedCreateUpdateFilter.mockReset();
+    mockedUpdateUpdateFilter.mockReset();
+    mockedDeleteUpdateFilter.mockReset();
   });
 
   it('renders the loaded settings into the form fields', async () => {
@@ -327,6 +341,10 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
       lastError: null,
     });
     mockedCheckNow.mockReset();
+    mockedListUpdateFilters.mockReset().mockResolvedValue([]);
+    mockedCreateUpdateFilter.mockReset();
+    mockedUpdateUpdateFilter.mockReset();
+    mockedDeleteUpdateFilter.mockReset();
   });
 
   const openCertificatesTab = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -444,5 +462,167 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     await user.click(await screen.findByRole('button', { name: 'Prepare rotation' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.');
+  });
+});
+
+describe('AdminPage update filters', () => {
+  beforeEach(() => {
+    mockedGetSettings.mockReset().mockResolvedValue(baseSettings);
+    mockedUpdateSettings.mockReset();
+    mockedGetVersion.mockReset().mockResolvedValue({ server: '0.3.0', protocol: '0.1.0', database: '0.3.0' });
+    mockedGetCaStatus.mockReset().mockResolvedValue(baseCaStatus);
+    mockedGetAgentUpdateStatus.mockReset().mockResolvedValue({
+      enabled: true,
+      latestVersion: null,
+      checkedAt: null,
+      lastError: null,
+    });
+    mockedListUpdateFilters.mockReset().mockResolvedValue([]);
+    mockedCreateUpdateFilter.mockReset();
+    mockedUpdateUpdateFilter.mockReset();
+    mockedDeleteUpdateFilter.mockReset();
+  });
+
+  const openUpdateFiltersTab = async (user: ReturnType<typeof userEvent.setup>) => {
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Update filters' }));
+  };
+
+  it('lists the filters returned by the API', async () => {
+    mockedListUpdateFilters.mockResolvedValue([
+      { id: 1, name: 'Defender', pattern: 'Security Intelligence-Update', createdAt: '2026-01-01T00:00:00Z' },
+    ]);
+    const user = userEvent.setup();
+
+    await openUpdateFiltersTab(user);
+
+    expect(await screen.findByText('Defender')).toBeInTheDocument();
+    expect(screen.getByText('Security Intelligence-Update')).toBeInTheDocument();
+  });
+
+  it('shows a placeholder when there are no filters', async () => {
+    const user = userEvent.setup();
+
+    await openUpdateFiltersTab(user);
+
+    expect(await screen.findByText('No filters defined.')).toBeInTheDocument();
+  });
+
+  it('adds a new filter and reloads the list', async () => {
+    mockedCreateUpdateFilter.mockResolvedValue({ id: 2, name: 'Edge', pattern: 'Microsoft Edge', createdAt: '2026-01-01T00:00:00Z' });
+    const user = userEvent.setup();
+    await openUpdateFiltersTab(user);
+    mockedListUpdateFilters.mockResolvedValue([
+      { id: 2, name: 'Edge', pattern: 'Microsoft Edge', createdAt: '2026-01-01T00:00:00Z' },
+    ]);
+
+    await user.type(screen.getByLabelText('Name'), 'Edge');
+    await user.type(screen.getByLabelText('Pattern (regular expression)'), 'Microsoft Edge');
+    await user.click(screen.getByRole('button', { name: 'Add filter' }));
+
+    expect(mockedCreateUpdateFilter).toHaveBeenCalledWith({ name: 'Edge', pattern: 'Microsoft Edge' });
+    expect(await screen.findByText('Edge')).toBeInTheDocument();
+  });
+
+  it('disables Add filter until both name and pattern are filled in', async () => {
+    const user = userEvent.setup();
+    await openUpdateFiltersTab(user);
+
+    expect(screen.getByRole('button', { name: 'Add filter' })).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Name'), 'Edge');
+    expect(screen.getByRole('button', { name: 'Add filter' })).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Pattern (regular expression)'), 'Microsoft Edge');
+    expect(screen.getByRole('button', { name: 'Add filter' })).toBeEnabled();
+  });
+
+  it('shows an error message when adding a filter fails', async () => {
+    mockedCreateUpdateFilter.mockRejectedValue(new ApiError(400, 'Invalid regular expression: too many )'));
+    const user = userEvent.setup();
+    await openUpdateFiltersTab(user);
+
+    await user.type(screen.getByLabelText('Name'), 'Broken');
+    await user.type(screen.getByLabelText('Pattern (regular expression)'), ')');
+    await user.click(screen.getByRole('button', { name: 'Add filter' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid regular expression: too many )');
+  });
+
+  it('edits a filter in place and saves the change', async () => {
+    mockedListUpdateFilters.mockResolvedValue([
+      { id: 1, name: 'Defender', pattern: 'Security Intelligence-Update', createdAt: '2026-01-01T00:00:00Z' },
+    ]);
+    mockedUpdateUpdateFilter.mockResolvedValue({ id: 1, name: 'Defender (renamed)', pattern: 'Security Intelligence-Update', createdAt: '2026-01-01T00:00:00Z' });
+    const user = userEvent.setup();
+    await openUpdateFiltersTab(user);
+    await screen.findByText('Defender');
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    // Two "Name" fields exist while editing (this row's inline input and
+    // the separate "Add a filter" form's own Name field below it) — found
+    // unambiguously by its current value instead, since only the inline
+    // one starts pre-filled with the filter's existing name.
+    const nameInput = screen.getByDisplayValue('Defender');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Defender (renamed)');
+    mockedListUpdateFilters.mockResolvedValue([
+      { id: 1, name: 'Defender (renamed)', pattern: 'Security Intelligence-Update', createdAt: '2026-01-01T00:00:00Z' },
+    ]);
+    // Two "Save" buttons exist while editing — this row's own Save and the
+    // page's main settings-form submit button below it; the row's own
+    // renders first.
+    await user.click(screen.getAllByRole('button', { name: 'Save' })[0]);
+
+    expect(mockedUpdateUpdateFilter).toHaveBeenCalledWith(1, { name: 'Defender (renamed)', pattern: 'Security Intelligence-Update' });
+    expect(await screen.findByText('Defender (renamed)')).toBeInTheDocument();
+  });
+
+  it('cancels an in-place edit without saving', async () => {
+    mockedListUpdateFilters.mockResolvedValue([
+      { id: 1, name: 'Defender', pattern: 'Security Intelligence-Update', createdAt: '2026-01-01T00:00:00Z' },
+    ]);
+    const user = userEvent.setup();
+    await openUpdateFiltersTab(user);
+    await screen.findByText('Defender');
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(mockedUpdateUpdateFilter).not.toHaveBeenCalled();
+    expect(screen.getByText('Defender')).toBeInTheDocument();
+  });
+
+  it('deletes a filter after confirmation and reloads the list', async () => {
+    mockedListUpdateFilters.mockResolvedValue([
+      { id: 1, name: 'Defender', pattern: 'Security Intelligence-Update', createdAt: '2026-01-01T00:00:00Z' },
+    ]);
+    mockedDeleteUpdateFilter.mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    await openUpdateFiltersTab(user);
+    await screen.findByText('Defender');
+    mockedListUpdateFilters.mockResolvedValue([]);
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Defender'));
+    expect(mockedDeleteUpdateFilter).toHaveBeenCalledWith(1);
+    expect(await screen.findByText('No filters defined.')).toBeInTheDocument();
+  });
+
+  it('does nothing when delete confirmation is declined', async () => {
+    mockedListUpdateFilters.mockResolvedValue([
+      { id: 1, name: 'Defender', pattern: 'Security Intelligence-Update', createdAt: '2026-01-01T00:00:00Z' },
+    ]);
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const user = userEvent.setup();
+    await openUpdateFiltersTab(user);
+    await screen.findByText('Defender');
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(mockedDeleteUpdateFilter).not.toHaveBeenCalled();
   });
 });

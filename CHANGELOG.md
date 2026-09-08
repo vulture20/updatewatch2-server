@@ -11,6 +11,31 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.20.0] - 2026-09-08
+
+### Added
+
+- Global update filters: an admin can maintain a named list of regular-
+  expression filters (Administration → Update filters —
+  `GET`/`POST /api/admin/update-filters`, `PUT`/`DELETE .../{id}`), each
+  matched case-insensitively against an update's title. Any update
+  matching any active filter is excluded from the pending-updates
+  count and list everywhere they're shown (`AgentsListPage`,
+  `AgentDetailPage`) — evaluated live against the current filter list
+  on every read, not cached at report time, so adding, editing, or
+  deleting a filter changes what's displayed immediately, with no new
+  agent report or restart needed. Ships with one default filter,
+  "Security Intelligence-Update für Microsoft Defender Antivirus",
+  seeded once at startup if the filter table is completely empty and
+  never re-seeded afterward. The exclusion logic (`UpdateFilterMatcher`)
+  is deliberately the one shared decision point both the pending-
+  updates display and, later, the threshold-crossing email
+  notification (not yet implemented) are meant to call into.
+
+### Changed
+
+- DB schema bumped to `0.12.0` for the new `UpdateFilters` table.
+
 ## [0.19.0] - 2026-09-08
 
 ### Changed

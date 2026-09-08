@@ -16,6 +16,7 @@ using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Demo;
 using UpdateWatch2.Server.Notifications;
+using UpdateWatch2.Server.UpdateFilters;
 using UpdateWatch2.Server.Updates;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -108,6 +109,7 @@ builder.Services.AddScoped<IAdminAccountService, AdminAccountService>();
 builder.Services.AddScoped<IActiveDirectoryAuthService, ActiveDirectoryAuthService>();
 builder.Services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
 builder.Services.AddScoped<IDemoDataSeeder, DemoDataSeeder>();
+builder.Services.AddScoped<IUpdateFilterService, UpdateFilterService>();
 
 // Where downloaded agent release assets are cached (updatewatch2-server#14)
 // — resolved the same way Certs:Path/Database:Path already are (a
@@ -326,6 +328,12 @@ using (var scope = app.Services.CreateScope())
 
     var settingsStore = scope.ServiceProvider.GetRequiredService<IAdminSettingsStore>();
     await settingsStore.InitializeAsync();
+
+    // Ships with the default filter from CLAUDE.md's "Key configurable
+    // behaviors to preserve" on a fresh install; a no-op once the table has
+    // any rows at all, including after an admin has deleted every one.
+    var updateFilters = scope.ServiceProvider.GetRequiredService<IUpdateFilterService>();
+    await updateFilters.EnsureSeededAsync();
 
     // UPDATEWATCH2_DEMOMODE — deliberately env-var-only, never an
     // admin-UI setting, the same as UPDATEWATCH2_TRUSTEDIP (CLAUDE.md).

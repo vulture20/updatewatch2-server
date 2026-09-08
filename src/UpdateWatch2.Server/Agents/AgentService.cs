@@ -2,26 +2,72 @@ using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
+using UpdateWatch2.Server.UpdateFilters;
 
 namespace UpdateWatch2.Server.Agents;
 
 public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentService
 {
-    public async Task<IReadOnlyList<AgentListItemDto>> GetAllAsync(CancellationToken ct = default) =>
-        await db.Agents
+    public async Task<IReadOnlyList<AgentListItemDto>> GetAllAsync(CancellationToken ct = default)
+    {
+        var agents = await db.Agents
             .OrderBy(a => a.Hostname)
-            .Select(a => new AgentListItemDto(a.Hostname, a.Approved, a.RebootRequired, a.PendingUpdateCount))
+            .Select(a => new { a.Id, a.Hostname, a.Approved, a.RebootRequired })
             .ToListAsync(ct);
 
-    public async Task<AgentDetailDto?> GetByHostnameAsync(string hostname, CancellationToken ct = default) =>
-        await db.Agents
-            .Where(a => a.Hostname == hostname)
-            .Select(a => new AgentDetailDto(
-                a.Hostname, a.DnsName, a.OperatingSystem, a.IpAddress, a.AgentVersion,
-                a.Approved, a.RebootRequired, a.PendingUpdateCount, a.LastAliveAt,
-                a.ClientCertificateThumbprint, a.ClientCertificateThumbprintSha1, a.ClientCertificateIssuedAt, a.ClientCertificateExpiresAt,
-                a.PendingInstallRequestedAt, a.LastInstallOutcome, a.LastInstallCompletedAt))
-            .SingleOrDefaultAsync(ct);
+        var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct);
+
+        return agents
+            .Select(a => new AgentListItemDto(a.Hostname, a.Approved, a.RebootRequired, countsByAgent.GetValueOrDefault(a.Id)))
+            .ToList();
+    }
+
+    public async Task<AgentDetailDto?> GetByHostnameAsync(string hostname, CancellationToken ct = default)
+    {
+        var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
+        if (agent is null)
+        {
+            return null;
+        }
+
+        var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct, onlyAgentId: agent.Id);
+
+        return new AgentDetailDto(
+            agent.Hostname, agent.DnsName, agent.OperatingSystem, agent.IpAddress, agent.AgentVersion,
+            agent.Approved, agent.RebootRequired, countsByAgent.GetValueOrDefault(agent.Id), agent.LastAliveAt,
+            agent.ClientCertificateThumbprint, agent.ClientCertificateThumbprintSha1, agent.ClientCertificateIssuedAt, agent.ClientCertificateExpiresAt,
+            agent.PendingInstallRequestedAt, agent.LastInstallOutcome, agent.LastInstallCompletedAt);
+    }
+
+    /// <summary>
+    /// Pending-update count per agent, excluding anything an active
+    /// <see cref="Db.Entities.UpdateFilter"/> matches — computed live on
+    /// every call rather than trusted from the raw, unfiltered
+    /// <see cref="Db.Entities.Agent.PendingUpdateCount"/> column, so
+    /// adding/editing/deleting a filter changes what's displayed
+    /// immediately, with no need to wait for the agent's next report.
+    /// <paramref name="onlyAgentId"/> scopes the underlying query to one
+    /// agent (the detail page) instead of loading every agent's items (the
+    /// overview list) — either way the filter list itself is only fetched
+    /// once.
+    /// </summary>
+    private async Task<Dictionary<int, int>> CountFilteredPendingUpdatesByAgentAsync(CancellationToken ct, int? onlyAgentId = null)
+    {
+        var filters = await db.UpdateFilters.ToListAsync(ct);
+
+        var itemsQuery = db.UpdateItems.AsQueryable();
+        if (onlyAgentId is not null)
+        {
+            itemsQuery = itemsQuery.Where(u => u.AgentId == onlyAgentId);
+        }
+
+        var items = await itemsQuery.Select(u => new { u.AgentId, u.Title }).ToListAsync(ct);
+
+        return items
+            .Where(u => !UpdateFilterMatcher.IsExcluded(u.Title, filters))
+            .GroupBy(u => u.AgentId)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
 
     public async Task<bool> ApproveAsync(string hostname, string approvedBy, CancellationToken ct = default)
     {

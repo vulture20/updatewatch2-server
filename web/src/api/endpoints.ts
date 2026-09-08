@@ -10,7 +10,9 @@ import type {
   MeResponse,
   ReissueCertificateResult,
   UpdateAdminSettings,
+  UpdateFilter,
   UpdateItem,
+  UpsertUpdateFilter,
   VersionInfo,
 } from './types';
 
@@ -65,4 +67,12 @@ export const agentUpdatesApi = {
   // getStatus) rather than a separate "outcome" type, since the refreshed
   // checkedAt/latestVersion/lastError already tell the admin what happened.
   checkNow: () => apiClient.post<AgentUpdateStatus>('/api/admin/agent-update-status/check'),
+};
+
+/** Global update filters — see UpdateFiltersController. */
+export const updateFiltersApi = {
+  list: () => apiClient.get<UpdateFilter[]>('/api/admin/update-filters'),
+  create: (filter: UpsertUpdateFilter) => apiClient.post<UpdateFilter>('/api/admin/update-filters', filter),
+  update: (id: number, filter: UpsertUpdateFilter) => apiClient.put<UpdateFilter>(`/api/admin/update-filters/${id}`, filter),
+  delete: (id: number) => apiClient.delete<void>(`/api/admin/update-filters/${id}`),
 };

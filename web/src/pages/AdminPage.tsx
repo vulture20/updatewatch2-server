@@ -1,13 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { adminApi, agentUpdatesApi, certificateAuthorityApi, versionApi } from '../api/endpoints';
+import { adminApi, agentUpdatesApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
-import type { AdEncryption, AdminSettings, AgentUpdateStatus, CaRotationStatus, SmtpEncryption, VersionInfo } from '../api/types';
+import type { AdEncryption, AdminSettings, AgentUpdateStatus, CaRotationStatus, SmtpEncryption, UpdateFilter, VersionInfo } from '../api/types';
 
 const LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const;
 const SMTP_ENCRYPTIONS: SmtpEncryption[] = ['None', 'StartTls', 'SslTls'];
 const AD_ENCRYPTIONS: AdEncryption[] = ['None', 'StartTls', 'Ldaps'];
-const TABS = ['general', 'notifications', 'activeDirectory', 'certificates'] as const;
+const TABS = ['general', 'notifications', 'activeDirectory', 'certificates', 'updateFilters'] as const;
 type Tab = (typeof TABS)[number];
 
 type FormState = Omit<
@@ -51,6 +51,13 @@ export function AdminPage() {
   const [agentUpdateStatus, setAgentUpdateStatus] = useState<AgentUpdateStatus | null>(null);
   const [agentUpdateBusy, setAgentUpdateBusy] = useState(false);
   const [agentUpdateError, setAgentUpdateError] = useState<string | null>(null);
+  const [updateFilters, setUpdateFilters] = useState<UpdateFilter[]>([]);
+  const [updateFiltersError, setUpdateFiltersError] = useState<string | null>(null);
+  const [newFilterName, setNewFilterName] = useState('');
+  const [newFilterPattern, setNewFilterPattern] = useState('');
+  const [editingFilterId, setEditingFilterId] = useState<number | null>(null);
+  const [editFilterName, setEditFilterName] = useState('');
+  const [editFilterPattern, setEditFilterPattern] = useState('');
 
   const reloadCaStatus = () =>
     certificateAuthorityApi
@@ -58,12 +65,59 @@ export function AdminPage() {
       .then(setCaStatus)
       .catch(() => setCaStatus(null));
 
+  const reloadUpdateFilters = () => updateFiltersApi.list().then(setUpdateFilters).catch(() => setUpdateFilters([]));
+
   useEffect(() => {
     versionApi.get().then(setVersion).catch(() => setVersion(null));
     adminApi.getSettings().then((settings) => setForm(toFormState(settings)));
     reloadCaStatus();
     agentUpdatesApi.getStatus().then(setAgentUpdateStatus).catch(() => setAgentUpdateStatus(null));
+    reloadUpdateFilters();
   }, []);
+
+  const addUpdateFilter = () => {
+    setUpdateFiltersError(null);
+    updateFiltersApi
+      .create({ name: newFilterName, pattern: newFilterPattern })
+      .then(() => {
+        setNewFilterName('');
+        setNewFilterPattern('');
+        reloadUpdateFilters();
+      })
+      .catch((err) => setUpdateFiltersError(err instanceof ApiError ? err.message : t('login.genericError')));
+  };
+
+  const startEditingUpdateFilter = (filter: UpdateFilter) => {
+    setUpdateFiltersError(null);
+    setEditingFilterId(filter.id);
+    setEditFilterName(filter.name);
+    setEditFilterPattern(filter.pattern);
+  };
+
+  const saveUpdateFilterEdit = () => {
+    if (editingFilterId === null) {
+      return;
+    }
+    setUpdateFiltersError(null);
+    updateFiltersApi
+      .update(editingFilterId, { name: editFilterName, pattern: editFilterPattern })
+      .then(() => {
+        setEditingFilterId(null);
+        reloadUpdateFilters();
+      })
+      .catch((err) => setUpdateFiltersError(err instanceof ApiError ? err.message : t('login.genericError')));
+  };
+
+  const deleteUpdateFilter = (filter: UpdateFilter) => {
+    if (!window.confirm(t('admin.updateFilters.deleteConfirm', { name: filter.name }))) {
+      return;
+    }
+    setUpdateFiltersError(null);
+    updateFiltersApi
+      .delete(filter.id)
+      .then(reloadUpdateFilters)
+      .catch((err) => setUpdateFiltersError(err instanceof ApiError ? err.message : t('login.genericError')));
+  };
 
   const runAgentUpdateCheck = () => {
     setAgentUpdateError(null);
@@ -474,6 +528,67 @@ export function AdminPage() {
               </button>
             </>
           )}
+        </div>
+
+        <div hidden={tab !== 'updateFilters'}>
+          <h2>{t('admin.updateFilters.title')}</h2>
+          <p className="field-hint">{t('admin.updateFilters.hint')}</p>
+          {updateFiltersError && <div role="alert" className="login-error">{updateFiltersError}</div>}
+
+          {updateFilters.length === 0 ? (
+            <p>{t('admin.updateFilters.none')}</p>
+          ) : (
+            <ul>
+              {updateFilters.map((filter) =>
+                editingFilterId === filter.id ? (
+                  <li key={filter.id}>
+                    <input
+                      type="text"
+                      aria-label={t('admin.updateFilters.name')}
+                      value={editFilterName}
+                      onChange={(e) => setEditFilterName(e.target.value)}
+                    />{' '}
+                    <input
+                      type="text"
+                      aria-label={t('admin.updateFilters.pattern')}
+                      value={editFilterPattern}
+                      onChange={(e) => setEditFilterPattern(e.target.value)}
+                    />{' '}
+                    <button type="button" onClick={saveUpdateFilterEdit}>
+                      {t('admin.updateFilters.save')}
+                    </button>{' '}
+                    <button type="button" onClick={() => setEditingFilterId(null)}>
+                      {t('admin.updateFilters.cancel')}
+                    </button>
+                  </li>
+                ) : (
+                  <li key={filter.id}>
+                    <strong>{filter.name}</strong> — <code>{filter.pattern}</code>{' '}
+                    <button type="button" onClick={() => startEditingUpdateFilter(filter)}>
+                      {t('admin.updateFilters.edit')}
+                    </button>{' '}
+                    <button type="button" className="btn-danger" onClick={() => deleteUpdateFilter(filter)}>
+                      {t('admin.updateFilters.delete')}
+                    </button>
+                  </li>
+                ),
+              )}
+            </ul>
+          )}
+
+          <h3>{t('admin.updateFilters.addTitle')}</h3>
+          <label>
+            {t('admin.updateFilters.name')}
+            <input type="text" value={newFilterName} onChange={(e) => setNewFilterName(e.target.value)} />
+          </label>
+          <label>
+            {t('admin.updateFilters.pattern')}
+            <input type="text" value={newFilterPattern} onChange={(e) => setNewFilterPattern(e.target.value)} />
+          </label>
+          <p className="field-hint">{t('admin.updateFilters.patternHint')}</p>
+          <button type="button" className="btn-accent" disabled={!newFilterName || !newFilterPattern} onClick={addUpdateFilter}>
+            {t('admin.updateFilters.add')}
+          </button>
         </div>
 
         <button type="submit" disabled={saving}>

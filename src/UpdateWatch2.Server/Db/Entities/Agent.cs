@@ -78,6 +78,15 @@ public class Agent
     /// <summary>Set from the agent's most recent update-check report; independent of update installation.</summary>
     public bool RebootRequired { get; set; }
 
+    /// <summary>
+    /// Raw count of the agent's most recently reported updates, set by
+    /// <see cref="Updates.UpdateService.ReportUpdatesAsync"/> — NOT what the
+    /// admin UI displays. The displayed pending-update count is computed
+    /// live by <see cref="Agents.AgentService"/>, excluding anything an
+    /// active <see cref="UpdateFilter"/> matches, so it stays correct
+    /// immediately after a filter is added/edited/deleted rather than only
+    /// after this agent's next report.
+    /// </summary>
     public int PendingUpdateCount { get; set; }
 
     /// <summary>

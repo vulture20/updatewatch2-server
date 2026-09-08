@@ -144,3 +144,21 @@ export type UpdateAdminSettings = Omit<
   adBindPassword?: string;
   gitHubToken?: string;
 };
+
+/**
+ * A named regex filter (see UpdateFiltersController) — any update whose
+ * title matches any filter's pattern is excluded from the pending-updates
+ * display, live as filters are added/edited/deleted, not just for future
+ * agent reports.
+ */
+export interface UpdateFilter {
+  id: number;
+  name: string;
+  pattern: string;
+  createdAt: string;
+}
+
+export interface UpsertUpdateFilter {
+  name: string;
+  pattern: string;
+}

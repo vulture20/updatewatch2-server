@@ -65,7 +65,8 @@
       "general": "Allgemein",
       "notifications": "Benachrichtigungen",
       "activeDirectory": "Active Directory",
-      "certificates": "Zertifikate"
+      "certificates": "Zertifikate",
+      "updateFilters": "Update-Filter"
     },
     "logLevel": "Log-Stufe",
     "logLevelHint": "Wird beim nächsten Neustart des Servers wirksam.",
@@ -130,6 +131,21 @@
       "stillOnPreviousRoot": "Agents noch auf der vorherigen Wurzel: {{count}}",
       "stillOnPreviousRootMore": "(+{{count}} weitere)",
       "unknownRootAgents": "{{count}} Agent(s) haben ein Zertifikat, das ausgestellt wurde, bevor dies nachverfolgt werden konnte, und lassen sich nicht eindeutig zuordnen."
+    },
+    "updateFilters": {
+      "title": "Update-Filter",
+      "hint": "Jedes Update, dessen Titel auf einen dieser regulären Ausdrücke passt, wird überall aus der Anzeige und Anzahl ausstehender Updates ausgenommen — und (sobald umgesetzt) auch aus der Schwellenwert-E-Mail-Benachrichtigung. Änderungen wirken sofort, ohne Neustart oder neuen Agent-Bericht.",
+      "none": "Keine Filter definiert.",
+      "name": "Name",
+      "pattern": "Muster (regulärer Ausdruck)",
+      "patternHint": "Wird ohne Berücksichtigung der Groß-/Kleinschreibung gegen den Update-Titel geprüft. Reiner Text funktioniert als exakte Übereinstimmung — Regex-Syntax ist nur bei Bedarf nötig.",
+      "addTitle": "Filter hinzufügen",
+      "add": "Filter hinzufügen",
+      "edit": "Bearbeiten",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "delete": "Löschen",
+      "deleteConfirm": "Filter \"{{name}}\" löschen? Dadurch verborgene Updates erscheinen sofort wieder in der Anzeige ausstehender Updates."
     },
     "save": "Speichern",
     "saved": "Einstellungen gespeichert."

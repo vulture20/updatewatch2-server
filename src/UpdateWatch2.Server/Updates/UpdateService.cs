@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
+using UpdateWatch2.Server.UpdateFilters;
 
 namespace UpdateWatch2.Server.Updates;
 
@@ -15,11 +16,20 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
             return null;
         }
 
-        return await db.UpdateItems
+        var items = await db.UpdateItems
             .Where(u => u.AgentId == agent.Id)
             .OrderBy(u => u.Title)
-            .Select(u => new UpdateItemDto(u.Id, u.Title, u.PackageId, u.Description, u.DetectedAt, u.Installed))
             .ToListAsync(ct);
+
+        // Applied here, live against the current filter list, rather than
+        // at report time — see UpdateFilterMatcher and Db.Entities.UpdateFilter's
+        // doc comment on why editing a filter must take effect immediately.
+        var filters = await db.UpdateFilters.ToListAsync(ct);
+
+        return items
+            .Where(u => !UpdateFilterMatcher.IsExcluded(u.Title, filters))
+            .Select(u => new UpdateItemDto(u.Id, u.Title, u.PackageId, u.Description, u.DetectedAt, u.Installed))
+            .ToList();
     }
 
     public async Task<bool> ReportUpdatesAsync(string hostname, ReportUpdatesRequest report, CancellationToken ct = default)
