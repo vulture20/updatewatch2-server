@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
@@ -16,6 +17,7 @@ public class AgentServiceTests : IDisposable
     private readonly AgentService _service;
     private readonly InternalCertificateAuthority _ca;
     private readonly AgentRegistrationService _registrationService;
+    private readonly CertificateRejectionService _rejectionService;
 
     private static readonly AgentRegisterRequest BareRequest = new(null, null, null, null, null, null);
 
@@ -26,7 +28,8 @@ public class AgentServiceTests : IDisposable
         _db.Database.Migrate();
 
         var auditLog = new AuditLogService(_db);
-        _service = new AgentService(_db, auditLog);
+        _rejectionService = new CertificateRejectionService(_db, auditLog, NullLogger<CertificateRejectionService>.Instance);
+        _service = new AgentService(_db, auditLog, _rejectionService);
         _ca = new InternalCertificateAuthority(_certsDirectory);
         _registrationService = new AgentRegistrationService(_db, _ca, auditLog, new FakeAdminSettingsStore(), new FakeAgentUpdateService());
     }
@@ -287,5 +290,44 @@ public class AgentServiceTests : IDisposable
 
         var after = await _service.GetByHostnameAsync(hostname);
         Assert.Equal(0, after!.PendingUpdateCount);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_flags_an_agent_that_recently_presented_a_rejected_certificate()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("cert-flagged-host");
+        var reissued = _ca.IssueAgentLeaf(hostname, TimeSpan.FromDays(730));
+        using var expiredLikeCert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(reissued.PfxBytes, password: null);
+        await _rejectionService.RecordAsync(CertificateRejectionReason.NotTrusted, expiredLikeCert, remoteIpAddress: null);
+
+        var list = await _service.GetAllAsync();
+
+        var item = Assert.Single(list, a => a.Hostname == hostname);
+        Assert.Equal("NotTrusted", item.LastCertificateRejectionReason);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_leaves_LastCertificateRejectionReason_null_with_no_recent_rejection()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("unflagged-host");
+
+        var list = await _service.GetAllAsync();
+
+        var item = Assert.Single(list, a => a.Hostname == hostname);
+        Assert.Null(item.LastCertificateRejectionReason);
+    }
+
+    [Fact]
+    public async Task GetByHostnameAsync_surfaces_the_rejection_reason_and_timestamp()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("cert-flagged-detail-host");
+        var reissued = _ca.IssueAgentLeaf(hostname, TimeSpan.FromDays(730));
+        using var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(reissued.PfxBytes, password: null);
+        await _rejectionService.RecordAsync(CertificateRejectionReason.UnknownAgent, cert, remoteIpAddress: null);
+
+        var detail = await _service.GetByHostnameAsync(hostname);
+
+        Assert.Equal("UnknownAgent", detail!.LastCertificateRejectionReason);
+        Assert.NotNull(detail.LastCertificateRejectionAt);
     }
 }

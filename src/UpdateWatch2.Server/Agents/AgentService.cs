@@ -6,7 +6,7 @@ using UpdateWatch2.Server.UpdateFilters;
 
 namespace UpdateWatch2.Server.Agents;
 
-public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentService
+public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertificateRejectionService rejectionService) : IAgentService
 {
     public async Task<IReadOnlyList<AgentListItemDto>> GetAllAsync(CancellationToken ct = default)
     {
@@ -16,9 +16,12 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
             .ToListAsync(ct);
 
         var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct);
+        var rejectionsByHostname = await rejectionService.GetRecentByHostnameAsync(ct);
 
         return agents
-            .Select(a => new AgentListItemDto(a.Hostname, a.Approved, a.RebootRequired, countsByAgent.GetValueOrDefault(a.Id)))
+            .Select(a => new AgentListItemDto(
+                a.Hostname, a.Approved, a.RebootRequired, countsByAgent.GetValueOrDefault(a.Id),
+                rejectionsByHostname.GetValueOrDefault(a.Hostname)?.Reason))
             .ToList();
     }
 
@@ -31,13 +34,15 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog) : IAgentSe
         }
 
         var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct, onlyAgentId: agent.Id);
+        var rejectionsByHostname = await rejectionService.GetRecentByHostnameAsync(ct);
+        var rejection = rejectionsByHostname.GetValueOrDefault(agent.Hostname);
 
         return new AgentDetailDto(
             agent.Hostname, agent.DnsName, agent.OperatingSystem, agent.IpAddress, agent.AgentVersion,
             agent.Approved, agent.RebootRequired, countsByAgent.GetValueOrDefault(agent.Id), agent.LastAliveAt,
             agent.ClientCertificateThumbprint, agent.ClientCertificateThumbprintSha1, agent.ClientCertificateIssuedAt, agent.ClientCertificateExpiresAt,
             agent.PendingInstallRequestedAt, agent.LastInstallOutcome, agent.LastInstallCompletedAt,
-            agent.IssuingRootThumbprint);
+            agent.IssuingRootThumbprint, rejection?.Reason, rejection?.Timestamp);
     }
 
     /// <summary>

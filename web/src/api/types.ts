@@ -16,6 +16,8 @@ export interface AgentListItem {
   approved: boolean;
   rebootRequired: boolean;
   pendingUpdateCount: number;
+  /** Set when this agent presented an invalid/expired/unrecognized client certificate within the last 24 hours — flags the row with a warning icon. */
+  lastCertificateRejectionReason: string | null;
 }
 
 export interface AgentDetail {
@@ -44,6 +46,9 @@ export interface AgentDetail {
    * certificate issued before this was tracked, or no certificate at all.
    */
   issuingRootThumbprint: string | null;
+  /** Same as AgentListItem.lastCertificateRejectionReason — shown on the detail page alongside when it happened. */
+  lastCertificateRejectionReason: string | null;
+  lastCertificateRejectionAt: string | null;
 }
 
 /** Response of an admin-initiated certificate re-issuance (updatewatch2-server#8). */

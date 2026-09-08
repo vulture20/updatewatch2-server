@@ -23,8 +23,8 @@ describe('AgentsListPage', () => {
 
   it('renders the agents returned by the API', async () => {
     mockedList.mockResolvedValue([
-      { hostname: 'host-1', approved: true, rebootRequired: false, pendingUpdateCount: 2 },
-      { hostname: 'host-2', approved: false, rebootRequired: true, pendingUpdateCount: 0 },
+      { hostname: 'host-1', approved: true, rebootRequired: false, pendingUpdateCount: 2, lastCertificateRejectionReason: null },
+      { hostname: 'host-2', approved: false, rebootRequired: true, pendingUpdateCount: 0, lastCertificateRejectionReason: null },
     ]);
 
     render(
@@ -51,7 +51,7 @@ describe('AgentsListPage', () => {
 
   it('approves the selected agents and reloads the list', async () => {
     mockedList.mockResolvedValue([
-      { hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 0 },
+      { hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 0, lastCertificateRejectionReason: null },
     ]);
     mockedApproveMany.mockResolvedValue({ approvedCount: 1, notFoundHostnames: [] });
     const user = userEvent.setup();
@@ -74,8 +74,8 @@ describe('AgentsListPage', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       mockedList
-        .mockResolvedValueOnce([{ hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 0 }])
-        .mockResolvedValueOnce([{ hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 5 }]);
+        .mockResolvedValueOnce([{ hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 0, lastCertificateRejectionReason: null }])
+        .mockResolvedValueOnce([{ hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 5, lastCertificateRejectionReason: null }]);
 
       render(
         <MemoryRouter>
@@ -99,7 +99,7 @@ describe('AgentsListPage', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       mockedList
-        .mockResolvedValueOnce([{ hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 0 }])
+        .mockResolvedValueOnce([{ hostname: 'host-1', approved: false, rebootRequired: false, pendingUpdateCount: 0, lastCertificateRejectionReason: null }])
         .mockRejectedValueOnce(new Error('transient network error'));
 
       render(
@@ -119,5 +119,36 @@ describe('AgentsListPage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('flags a row with a warning icon when the agent recently presented a rejected certificate', async () => {
+    mockedList.mockResolvedValue([
+      { hostname: 'host-1', approved: true, rebootRequired: false, pendingUpdateCount: 0, lastCertificateRejectionReason: 'Expired' },
+      { hostname: 'host-2', approved: true, rebootRequired: false, pendingUpdateCount: 0, lastCertificateRejectionReason: null },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <AgentsListPage />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('host-1');
+    expect(screen.getByRole('img', { name: /Expired/ })).toBeInTheDocument();
+  });
+
+  it('shows no warning icon when nothing was recently rejected', async () => {
+    mockedList.mockResolvedValue([
+      { hostname: 'host-1', approved: true, rebootRequired: false, pendingUpdateCount: 0, lastCertificateRejectionReason: null },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <AgentsListPage />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('host-1');
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 });

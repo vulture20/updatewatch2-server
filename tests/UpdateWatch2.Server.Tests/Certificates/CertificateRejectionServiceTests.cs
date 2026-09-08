@@ -44,8 +44,13 @@ public class CertificateRejectionServiceTests : IDisposable
 
         var entry = await _db.AuditLogEntries.SingleAsync();
         Assert.Equal("agent.certificate.rejected.UnknownAgent", entry.Action);
-        Assert.Equal(issued.ThumbprintSha256, entry.Actor);
+        // The certificate's own CN ("rejected-host" — every agent leaf's
+        // Subject is "CN=<hostname>"), not the thumbprint, so a rejection
+        // can be attributed back to the agent it claims to be (see
+        // GetRecentByHostnameAsync / AgentService's flagging).
+        Assert.Equal("rejected-host", entry.Actor);
         Assert.Contains("203.0.113.5", entry.Details);
+        Assert.Contains(issued.ThumbprintSha256, entry.Details);
     }
 
     [Fact]
@@ -107,5 +112,41 @@ public class CertificateRejectionServiceTests : IDisposable
 
         Assert.Equal(0, status.RecentCount);
         Assert.Empty(status.Recent);
+    }
+
+    [Fact]
+    public async Task GetRecentByHostnameAsync_keys_by_the_certificates_own_CN()
+    {
+        var issued = _ca.IssueAgentLeaf("flagged-host", TimeSpan.FromDays(730));
+        using var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(issued.PfxBytes, password: null);
+        await _service.RecordAsync(CertificateRejectionReason.AgentNotApproved, cert, remoteIpAddress: null);
+
+        var byHostname = await _service.GetRecentByHostnameAsync();
+
+        var entry = Assert.Single(byHostname);
+        Assert.Equal("flagged-host", entry.Key);
+        Assert.Equal("AgentNotApproved", entry.Value.Reason);
+    }
+
+    [Fact]
+    public async Task GetRecentByHostnameAsync_keeps_only_the_most_recent_rejection_per_hostname()
+    {
+        var issued = _ca.IssueAgentLeaf("repeat-offender", TimeSpan.FromDays(730));
+        using var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(issued.PfxBytes, password: null);
+        await _service.RecordAsync(CertificateRejectionReason.NotTrusted, cert, remoteIpAddress: null);
+        await _service.RecordAsync(CertificateRejectionReason.Expired, cert, remoteIpAddress: null);
+
+        var byHostname = await _service.GetRecentByHostnameAsync();
+
+        var entry = Assert.Single(byHostname);
+        Assert.Equal("Expired", entry.Value.Reason);
+    }
+
+    [Fact]
+    public async Task GetRecentByHostnameAsync_returns_empty_with_no_rejections()
+    {
+        var byHostname = await _service.GetRecentByHostnameAsync();
+
+        Assert.Empty(byHostname);
     }
 }

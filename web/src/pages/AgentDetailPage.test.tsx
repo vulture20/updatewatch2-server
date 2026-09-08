@@ -50,6 +50,8 @@ const approvedAgent: AgentDetail = {
   lastInstallOutcome: null,
   lastInstallCompletedAt: null,
   issuingRootThumbprint: 'root-thumb-1',
+  lastCertificateRejectionReason: null,
+  lastCertificateRejectionAt: null,
 };
 
 function renderPage() {
@@ -109,6 +111,28 @@ describe('AgentDetailPage certificate re-issuance', () => {
 
     await screen.findByText('abc123');
     expect(screen.getByText('Issuing CA root (SHA-256)').nextElementSibling).toHaveTextContent('—');
+  });
+
+  it('shows the certificate rejection reason and timestamp when one is recorded', async () => {
+    mockedGet.mockResolvedValue({
+      ...approvedAgent,
+      lastCertificateRejectionReason: 'Expired',
+      lastCertificateRejectionAt: '2026-01-05T12:00:00Z',
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('Last certificate rejection')).toBeInTheDocument();
+    expect(screen.getByText(/Certificate expired/)).toBeInTheDocument();
+  });
+
+  it('does not show a certificate rejection row when there is none', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+
+    renderPage();
+
+    await screen.findByText('abc123');
+    expect(screen.queryByText('Last certificate rejection')).not.toBeInTheDocument();
   });
 
   it('shows the reissue button only for an approved agent', async () => {

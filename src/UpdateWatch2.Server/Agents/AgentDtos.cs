@@ -5,7 +5,15 @@ public record AgentListItemDto(
     string Hostname,
     bool Approved,
     bool RebootRequired,
-    int PendingUpdateCount);
+    int PendingUpdateCount,
+    /// <summary>
+    /// Non-null when this agent presented an invalid/expired/unrecognized
+    /// client certificate within the last 24 hours (see
+    /// <see cref="Certificates.ICertificateRejectionService.GetRecentByHostnameAsync"/>)
+    /// — flags the row in the overview list with a warning icon. One of
+    /// <see cref="Certificates.CertificateRejectionReason"/>'s values.
+    /// </summary>
+    string? LastCertificateRejectionReason);
 
 /// <summary>Full shape for the per-agent detail view.</summary>
 public record AgentDetailDto(
@@ -34,7 +42,10 @@ public record AgentDetailDto(
     /// tracked (updatewatch2-server#6 follow-up) or for an agent with no
     /// certificate at all.
     /// </summary>
-    string? IssuingRootThumbprint);
+    string? IssuingRootThumbprint,
+    /// <summary>Same as <see cref="AgentListItemDto.LastCertificateRejectionReason"/> — the reason, if known, shown on the detail page.</summary>
+    string? LastCertificateRejectionReason,
+    DateTimeOffset? LastCertificateRejectionAt);
 
 /// <summary>
 /// How many/which agents would stop authenticating if the CA's previous

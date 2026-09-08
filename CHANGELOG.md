@@ -11,6 +11,25 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.23.0] - 2026-09-08
+
+### Added
+
+- Agents affected by a rejected client certificate are now flagged
+  directly in the admin UI, not just the general warning banner: a
+  warning icon next to the hostname on the overview list, and the
+  reason (plus when it happened) on the agent's own detail page,
+  "sofern bekannt" — whenever it can be attributed. Attribution works
+  from the certificate's own Subject CN (every agent leaf's Subject is
+  `CN=<hostname>`, readable even from an expired/untrusted
+  certificate) rather than needing a DB match, so it also covers a
+  certificate that failed chain/validity-period validation outright,
+  not only the already-known-agent case.
+  `ICertificateRejectionService.GetRecentByHostnameAsync` resolves the
+  most recent rejection per hostname within the same 24h window the
+  warning banner uses; `AgentService` now depends on it for both the
+  list and detail queries.
+
 ## [0.22.0] - 2026-09-08
 
 ### Added

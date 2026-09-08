@@ -23,7 +23,8 @@
     "empty": "No agents registered yet.",
     "loading": "Loading agents…",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "certificateRejectedIcon": "This agent presented a rejected certificate ({{reason}}) within the last 24 hours."
   },
   "agentDetail": {
     "dnsName": "DNS name",
@@ -47,6 +48,14 @@
     "certificateIssuedAt": "Certificate issued",
     "certificateExpiresAt": "Certificate expires",
     "issuingCaRoot": "Issuing CA root (SHA-256)",
+    "certificateRejectionReason": "Last certificate rejection",
+    "certificateRejectionReasons": {
+      "Expired": "Certificate expired",
+      "NotYetValid": "Certificate not yet valid",
+      "NotTrusted": "Certificate not trusted (doesn't chain to a trusted CA root)",
+      "UnknownAgent": "Certificate doesn't match this agent",
+      "AgentNotApproved": "Agent not approved"
+    },
     "reissueCertificate": "Reissue certificate",
     "reissueConfirm": "This immediately invalidates the agent's current certificate. Continue?",
     "reissueTokenTitle": "One-time registration token",

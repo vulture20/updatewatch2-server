@@ -25,4 +25,16 @@ public interface ICertificateRejectionService
 
     /// <summary>Recent rejections (see <see cref="CertificateRejectionStatusDto"/>) — backs the admin UI's warning banner.</summary>
     Task<CertificateRejectionStatusDto> GetStatusAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// The most recent rejection per claimed hostname within the same
+    /// lookback window <see cref="GetStatusAsync"/> uses, keyed by hostname
+    /// — backs <c>AgentService</c> flagging an affected agent in the
+    /// overview list and showing the reason on its detail page. A
+    /// rejection whose hostname couldn't be resolved (see
+    /// <see cref="RecordAsync"/>) is keyed by thumbprint or "unknown"
+    /// instead, which simply never matches a real agent — harmless, not
+    /// filtered out specially.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, CertificateRejectionDto>> GetRecentByHostnameAsync(CancellationToken ct = default);
 }

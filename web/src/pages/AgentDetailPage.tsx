@@ -102,6 +102,15 @@ export function AgentDetailPage() {
         <dd>{agent.clientCertificateExpiresAt ? new Date(agent.clientCertificateExpiresAt).toLocaleString() : '—'}</dd>
         <dt>{t('agentDetail.issuingCaRoot')}</dt>
         <dd>{agent.issuingRootThumbprint ?? '—'}</dd>
+        {agent.lastCertificateRejectionReason && (
+          <>
+            <dt>{t('agentDetail.certificateRejectionReason')}</dt>
+            <dd role="alert">
+              {t(`agentDetail.certificateRejectionReasons.${agent.lastCertificateRejectionReason}`)}
+              {agent.lastCertificateRejectionAt && ` (${new Date(agent.lastCertificateRejectionAt).toLocaleString()})`}
+            </dd>
+          </>
+        )}
         <dt>{t('agentDetail.lastInstallOutcome')}</dt>
         <dd>
           {agent.pendingInstallRequestedAt

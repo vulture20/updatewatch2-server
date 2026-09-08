@@ -100,6 +100,15 @@ export function AgentsListPage() {
                     />
                   </td>
                   <td>
+                    {agent.lastCertificateRejectionReason && (
+                      <span
+                        role="img"
+                        aria-label={t('agents.certificateRejectedIcon', { reason: agent.lastCertificateRejectionReason })}
+                        title={t('agents.certificateRejectedIcon', { reason: agent.lastCertificateRejectionReason })}
+                      >
+                        ⚠️{' '}
+                      </span>
+                    )}
                     <Link to={`/agents/${encodeURIComponent(agent.hostname)}`}>{agent.hostname}</Link>
                   </td>
                   <td>{agent.approved ? t('agents.yes') : t('agents.no')}</td>

@@ -23,7 +23,8 @@
     "empty": "Noch keine Agents registriert.",
     "loading": "Agents werden geladen…",
     "yes": "Ja",
-    "no": "Nein"
+    "no": "Nein",
+    "certificateRejectedIcon": "Dieser Agent hat innerhalb der letzten 24 Stunden ein abgelehntes Zertifikat vorgelegt ({{reason}})."
   },
   "agentDetail": {
     "dnsName": "DNS-Name",
@@ -47,6 +48,14 @@
     "certificateIssuedAt": "Zertifikat ausgestellt",
     "certificateExpiresAt": "Zertifikat gültig bis",
     "issuingCaRoot": "Ausstellende CA-Wurzel (SHA-256)",
+    "certificateRejectionReason": "Letzte Zertifikatsablehnung",
+    "certificateRejectionReasons": {
+      "Expired": "Zertifikat abgelaufen",
+      "NotYetValid": "Zertifikat noch nicht gültig",
+      "NotTrusted": "Zertifikat nicht vertrauenswürdig (Kette führt zu keiner vertrauten CA-Wurzel)",
+      "UnknownAgent": "Zertifikat passt nicht zu diesem Agent",
+      "AgentNotApproved": "Agent nicht bestätigt"
+    },
     "reissueCertificate": "Zertifikat neu ausstellen",
     "reissueConfirm": "Dadurch wird das aktuelle Zertifikat des Agenten sofort ungültig. Fortfahren?",
     "reissueTokenTitle": "Einmaliges Registrierungstoken",
