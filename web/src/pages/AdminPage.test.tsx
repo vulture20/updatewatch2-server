@@ -18,6 +18,7 @@ vi.mock('../api/endpoints', () => ({
     prepareRotation: vi.fn(),
     activateRotation: vi.fn(),
     retirePreviousRoot: vi.fn(),
+    downloadUrl: 'http://localhost/api/admin/certificate-authority/download',
   },
   agentUpdatesApi: {
     getStatus: vi.fn(),
@@ -393,6 +394,10 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     expect(screen.getByRole('button', { name: 'Activate rotation' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Retire previous root' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Prepare rotation' })).toBeEnabled();
+    expect(screen.getByRole('link', { name: 'Download CA root certificate' })).toHaveAttribute(
+      'href',
+      certificateAuthorityApi.downloadUrl,
+    );
   });
 
   it('prepares a rotation and reflects the newly pending root', async () => {

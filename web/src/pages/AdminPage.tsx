@@ -490,6 +490,14 @@ export function AdminPage() {
                 </dd>
               </dl>
 
+              <p className="field-hint">
+                <a href={certificateAuthorityApi.downloadUrl} download="updatewatch2-ca.crt">
+                  {t('admin.caRotation.download')}
+                </a>
+                {' — '}
+                {t('admin.caRotation.downloadHint')}
+              </p>
+
               {caStatus.previousThumbprint && (
                 <div role="status" className="field-hint">
                   <p>

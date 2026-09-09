@@ -11,6 +11,32 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.26.0] - 2026-09-09
+
+### Added
+
+- New session-authenticated `GET /api/admin/certificate-authority/download`
+  (`CertificateAuthorityController`), returning the current CA root's raw
+  DER bytes and audit-logging the download as `ca.root.downloaded` (SHA-256
+  thumbprint of the exported root as the audit `Details`, same convention
+  as the sibling `ca.rotation.*` actions). Lets an admin obtain today's CA
+  root through their own already-authenticated session rather than only
+  via the existing anonymous, agent-facing `GET /api/agent/ca-certificate`
+  — which is untouched and remains exactly what a genuinely
+  not-pre-seeded agent falls back to for trust-on-first-use (TOFU) at its
+  own first contact. The admin UI's Certificates tab (`AdminPage.tsx`)
+  gained a matching "Download CA root certificate" link next to the CA
+  rotation status, a plain `<a download>` rather than one of the existing
+  mutation buttons since a GET performs no client-side action to await.
+  Pairs with agent v0.15.0's new NSIS `/CACERT=<path>` silent-install
+  switch: an admin downloads the root here and hands it to a fresh
+  agent's installer, so that agent's `RegistrationWorker` never has a
+  TOFU window to begin with (its existing `EnsureCaPinnedAsync` early-return
+  already skips the fetch once anything is pre-seeded at its fixed local
+  trust-store path — no agent-side trust-bootstrap code needed to change).
+  No protocol or DB schema bump — this is a purely
+  admin-facing addition; the agent-facing wire protocol is untouched.
+
 ## [0.25.4] - 2026-09-09
 
 ### Fixed

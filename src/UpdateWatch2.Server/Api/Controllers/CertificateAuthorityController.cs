@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UpdateWatch2.Server.Agents;
@@ -43,6 +44,35 @@ public class CertificateAuthorityController(ICertificateAuthority ca, IAgentServ
         ca.ActivateRotation();
         await auditLog.LogAsync(User.Identity!.Name!, "ca.rotation.activated", ca.RootCertificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256), ct);
         return Ok(await BuildStatusAsync(ct));
+    }
+
+    /// <summary>
+    /// Lets an admin obtain the current CA root's raw bytes over their own
+    /// already-authenticated session — closes the trust-on-first-use (TOFU)
+    /// window a freshly installed agent otherwise relies on
+    /// (<c>RegistrationWorker.EnsureCaPinnedAsync</c> on the agent side, a
+    /// separate repo): download this file ahead of time and hand
+    /// it to the installer (NSIS <c>/CACERT=</c>, or manually placed at
+    /// <c>/etc/updatewatch2/ca.pem</c> on Linux before the service's first
+    /// start) so the agent never has to trust whatever CA a first, possibly
+    /// intercepted connection hands it. Deliberately GET, not POST — purely
+    /// read-only, and a plain <c>&lt;a href&gt;</c> only navigates for GET.
+    /// Same DER export (<see cref="X509ContentType.Cert"/>) as the
+    /// anonymous, agent-facing <see cref="AgentProtocolController.CaCertificate"/>
+    /// — which stays untouched and is still what a genuinely un-pre-seeded
+    /// agent falls back to; this is strictly an additional, authenticated
+    /// path to the same bytes, not a replacement.
+    /// </summary>
+    [HttpGet("download")]
+    public async Task<IActionResult> Download(CancellationToken ct)
+    {
+        var bytes = ca.RootCertificate.Export(X509ContentType.Cert);
+        await auditLog.LogAsync(
+            User.Identity!.Name!,
+            "ca.root.downloaded",
+            ca.RootCertificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256),
+            ct);
+        return File(bytes, "application/x-x509-ca-cert", "updatewatch2-ca.crt");
     }
 
     [HttpPost("retire-previous")]

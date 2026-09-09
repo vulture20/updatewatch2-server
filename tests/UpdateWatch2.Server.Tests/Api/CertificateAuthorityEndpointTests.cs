@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using UpdateWatch2.Server.Tests.TestHelpers;
@@ -72,6 +74,35 @@ public class CertificateAuthorityEndpointTests : IClassFixture<WebApplicationFac
         var response = await _anonymousClient.PostAsync($"/api/admin/certificate-authority/{action}", content: null);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Download_requires_an_admin_session()
+    {
+        var response = await _anonymousClient.GetAsync("/api/admin/certificate-authority/download");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Download_returns_the_current_root_matching_the_status_endpoints_thumbprint()
+    {
+        // The valuable assertion here is the thumbprint cross-check against
+        // the status endpoint's own currentThumbprint — it proves the
+        // downloaded bytes really are the *current* root, not a stale or
+        // wrong export, not just that a 200 with plausible-looking headers
+        // came back.
+        var statusResponse = await _client.GetAsync("/api/admin/certificate-authority");
+        var status = await statusResponse.Content.ReadFromJsonAsync<RotationStatus>();
+
+        var response = await _client.GetAsync("/api/admin/certificate-authority/download");
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("application/x-x509-ca-cert", response.Content.Headers.ContentType?.MediaType);
+        Assert.EndsWith(".crt", response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? "");
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        using var downloaded = X509CertificateLoader.LoadCertificate(bytes);
+        Assert.Equal(status!.currentThumbprint, downloaded.GetCertHashString(HashAlgorithmName.SHA256));
     }
 
     [Fact]

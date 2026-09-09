@@ -1,4 +1,8 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+// Exported so a non-JSON, browser-navigated URL (e.g. the CA certificate
+// download link in AdminPage's Certificates tab) can be built without
+// duplicating this resolution logic — apiClient's own get/post/put/delete
+// helpers below are for JSON calls only, not file downloads.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 export class ApiError extends Error {
   constructor(

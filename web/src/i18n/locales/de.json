@@ -130,6 +130,8 @@
     "caRotation": {
       "title": "Rotation der Zertifizierungsstelle (CA-Wurzel)",
       "hint": "Drei getrennte Schritte statt eines einzigen \"Jetzt rotieren\"-Buttons: Vorbereiten erzeugt eine neue Wurzel, ohne sie sofort zu verwenden; Aktivieren schaltet auf sie um und stellt das eigene Zertifikat des Servers sofort neu aus (kein Neustart nötig); Zurückziehen entfernt die alte Wurzel, sobald jeder Agent über sie hinaus erneuert hat. Vor dem Aktivieren abwarten, bis Agents die vorbereitete Wurzel über ihren eigenen Heartbeat-Zyklus übernommen haben — sonst verliert ein Agent, der das noch nicht getan hat, kurzzeitig die Verbindung zum Server.",
+      "download": "CA-Wurzelzertifikat herunterladen",
+      "downloadHint": "Diese Datei dem Windows-Installer über /CACERT=<Pfad> übergeben oder vor dem ersten Start eines Linux-Agenten unter /etc/updatewatch2/ca.pem ablegen — so muss ein frisch installierter Agent der CA des Servers beim ersten Kontakt (Trust-on-First-Use) nie erst selbst vertrauen.",
       "current": "Aktuelle Wurzel",
       "previous": "Vorherige Wurzel (noch vertrauenswürdig)",
       "pending": "Vorbereitete Wurzel (noch nicht aktiv)",

@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, API_BASE_URL } from './client';
 import type {
   AdminSettings,
   AgentDetail,
@@ -59,6 +59,11 @@ export const certificateAuthorityApi = {
   prepareRotation: () => apiClient.post<CaRotationStatus>('/api/admin/certificate-authority/prepare'),
   activateRotation: () => apiClient.post<CaRotationStatus>('/api/admin/certificate-authority/activate'),
   retirePreviousRoot: () => apiClient.post<CaRotationStatus>('/api/admin/certificate-authority/retire-previous'),
+  // A raw file download, not JSON — not routed through apiClient.get<T>().
+  // Consumed directly as an <a href> so the browser's normal top-level
+  // navigation carries the SameSite=Lax session cookie; lets an admin
+  // pre-seed a fresh agent install's CA trust and skip trust-on-first-use.
+  downloadUrl: `${API_BASE_URL}/api/admin/certificate-authority/download`,
 };
 
 /** Agent auto-update status (updatewatch2-server#14) — see AgentUpdatesController. The enabled/token toggle itself is part of adminApi's settings, not this. */

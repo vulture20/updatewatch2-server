@@ -130,6 +130,8 @@
     "caRotation": {
       "title": "Certificate authority root rotation",
       "hint": "Three separate steps, not one \"rotate now\" button: prepare generates a new root without using it for anything yet; activate switches to it and re-issues this server's own certificate immediately (no restart needed); retire drops the old root once every agent has renewed past it. Wait for agents to pick up a prepared root on their own heartbeat cadence before activating — an agent that hasn't yet will briefly lose its connection to the server otherwise.",
+      "download": "Download CA root certificate",
+      "downloadHint": "Give this file to the Windows installer via /CACERT=<path>, or place it at /etc/updatewatch2/ca.pem before starting a Linux agent for the first time — so a freshly installed agent never has to trust the server's CA on first contact (trust-on-first-use) at all.",
       "current": "Current root",
       "previous": "Previous root (still trusted)",
       "pending": "Prepared root (not yet active)",
