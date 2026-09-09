@@ -11,6 +11,31 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.25.3] - 2026-09-09
+
+### Fixed
+
+- **The Docker image publish pipeline was broken by the previous
+  release** — `v0.25.2`'s new `<Version>` element reads the repo-root
+  `VERSION` file via `$(MSBuildProjectDirectory)/../../VERSION`, which
+  resolves correctly from a normal checkout but not inside
+  `docker/Dockerfile`'s build stage: that build context only ever
+  copies `src/UpdateWatch2.Server/` in, never the repo root, so the
+  expression resolved to `/VERSION` with nothing there and `dotnet
+  restore` failed outright ("could not be evaluated") — confirmed
+  live, not just reasoned about: `docker-publish.yml` failed on `main`
+  and both the `v0.25.1`/`v0.25.2` tag pushes, meaning neither tag's
+  image was ever actually published. Fixed with `COPY VERSION
+  /VERSION` in the Dockerfile's build stage, matching where that
+  expression looks from there — the same class of gap
+  `Database:Path`/`Certs:Path` already needed explicit
+  container-specific values for, rather than trusting a dev-relative
+  default. Verified with a real local `docker build`, not just
+  `dotnet build`/`dotnet test`: succeeds end to end, and the resulting
+  image's `UpdateWatch2.Server.dll` genuinely carries "Copyright (C)
+  2026 Thorsten Schröpel"/"0.25.3"/"UpdateWatch2 Server" in its
+  assembly metadata.
+
 ## [0.25.2] - 2026-09-09
 
 ### Fixed

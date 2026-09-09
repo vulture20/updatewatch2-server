@@ -15,6 +15,17 @@ RUN npm run build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS server-build
 WORKDIR /src
+# UpdateWatch2.Server.csproj's <Version> reads a repo-root VERSION file two
+# directories up from the csproj itself ($(MSBuildProjectDirectory)/../../VERSION)
+# — true for a normal checkout, but this build context only ever copies
+# src/UpdateWatch2.Server/ in, not the repo root, so that relative path
+# resolves to /VERSION with nothing there and dotnet restore fails outright
+# ("could not be evaluated"). Same class of gap as Database__Path/Certs__Path
+# below needing an explicit container-specific value rather than trusting a
+# dev-relative default — confirmed live: the very next docker-publish run
+# after <Version> was added failed this exact way. Placed at /VERSION,
+# matching where that expression actually looks from here.
+COPY VERSION /VERSION
 COPY src/UpdateWatch2.Server/UpdateWatch2.Server.csproj UpdateWatch2.Server/
 RUN dotnet restore UpdateWatch2.Server/UpdateWatch2.Server.csproj
 COPY src/UpdateWatch2.Server/ UpdateWatch2.Server/
