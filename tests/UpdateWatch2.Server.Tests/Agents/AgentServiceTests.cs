@@ -330,4 +330,61 @@ public class AgentServiceTests : IDisposable
         Assert.Equal("UnknownAgent", detail!.LastCertificateRejectionReason);
         Assert.NotNull(detail.LastCertificateRejectionAt);
     }
+
+    [Fact]
+    public async Task GetByHostnameAsync_clears_the_rejection_flag_once_the_agent_has_heartbeated_successfully_since()
+    {
+        // Regression guard for a real user report: fixing a certificate
+        // problem left the warning icon showing for up to 24h afterward,
+        // because only the rejection's own age (not whether the agent had
+        // since proven itself healthy again) decided whether to flag it.
+        var hostname = await RegisterApproveAndCertifyAsync("recovered-host");
+        var reissued = _ca.IssueAgentLeaf(hostname, TimeSpan.FromDays(730));
+        using var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(reissued.PfxBytes, password: null);
+        await _rejectionService.RecordAsync(CertificateRejectionReason.NotTrusted, cert, remoteIpAddress: null);
+
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.LastAliveAt = DateTimeOffset.UtcNow; // a later successful heartbeat
+        await _db.SaveChangesAsync();
+
+        var detail = await _service.GetByHostnameAsync(hostname);
+
+        Assert.Null(detail!.LastCertificateRejectionReason);
+        Assert.Null(detail.LastCertificateRejectionAt);
+    }
+
+    [Fact]
+    public async Task GetByHostnameAsync_keeps_the_flag_when_the_last_successful_heartbeat_predates_the_rejection()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("still-broken-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.LastAliveAt = DateTimeOffset.UtcNow.AddMinutes(-10); // healthy 10 minutes ago
+        await _db.SaveChangesAsync();
+
+        var reissued = _ca.IssueAgentLeaf(hostname, TimeSpan.FromDays(730));
+        using var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(reissued.PfxBytes, password: null);
+        await _rejectionService.RecordAsync(CertificateRejectionReason.NotTrusted, cert, remoteIpAddress: null); // then broke just now
+
+        var detail = await _service.GetByHostnameAsync(hostname);
+
+        Assert.Equal("NotTrusted", detail!.LastCertificateRejectionReason);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_clears_the_rejection_flag_once_the_agent_has_heartbeated_successfully_since()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("recovered-list-host");
+        var reissued = _ca.IssueAgentLeaf(hostname, TimeSpan.FromDays(730));
+        using var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(reissued.PfxBytes, password: null);
+        await _rejectionService.RecordAsync(CertificateRejectionReason.NotTrusted, cert, remoteIpAddress: null);
+
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.LastAliveAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var list = await _service.GetAllAsync();
+
+        var item = Assert.Single(list, a => a.Hostname == hostname);
+        Assert.Null(item.LastCertificateRejectionReason);
+    }
 }

@@ -12,7 +12,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
     {
         var agents = await db.Agents
             .OrderBy(a => a.Hostname)
-            .Select(a => new { a.Id, a.Hostname, a.Approved, a.RebootRequired })
+            .Select(a => new { a.Id, a.Hostname, a.Approved, a.RebootRequired, a.LastAliveAt })
             .ToListAsync(ct);
 
         var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct);
@@ -21,7 +21,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
         return agents
             .Select(a => new AgentListItemDto(
                 a.Hostname, a.Approved, a.RebootRequired, countsByAgent.GetValueOrDefault(a.Id),
-                rejectionsByHostname.GetValueOrDefault(a.Hostname)?.Reason))
+                ResolveActiveRejection(rejectionsByHostname.GetValueOrDefault(a.Hostname), a.LastAliveAt)?.Reason))
             .ToList();
     }
 
@@ -35,7 +35,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
 
         var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct, onlyAgentId: agent.Id);
         var rejectionsByHostname = await rejectionService.GetRecentByHostnameAsync(ct);
-        var rejection = rejectionsByHostname.GetValueOrDefault(agent.Hostname);
+        var rejection = ResolveActiveRejection(rejectionsByHostname.GetValueOrDefault(agent.Hostname), agent.LastAliveAt);
 
         return new AgentDetailDto(
             agent.Hostname, agent.DnsName, agent.OperatingSystem, agent.IpAddress, agent.AgentVersion,
@@ -44,6 +44,21 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
             agent.PendingInstallRequestedAt, agent.LastInstallOutcome, agent.LastInstallCompletedAt,
             agent.IssuingRootThumbprint, rejection?.Reason, rejection?.Timestamp);
     }
+
+    /// <summary>
+    /// A rejection only still flags an agent if there's been no successful
+    /// heartbeat since it happened — otherwise the agent is presenting a
+    /// working certificate again right now, and the flag must clear
+    /// immediately rather than linger for the rest of
+    /// <see cref="ICertificateRejectionService.GetRecentByHostnameAsync"/>'s
+    /// 24h lookback window. Found by a user report: fixing a certificate
+    /// problem left the warning icon showing for up to 24h after the agent
+    /// was already healthy again, because the lookback window alone
+    /// decided whether to show it, with no way for a later success to
+    /// clear it early.
+    /// </summary>
+    private static CertificateRejectionDto? ResolveActiveRejection(CertificateRejectionDto? rejection, DateTimeOffset? lastAliveAt) =>
+        rejection is not null && lastAliveAt is not null && lastAliveAt >= rejection.Timestamp ? null : rejection;
 
     /// <summary>
     /// Pending-update count per agent, excluding anything an active

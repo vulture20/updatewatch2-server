@@ -11,6 +11,22 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.23.1] - 2026-09-09
+
+### Fixed
+
+- The warning icon/reason from the previous release's certificate-
+  rejection flagging didn't clear once the underlying problem was
+  actually fixed — it lingered for up to 24 hours after an agent had
+  already gone back to authenticating successfully, since only the
+  rejection's own age (`ICertificateRejectionService`'s 24h lookback
+  window) decided whether to show it, with no way for a later success
+  to clear it early. `AgentService` now also compares the rejection's
+  timestamp against the agent's own `LastAliveAt` (updated on every
+  successful heartbeat) and clears the flag immediately once a
+  heartbeat has landed since the rejection happened — found by a user
+  report, not by testing.
+
 ## [0.23.0] - 2026-09-08
 
 ### Added
