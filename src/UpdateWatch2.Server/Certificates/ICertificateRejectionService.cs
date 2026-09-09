@@ -49,7 +49,7 @@ public interface ICertificateRejectionService
     /// — backs <c>AgentService</c> flagging an affected agent in the
     /// overview list and showing the reason on its detail page. A
     /// rejection whose hostname couldn't be resolved (see
-    /// <see cref="RecordAsync"/>) is keyed by thumbprint or "unknown"
+    /// <see cref="RecordAsync"/>) is keyed by the remote IP address or "unknown"
     /// instead, which simply never matches a real agent — harmless, not
     /// filtered out specially.
     /// </summary>

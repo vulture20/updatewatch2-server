@@ -40,7 +40,13 @@ public class CertificateRejectionService(AppDbContext db, IAuditLogService audit
         // flags anything (see AgentService), so there's nothing unsafe
         // about trusting it provisionally here.
         var claimedHostname = certificate?.GetNameInfo(X509NameType.SimpleName, forIssuer: false);
-        var actor = !string.IsNullOrEmpty(claimedHostname) ? claimedHostname : thumbprint ?? "unknown";
+        // Falls back to the remote IP address, not the thumbprint — a
+        // thumbprint means nothing to an admin scanning the audit log at a
+        // glance, while an IP is at least actionable (which host/network
+        // to go look at) — requested after the hostname-attribution work
+        // above shipped. Details (below) still includes the thumbprint
+        // unchanged; only the Actor column's own fallback value changes.
+        var actor = !string.IsNullOrEmpty(claimedHostname) ? claimedHostname : remoteIpAddress ?? "unknown";
         var details = FormatDetails(reason, certificate, thumbprint, remoteIpAddress);
 
         logger.LogWarning("Rejected agent client certificate ({Reason}): {Details}", reason, details);

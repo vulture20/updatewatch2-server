@@ -11,6 +11,19 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.25.1] - 2026-09-09
+
+### Changed
+
+- Requested by the user: a rejected-certificate audit log entry's
+  `Actor` no longer falls back to the certificate's own thumbprint
+  when no hostname can be resolved from it — a thumbprint means
+  nothing to an admin scanning the audit log at a glance, while the
+  remote IP address (the new fallback) is at least actionable. Only
+  the fallback changed — the hostname still takes priority when
+  resolvable, and `Details` still carries the thumbprint unchanged
+  either way.
+
 ## [0.25.0] - 2026-09-09
 
 ### Added

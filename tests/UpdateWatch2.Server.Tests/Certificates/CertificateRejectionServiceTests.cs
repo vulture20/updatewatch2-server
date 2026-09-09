@@ -54,12 +54,24 @@ public class CertificateRejectionServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task RecordAsync_uses_unknown_as_the_actor_when_no_certificate_is_available()
+    public async Task RecordAsync_uses_unknown_as_the_actor_when_no_certificate_or_ip_is_available()
     {
         await _service.RecordAsync(CertificateRejectionReason.NotTrusted, certificate: null, remoteIpAddress: null);
 
         var entry = await _db.AuditLogEntries.SingleAsync();
         Assert.Equal("unknown", entry.Actor);
+    }
+
+    [Fact]
+    public async Task RecordAsync_falls_back_to_the_remote_ip_not_the_thumbprint_when_no_hostname_can_be_resolved()
+    {
+        // The fallback used to be the certificate's own thumbprint —
+        // changed on request: a thumbprint means nothing to an admin
+        // scanning the audit log, an IP is at least actionable.
+        await _service.RecordAsync(CertificateRejectionReason.NotTrusted, certificate: null, remoteIpAddress: "203.0.113.9");
+
+        var entry = await _db.AuditLogEntries.SingleAsync();
+        Assert.Equal("203.0.113.9", entry.Actor);
     }
 
     [Fact]
