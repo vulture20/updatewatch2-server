@@ -7,5 +7,5 @@ namespace UpdateWatch2.Server;
 /// </summary>
 public static class AppVersion
 {
-    public const string Current = "0.25.3";
+    public const string Current = "0.25.4";
 }

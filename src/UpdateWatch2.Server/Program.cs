@@ -243,6 +243,10 @@ builder.WebHost.ConfigureKestrel(options =>
     });
 });
 
+// Shared between the two CertificateAuthenticationEvents callbacks below —
+// see OnAuthenticationFailed's own doc comment for why this exists.
+const string CertificateRejectionRecordedKey = "UpdateWatch2.CertificateRejectionRecorded";
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -318,18 +322,45 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                         context.ClientCertificate,
                         context.HttpContext.Connection.RemoteIpAddress?.ToString(),
                         context.HttpContext.RequestAborted);
+                    // Marks this request as already reported — see
+                    // OnAuthenticationFailed below for why this matters.
+                    context.HttpContext.Items[CertificateRejectionRecordedKey] = true;
                     context.Fail(result.FailureReason ?? "Certificate rejected.");
                 }
             },
-            // Fires when the certificate itself fails the handler's own
-            // chain-build/validity-period check — expired, not yet valid,
-            // or doesn't chain to a currently trusted internal CA root —
-            // before ICertificateValidator/OnCertificateValidated above is
-            // ever reached. High-priority/security-relevant per CLAUDE.md:
-            // must be immediately visible in the admin UI and logged, not
-            // just silently 401/403'd as before this existed.
+            // Fires whenever certificate authentication ends up failed —
+            // NOT only when the certificate itself fails the handler's own
+            // chain-build/validity-period check (expired, not yet valid,
+            // doesn't chain to a trusted root) before OnCertificateValidated
+            // above is ever reached, as this project originally assumed.
+            // Live-verified against a real mTLS handshake, not just
+            // reasoned about: calling context.Fail(...) *inside*
+            // OnCertificateValidated (a cryptographically valid certificate
+            // that just doesn't match a known/approved agent) ALSO fires
+            // this event afterward, for that exact same request — a real
+            // user report ("the last rejection reason shown is always
+            // misleadingly 'certificate not trusted', even when the actual
+            // cause is a reissued/superseded certificate") traced back to
+            // this: both events recorded a rejection microseconds apart,
+            // and GetRecentByHostnameAsync's "most recent wins" grouping
+            // always surfaced this event's generic NotTrusted fallback,
+            // silently overwriting the correct, more specific
+            // UnknownAgent/AgentNotApproved classification OnCertificateValidated
+            // had just recorded. The HttpContext.Items marker above is what
+            // tells the two apart — set only by OnCertificateValidated's own
+            // explicit Fail, so a genuine intrinsic chain/validity failure
+            // (which never reaches OnCertificateValidated at all, and so
+            // never sets it) still gets classified and recorded here as
+            // before. High-priority/security-relevant per CLAUDE.md: must
+            // be immediately visible in the admin UI and logged, not just
+            // silently 401/403'd as before this existed.
             OnAuthenticationFailed = async context =>
             {
+                if (context.HttpContext.Items.ContainsKey(CertificateRejectionRecordedKey))
+                {
+                    return;
+                }
+
                 var rejectionService = context.HttpContext.RequestServices.GetRequiredService<ICertificateRejectionService>();
                 var certificate = context.HttpContext.Connection.ClientCertificate;
                 await rejectionService.RecordAsync(

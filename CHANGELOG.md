@@ -11,6 +11,35 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.25.4] - 2026-09-09
+
+### Fixed
+
+- **A single rejected certificate could be recorded twice, with the
+  wrong one winning.** Reported by the user: after a certificate
+  reissue, an agent still connecting with its old certificate showed
+  "Zertifikat nicht vertrauenswürdig (Kette führt zu keiner
+  vertrauten CA-Wurzel)" (`NotTrusted`) as the last rejection reason
+  — misleading, since the certificate's chain was never the actual
+  problem. Live-verified against a real mTLS handshake, not just
+  reasoned about: calling `context.Fail(...)` *inside*
+  `OnCertificateValidated` (the correct, specific `UnknownAgent`/
+  `AgentNotApproved` classification for a cryptographically valid
+  certificate that just doesn't match a known/approved agent) also
+  fires `OnAuthenticationFailed` afterward, for that same request —
+  an assumption this project's own code comments got wrong when that
+  handler was added (`v0.22.0`). Both events then recorded a
+  rejection microseconds apart, and `GetRecentByHostnameAsync`'s
+  "most recent wins" grouping always surfaced `OnAuthenticationFailed`'s
+  generic `NotTrusted` fallback, silently overwriting the correct,
+  more specific classification `OnCertificateValidated` had just
+  recorded. Fixed with a `HttpContext.Items` marker set by
+  `OnCertificateValidated`'s own explicit `Fail` call, which
+  `OnAuthenticationFailed` now checks before recording anything — a
+  genuine intrinsic chain/validity failure (which never reaches
+  `OnCertificateValidated` at all) is unaffected and still classified
+  and recorded exactly as before.
+
 ## [0.25.3] - 2026-09-09
 
 ### Fixed
