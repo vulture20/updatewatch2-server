@@ -5,6 +5,17 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <!-- Same gap the agent repo's csproj already fixed (previously unset,
+         so the compiled binary's Company/Product/Copyright/File version
+         were all blank/default) — see that repo's UpdateWatch2.Agent.csproj
+         for the fuller explanation. Matches the copyright line already
+         used in README.md. -->
+    <Authors>Thorsten Schröpel</Authors>
+    <Company>Thorsten Schröpel</Company>
+    <Product>UpdateWatch2 Server</Product>
+    <Copyright>Copyright (C) 2026 Thorsten Schröpel</Copyright>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../../VERSION').Trim())</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

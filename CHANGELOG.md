@@ -11,6 +11,21 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.25.2] - 2026-09-09
+
+### Fixed
+
+- The compiled server binary's Company/Product/Copyright file-version
+  resource fields were blank, the same gap the agent repo's own
+  `UpdateWatch2.Agent.csproj` was fixed to close (agent v0.14.1):
+  `<Authors>`/`<Company>`/`<Product>`/`<Copyright>` were never set at
+  all. Now "Copyright (C) 2026 Thorsten Schröpel", matching
+  README.md's own copyright line; `<Version>` also now reads the
+  repo-root `VERSION` file, the same source `AppVersion.cs` is bumped
+  from by hand, so File version/Product version match the actual
+  server version too. Prepared alongside the agent-side fix but not
+  committed at the time — landing it now for the same consistency.
+
 ## [0.25.1] - 2026-09-09
 
 ### Changed
