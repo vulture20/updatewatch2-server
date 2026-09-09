@@ -2,12 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminApi, agentUpdatesApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
+import { AuditLogTab } from '../components/AuditLogTab';
 import type { AdEncryption, AdminSettings, AgentUpdateStatus, CaRotationStatus, SmtpEncryption, UpdateFilter, VersionInfo } from '../api/types';
 
 const LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const;
 const SMTP_ENCRYPTIONS: SmtpEncryption[] = ['None', 'StartTls', 'SslTls'];
 const AD_ENCRYPTIONS: AdEncryption[] = ['None', 'StartTls', 'Ldaps'];
-const TABS = ['general', 'notifications', 'activeDirectory', 'certificates', 'updateFilters'] as const;
+const TABS = ['general', 'notifications', 'activeDirectory', 'certificates', 'updateFilters', 'auditLog'] as const;
 type Tab = (typeof TABS)[number];
 
 type FormState = Omit<
@@ -589,6 +590,10 @@ export function AdminPage() {
           <button type="button" className="btn-accent" disabled={!newFilterName || !newFilterPattern} onClick={addUpdateFilter}>
             {t('admin.updateFilters.add')}
           </button>
+        </div>
+
+        <div hidden={tab !== 'auditLog'}>
+          <AuditLogTab />
         </div>
 
         <button type="submit" disabled={saving}>

@@ -76,7 +76,8 @@
       "notifications": "Notifications",
       "activeDirectory": "Active Directory",
       "certificates": "Certificates",
-      "updateFilters": "Update filters"
+      "updateFilters": "Update filters",
+      "auditLog": "Audit Log"
     },
     "logLevel": "Log level",
     "logLevelHint": "Takes effect on the server's next restart.",
@@ -167,5 +168,18 @@
   "certificateRejections": {
     "banner": "{{count}} agent certificate(s) rejected as invalid or expired in the last 24 hours. Check the server log or audit log for details.",
     "acknowledge": "Acknowledge"
+  },
+  "auditLog": {
+    "title": "Audit Log",
+    "search": "Search",
+    "searchButton": "Search",
+    "empty": "No matching entries.",
+    "timestamp": "Timestamp",
+    "actor": "Actor",
+    "action": "Action",
+    "details": "Details",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "pageIndicator": "Page {{page}} of {{totalPages}}"
   }
 }

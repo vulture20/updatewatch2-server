@@ -195,3 +195,20 @@ export interface CertificateRejectionStatus {
   recentCount: number;
   recent: CertificateRejection[];
 }
+
+/** One audit log row — see AuditLogController. */
+export interface AuditLogEntry {
+  id: number;
+  timestamp: string;
+  actor: string;
+  action: string;
+  details: string | null;
+}
+
+/** One page of the audit log, newest first — totalCount is the true total across every page, not just this one. */
+export interface AuditLogPage {
+  entries: AuditLogEntry[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}

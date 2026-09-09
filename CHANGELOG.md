@@ -11,6 +11,29 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.25.0] - 2026-09-09
+
+### Added
+
+- The audit log is now viewable in the admin UI — a new "Audit Log"
+  tab under Administration, paginated (50 entries per page) and
+  searchable (a single search box filtering actor/action/details
+  server-side). Every admin/security-relevant action already written
+  via `IAuditLogService.LogAsync` (agent approve/delete/reissue,
+  admin settings changes, CA rotation steps, update-filter CRUD,
+  certificate rejections, ...) was previously recorded but had no way
+  to actually be seen anywhere — this closes that gap. New
+  `GET /api/admin/audit-log` (admin-session gated,
+  `page`/`pageSize`/`search` query params, `pageSize` clamped to
+  [1, 200] server-side). Ordered by `Id` descending, not `Timestamp`
+  — this project's EF Core/SQLite combo can't translate an `OrderBy`
+  on a `DateTimeOffset` column at all (see
+  `CertificateRejectionService`'s own note on the same gap), and `Id`
+  gives the identical newest-first order since every entry is written
+  with `LogAsync`'s own default `Timestamp`, while staying a real
+  server-side `ORDER BY`/`LIMIT`/`OFFSET` instead of pulling the whole
+  table into memory just to page it.
+
 ## [0.24.0] - 2026-09-09
 
 ### Added

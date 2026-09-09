@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { adminApi, agentUpdatesApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
+import { adminApi, agentUpdatesApi, auditLogApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { AdminPage } from './AdminPage';
 
@@ -29,6 +29,9 @@ vi.mock('../api/endpoints', () => ({
     update: vi.fn(),
     delete: vi.fn(),
   },
+  auditLogApi: {
+    getPage: vi.fn(),
+  },
 }));
 
 const mockedGetSettings = vi.mocked(adminApi.getSettings);
@@ -44,6 +47,7 @@ const mockedListUpdateFilters = vi.mocked(updateFiltersApi.list);
 const mockedCreateUpdateFilter = vi.mocked(updateFiltersApi.create);
 const mockedUpdateUpdateFilter = vi.mocked(updateFiltersApi.update);
 const mockedDeleteUpdateFilter = vi.mocked(updateFiltersApi.delete);
+const mockedGetAuditLogPage = vi.mocked(auditLogApi.getPage);
 
 const baseCaStatus = {
   currentThumbprint: 'AAAA',
@@ -105,6 +109,7 @@ describe('AdminPage', () => {
     });
     mockedCheckNow.mockReset();
     mockedListUpdateFilters.mockReset().mockResolvedValue([]);
+    mockedGetAuditLogPage.mockReset().mockResolvedValue({ entries: [], totalCount: 0, page: 1, pageSize: 50 });
     mockedCreateUpdateFilter.mockReset();
     mockedUpdateUpdateFilter.mockReset();
     mockedDeleteUpdateFilter.mockReset();
@@ -194,6 +199,22 @@ describe('AdminPage', () => {
 
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ agentCertificateValidityDays: 90 }));
+  });
+
+  it('switches to the Audit Log tab and shows entries from the API', async () => {
+    mockedGetAuditLogPage.mockResolvedValue({
+      entries: [{ id: 1, timestamp: '2026-01-01T00:00:00Z', actor: 'admin', action: 'agent.approve', details: 'host-1' }],
+      totalCount: 1,
+      page: 1,
+      pageSize: 50,
+    });
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Audit Log' }));
+
+    expect(await screen.findByText('agent.approve')).toBeInTheDocument();
   });
 
   it('shows the latest known agent version and toggles auto-update off', async () => {
@@ -342,6 +363,7 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     });
     mockedCheckNow.mockReset();
     mockedListUpdateFilters.mockReset().mockResolvedValue([]);
+    mockedGetAuditLogPage.mockReset().mockResolvedValue({ entries: [], totalCount: 0, page: 1, pageSize: 50 });
     mockedCreateUpdateFilter.mockReset();
     mockedUpdateUpdateFilter.mockReset();
     mockedDeleteUpdateFilter.mockReset();
@@ -478,6 +500,7 @@ describe('AdminPage update filters', () => {
       lastError: null,
     });
     mockedListUpdateFilters.mockReset().mockResolvedValue([]);
+    mockedGetAuditLogPage.mockReset().mockResolvedValue({ entries: [], totalCount: 0, page: 1, pageSize: 50 });
     mockedCreateUpdateFilter.mockReset();
     mockedUpdateUpdateFilter.mockReset();
     mockedDeleteUpdateFilter.mockReset();

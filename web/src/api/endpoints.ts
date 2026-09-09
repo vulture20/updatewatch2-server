@@ -4,6 +4,7 @@ import type {
   AgentDetail,
   AgentListItem,
   AgentUpdateStatus,
+  AuditLogPage,
   BulkApproveResult,
   CaRotationStatus,
   CertificateRejectionStatus,
@@ -86,4 +87,15 @@ export const certificateRejectionsApi = {
   // status, same "return the freshly recomputed state" shape as
   // agentUpdatesApi.checkNow.
   acknowledge: () => apiClient.post<CertificateRejectionStatus>('/api/admin/certificate-rejections/acknowledge'),
+};
+
+/** Read-only, paginated audit log — see AuditLogController. */
+export const auditLogApi = {
+  getPage: (page: number, pageSize: number, search?: string) => {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (search) {
+      params.set('search', search);
+    }
+    return apiClient.get<AuditLogPage>(`/api/admin/audit-log?${params.toString()}`);
+  },
 };
