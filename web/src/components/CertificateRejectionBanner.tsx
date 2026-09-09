@@ -17,35 +17,43 @@ const POLL_INTERVAL_MS = 15000;
  * side: CertificateRejectionService's own lookback window) — immediately
  * visible in the UI per CLAUDE.md's requirement, alongside the Warning-level
  * application log line and audit log entry the server also always writes.
- * No dismiss/acknowledge action, same as SmtpWarningBanner: it just reflects
- * current state and clears itself once nothing recent remains.
+ * Acknowledging silences it (server-side, shared across every admin
+ * session, audit-logged) without waiting for the 24h window to age it out —
+ * added after a user report that the banner otherwise "stayed forever" with
+ * no way to confirm/close it. A genuinely new rejection after acknowledging
+ * still shows up immediately.
  */
 export function CertificateRejectionBanner() {
   const { t } = useTranslation();
   const [count, setCount] = useState(0);
+  const [acknowledging, setAcknowledging] = useState(false);
+
+  const load = () => {
+    certificateRejectionsApi
+      .getStatus()
+      .then((status) => setCount(status.recentCount))
+      .catch(() => {
+        // Couldn't load (e.g. no admin session yet) — say nothing rather
+        // than showing a misleading warning, same as SmtpWarningBanner.
+      });
+  };
 
   useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      certificateRejectionsApi
-        .getStatus()
-        .then((status) => {
-          if (!cancelled) {
-            setCount(status.recentCount);
-          }
-        })
-        .catch(() => {
-          // Couldn't load (e.g. no admin session yet) — say nothing rather
-          // than showing a misleading warning, same as SmtpWarningBanner.
-        });
-    };
     load();
     const id = setInterval(load, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
+    return () => clearInterval(id);
   }, []);
+
+  const acknowledge = () => {
+    setAcknowledging(true);
+    certificateRejectionsApi
+      .acknowledge()
+      .then((status) => setCount(status.recentCount))
+      .catch(() => {
+        // Leave the banner showing — an admin can just try again.
+      })
+      .finally(() => setAcknowledging(false));
+  };
 
   if (count === 0) {
     return null;
@@ -53,7 +61,10 @@ export function CertificateRejectionBanner() {
 
   return (
     <div role="alert" className="smtp-warning">
-      {t('certificateRejections.banner', { count })}
+      <span>{t('certificateRejections.banner', { count })}</span>{' '}
+      <button type="button" className="btn-ghost" disabled={acknowledging} onClick={acknowledge}>
+        {t('certificateRejections.acknowledge')}
+      </button>
     </div>
   );
 }

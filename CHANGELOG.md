@@ -11,6 +11,31 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.24.0] - 2026-09-09
+
+### Added
+
+- The certificate-rejection warning banner can now be acknowledged —
+  found by a user report that it "stayed forever" with no way to
+  confirm/close it, since it previously only cleared once the 24h
+  lookback window aged an entry out on its own. A new
+  `POST /api/admin/certificate-rejections/acknowledge` (admin-session
+  gated, audit-logged as `certificate-rejections.acknowledge`)
+  silences the banner for every rejection recorded up to that point —
+  shared across every admin session, not a per-session dismiss; a
+  genuinely new rejection afterward still shows up immediately.
+  Deliberately does not affect the per-agent warning icon/reason
+  (`AgentsListPage`/`AgentDetailPage`) — acknowledging the banner means
+  "an admin has seen this", not "the underlying agent's certificate
+  problem is fixed"; that still only clears once the agent itself
+  heartbeats successfully again (see `0.23.1`).
+
+### Changed
+
+- DB schema bumped to `0.13.0` for the new
+  `CertificateRejectionAcknowledgements` table (a single-row table,
+  same convention as `AdminSettings`/`AgentUpdateState`).
+
 ## [0.23.1] - 2026-09-09
 
 ### Fixed

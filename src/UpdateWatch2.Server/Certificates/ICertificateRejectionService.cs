@@ -23,8 +23,25 @@ public interface ICertificateRejectionService
     /// </summary>
     Task RecordAsync(CertificateRejectionReason reason, X509Certificate2? certificate, string? remoteIpAddress, CancellationToken ct = default);
 
-    /// <summary>Recent rejections (see <see cref="CertificateRejectionStatusDto"/>) — backs the admin UI's warning banner.</summary>
+    /// <summary>
+    /// Recent, unacknowledged rejections (see <see cref="CertificateRejectionStatusDto"/>)
+    /// — backs the admin UI's warning banner. A rejection at or before the
+    /// last <see cref="AcknowledgeAsync"/> call doesn't count, even if it's
+    /// still within the 24h lookback window; a rejection after it does,
+    /// immediately.
+    /// </summary>
     Task<CertificateRejectionStatusDto> GetStatusAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Silences the warning banner for every rejection recorded so far —
+    /// audit-logged (action <c>certificate-rejections.acknowledge</c>), a
+    /// single shared row visible to every admin session, not a per-session
+    /// dismiss. Does NOT affect <see cref="GetRecentByHostnameAsync"/> (the
+    /// per-agent warning icon) — acknowledging means "an admin has seen
+    /// this", not "the underlying problem is fixed"; only a later
+    /// successful heartbeat clears that.
+    /// </summary>
+    Task AcknowledgeAsync(string acknowledgedBy, CancellationToken ct = default);
 
     /// <summary>
     /// The most recent rejection per claimed hostname within the same

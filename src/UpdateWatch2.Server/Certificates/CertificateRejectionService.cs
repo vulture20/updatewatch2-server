@@ -19,9 +19,9 @@ public class CertificateRejectionService(AppDbContext db, IAuditLogService audit
     /// </summary>
     public const string ActionPrefix = "agent.certificate.rejected.";
 
-    // No separate acknowledge/dismiss state (same reasoning as
-    // SmtpWarningBanner, which has none either) — an old rejection just
-    // ages out of the window on its own once resolved/stopped recurring.
+    // Bounds how far back a rejection counts at all, regardless of
+    // acknowledgement — an old one still ages out on its own even if never
+    // explicitly acknowledged.
     private static readonly TimeSpan RecentWindow = TimeSpan.FromHours(24);
 
     // Same reasoning as AgentService.MaxAffectedHostnamesReturned — the
@@ -52,11 +52,34 @@ public class CertificateRejectionService(AppDbContext db, IAuditLogService audit
     {
         var recent = await LoadRecentAsync(ct);
 
+        var acknowledgedAt = (await db.CertificateRejectionAcknowledgements.SingleOrDefaultAsync(ct))?.AcknowledgedAt;
+        var unacknowledged = acknowledgedAt is null
+            ? recent
+            : recent.Where(e => e.Timestamp > acknowledgedAt).ToList();
+
         return new CertificateRejectionStatusDto(
-            recent.Count,
-            recent.Take(MaxRecentReturned)
+            unacknowledged.Count,
+            unacknowledged.Take(MaxRecentReturned)
                 .Select(ToDto)
                 .ToList());
+    }
+
+    public async Task AcknowledgeAsync(string acknowledgedBy, CancellationToken ct = default)
+    {
+        var row = await db.CertificateRejectionAcknowledgements.SingleOrDefaultAsync(ct);
+        if (row is null)
+        {
+            row = new Db.Entities.CertificateRejectionAcknowledgement { AcknowledgedBy = acknowledgedBy, AcknowledgedAt = DateTimeOffset.UtcNow };
+            db.CertificateRejectionAcknowledgements.Add(row);
+        }
+        else
+        {
+            row.AcknowledgedAt = DateTimeOffset.UtcNow;
+            row.AcknowledgedBy = acknowledgedBy;
+        }
+
+        await db.SaveChangesAsync(ct);
+        await auditLog.LogAsync(acknowledgedBy, "certificate-rejections.acknowledge", ct: ct);
     }
 
     public async Task<IReadOnlyDictionary<string, CertificateRejectionDto>> GetRecentByHostnameAsync(CancellationToken ct = default)

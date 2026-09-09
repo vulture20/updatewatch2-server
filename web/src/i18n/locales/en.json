@@ -165,6 +165,7 @@
     "dark": "Dark"
   },
   "certificateRejections": {
-    "banner": "{{count}} agent certificate(s) rejected as invalid or expired in the last 24 hours. Check the server log or audit log for details."
+    "banner": "{{count}} agent certificate(s) rejected as invalid or expired in the last 24 hours. Check the server log or audit log for details.",
+    "acknowledge": "Acknowledge"
   }
 }

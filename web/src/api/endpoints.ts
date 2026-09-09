@@ -81,4 +81,9 @@ export const updateFiltersApi = {
 /** Rejected agent client certificate attempts — see CertificateRejectionsController. */
 export const certificateRejectionsApi = {
   getStatus: () => apiClient.get<CertificateRejectionStatus>('/api/admin/certificate-rejections'),
+  // Silences the warning banner for everything recorded so far (shared
+  // across every admin session, audit-logged) — returns the refreshed
+  // status, same "return the freshly recomputed state" shape as
+  // agentUpdatesApi.checkNow.
+  acknowledge: () => apiClient.post<CertificateRejectionStatus>('/api/admin/certificate-rejections/acknowledge'),
 };

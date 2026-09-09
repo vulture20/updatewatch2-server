@@ -165,6 +165,7 @@
     "dark": "Dunkel"
   },
   "certificateRejections": {
-    "banner": "{{count}} abgelehnte(s) Agent-Zertifikat(e) (ungültig oder abgelaufen) in den letzten 24 Stunden. Details siehe Server-Log oder Audit-Log."
+    "banner": "{{count}} abgelehnte(s) Agent-Zertifikat(e) (ungültig oder abgelaufen) in den letzten 24 Stunden. Details siehe Server-Log oder Audit-Log.",
+    "acknowledge": "Bestätigen"
   }
 }

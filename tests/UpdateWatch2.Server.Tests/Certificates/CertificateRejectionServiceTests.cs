@@ -115,6 +115,69 @@ public class CertificateRejectionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AcknowledgeAsync_silences_the_banner_for_rejections_recorded_so_far()
+    {
+        await _service.RecordAsync(CertificateRejectionReason.Expired, certificate: null, remoteIpAddress: null);
+
+        await _service.AcknowledgeAsync("alice");
+        var status = await _service.GetStatusAsync();
+
+        Assert.Equal(0, status.RecentCount);
+        Assert.Empty(status.Recent);
+    }
+
+    [Fact]
+    public async Task AcknowledgeAsync_does_not_silence_a_rejection_recorded_after_it()
+    {
+        await _service.RecordAsync(CertificateRejectionReason.Expired, certificate: null, remoteIpAddress: null);
+        await _service.AcknowledgeAsync("alice");
+
+        await _service.RecordAsync(CertificateRejectionReason.NotTrusted, certificate: null, remoteIpAddress: null);
+        var status = await _service.GetStatusAsync();
+
+        Assert.Equal(1, status.RecentCount);
+        Assert.Equal("NotTrusted", status.Recent[0].Reason);
+    }
+
+    [Fact]
+    public async Task AcknowledgeAsync_writes_an_audit_log_entry_with_the_acknowledging_admin_as_actor()
+    {
+        await _service.RecordAsync(CertificateRejectionReason.Expired, certificate: null, remoteIpAddress: null);
+
+        await _service.AcknowledgeAsync("alice");
+
+        var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "certificate-rejections.acknowledge");
+        Assert.Equal("alice", entry.Actor);
+    }
+
+    [Fact]
+    public async Task AcknowledgeAsync_can_be_called_again_later_and_updates_who_acknowledged()
+    {
+        await _service.AcknowledgeAsync("alice");
+        await _service.AcknowledgeAsync("bob");
+
+        var row = await _db.CertificateRejectionAcknowledgements.SingleAsync();
+        Assert.Equal("bob", row.AcknowledgedBy);
+    }
+
+    [Fact]
+    public async Task AcknowledgeAsync_does_not_affect_GetRecentByHostnameAsync()
+    {
+        // Acknowledging the banner means "an admin has seen this", not "the
+        // underlying agent's certificate problem is fixed" — the per-agent
+        // warning icon (AgentService, via GetRecentByHostnameAsync) must
+        // stay governed only by a later successful heartbeat.
+        var issued = _ca.IssueAgentLeaf("still-flagged-host", TimeSpan.FromDays(730));
+        using var cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(issued.PfxBytes, password: null);
+        await _service.RecordAsync(CertificateRejectionReason.NotTrusted, cert, remoteIpAddress: null);
+
+        await _service.AcknowledgeAsync("alice");
+
+        var byHostname = await _service.GetRecentByHostnameAsync();
+        Assert.Contains("still-flagged-host", byHostname.Keys);
+    }
+
+    [Fact]
     public async Task GetRecentByHostnameAsync_keys_by_the_certificates_own_CN()
     {
         var issued = _ca.IssueAgentLeaf("flagged-host", TimeSpan.FromDays(730));

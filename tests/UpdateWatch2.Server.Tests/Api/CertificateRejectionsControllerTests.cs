@@ -86,4 +86,32 @@ public class CertificateRejectionsControllerTests : IClassFixture<WebApplication
         Assert.Equal(1, status!.RecentCount);
         Assert.Equal("Expired", status.Recent[0].Reason);
     }
+
+    [Fact]
+    public async Task Acknowledge_requires_an_admin_session()
+    {
+        var response = await _anonymousClient.PostAsync("/api/admin/certificate-rejections/acknowledge", content: null);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Acknowledge_silences_the_banner_and_returns_the_refreshed_status()
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var rejectionService = scope.ServiceProvider.GetRequiredService<ICertificateRejectionService>();
+            await rejectionService.RecordAsync(CertificateRejectionReason.Expired, certificate: null, remoteIpAddress: null);
+        }
+
+        var response = await _client.PostAsync("/api/admin/certificate-rejections/acknowledge", content: null);
+
+        response.EnsureSuccessStatusCode();
+        var status = await response.Content.ReadFromJsonAsync<CertificateRejectionStatusDto>();
+        Assert.Equal(0, status!.RecentCount);
+
+        var followUp = await _client.GetAsync("/api/admin/certificate-rejections");
+        var followUpStatus = await followUp.Content.ReadFromJsonAsync<CertificateRejectionStatusDto>();
+        Assert.Equal(0, followUpStatus!.RecentCount);
+    }
 }
