@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { announceAdminSettingsSaved } from '../adminSettingsEvents';
 import { adminApi, agentUpdatesApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { AuditLogTab } from '../components/AuditLogTab';
@@ -182,6 +183,7 @@ export function AdminPage() {
       });
       setForm(toFormState(settings));
       setSavedMessage(true);
+      announceAdminSettingsSaved({ smtpConfigured: settings.smtpConfigured });
       agentUpdatesApi.getStatus().then(setAgentUpdateStatus).catch(() => setAgentUpdateStatus(null));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('login.genericError'));

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { onAdminSettingsSaved } from '../adminSettingsEvents';
 import { adminApi } from '../api/endpoints';
 import { WarningTriangleIcon } from './WarningTriangleIcon';
 
@@ -14,6 +15,14 @@ import { WarningTriangleIcon } from './WarningTriangleIcon';
  * Neutral, divider-bordered treatment (`.banner-neutral`) — a
  * misconfiguration, not an active security event, unlike
  * CertificateRejectionBanner's accent-tinted styling.
+ *
+ * Beyond its initial mount-time fetch, this also listens for
+ * `AdminPage`'s own settings save (`onAdminSettingsSaved` — a same-tab
+ * `window` event, since this banner and `AdminPage` are siblings under
+ * `App.tsx`, not parent/child) so fixing the SMTP config makes the
+ * banner disappear the moment "Save" succeeds, not only after the next
+ * page load — a user report that it otherwise needed a manual F5 after
+ * every fix.
  */
 export function SmtpWarningBanner() {
   const { t } = useTranslation();
@@ -36,6 +45,8 @@ export function SmtpWarningBanner() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => onAdminSettingsSaved(({ smtpConfigured }) => setShowWarning(!smtpConfigured)), []);
 
   if (!showWarning) {
     return null;

@@ -11,6 +11,26 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.29.1] - 2026-09-10
+
+### Fixed
+
+- **`SmtpWarningBanner` needed a manual F5 to notice a just-fixed SMTP
+  configuration** — reported by the user. It only ever fetched
+  `/api/admin/settings` once, on mount; `AdminPage` (a sibling under
+  `App.tsx`, not its parent) had no way to tell it a save had just
+  changed `smtpConfigured`. Fixed with a same-tab `window` `CustomEvent`
+  (`src/adminSettingsEvents.ts`, `announceAdminSettingsSaved`/
+  `onAdminSettingsSaved`) — `AdminPage.handleSubmit` announces the
+  `smtpConfigured` value from the very settings object the server's own
+  `PUT` response just returned (no extra round trip), and the banner
+  updates from that immediately, disappearing (or staying, if the save
+  left it still unconfigured) the same moment "Save" succeeds. Real test
+  coverage in the new `SmtpWarningBanner.test.tsx`, rendering the banner
+  and `AdminPage` together the way `App.tsx` actually does, since a test
+  that only renders one or the other can't exercise the cross-component
+  event at all.
+
 ## [0.29.0] - 2026-09-10
 
 ### Added
