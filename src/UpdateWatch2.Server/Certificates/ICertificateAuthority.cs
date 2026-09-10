@@ -127,6 +127,22 @@ public interface ICertificateAuthority
     X509Certificate2 EnsureServerLeaf(string sanHostname);
 
     /// <summary>
+    /// Proactively regenerates the server's own leaf if it's within
+    /// <paramref name="leadTime"/> of its own <c>NotAfter</c> — the same
+    /// "safe to rotate freely, agents validate the chain not the leaf's
+    /// identity" reasoning <see cref="EnsureServerLeaf"/>'s doc comment
+    /// already covers, just triggered by approaching expiry instead of a
+    /// hostname/root mismatch. Returns the new leaf if one was actually
+    /// issued, or <see langword="null"/> if the current one is still fine
+    /// (or <see cref="EnsureServerLeaf"/> hasn't been called yet to
+    /// establish which hostname to issue for). Called on
+    /// <see cref="CertificateExpiryWorker"/>'s own periodic cadence, never
+    /// from the pre-DI startup path <see cref="EnsureServerLeaf"/> alone
+    /// covers — see that method's own doc comment for why.
+    /// </summary>
+    X509Certificate2? RenewServerLeafIfNearExpiry(TimeSpan leadTime);
+
+    /// <summary>
     /// Issues a brand-new client certificate for an approved agent, signed by
     /// the CURRENT <see cref="RootCertificate"/>, Subject CN = <paramref name="hostname"/>,
     /// Enhanced Key Usage = Client Authentication only, valid for

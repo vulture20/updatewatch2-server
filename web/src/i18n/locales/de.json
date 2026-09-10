@@ -144,6 +144,8 @@
     "smtpEncryption": "Verschlüsselung",
     "smtpFromAddress": "Absenderadresse",
     "smtpFromName": "Absendername",
+    "notificationRecipientAddress": "Benachrichtigungsempfänger",
+    "notificationRecipientAddressHint": "Wohin automatische Benachrichtigungs-E-Mails gehen — die Zertifikatsablauf-Warnung unten sowie die Update-Schwellenwert-Benachrichtigung. Leer lassen, um keine davon zu erhalten (die Prüfungen selbst laufen trotzdem weiter).",
     "notificationUpdatesPerMachine": "Schwelle Updates pro Maschine",
     "notificationAffectedMachines": "Schwelle betroffene Maschinen",
     "adEnabled": "Active-Directory-Anmeldung aktivieren",
@@ -160,6 +162,8 @@
     "adLoginGroupDnHint": "Nur Mitglieder dieser Gruppe erhalten Login-Berechtigung — geprüft über das \"member\"-Attribut der Gruppe.",
     "agentCertificateValidityDays": "Gültigkeitsdauer Agent-Zertifikat (Tage)",
     "agentCertificateValidityDaysHint": "Gilt nur für neu ausgestellte oder erneuerte Agent-Zertifikate, nicht rückwirkend für bereits ausgestellte. Die Laufzeit jeder CA-Wurzel selbst ist fest und hier nicht konfigurierbar — bei Bedarf unten rotieren.",
+    "certificateExpiryWarningLeadDays": "Vorlaufzeit Zertifikatsablauf (Tage)",
+    "certificateExpiryWarningLeadDaysHint": "Wie lange vor Ablauf der Server aktiv wird: Das eigene Server-Zertifikat (für Agent-Verbindungen) erneuert sich automatisch und löst dann einen Hinweis aus; die CA-Wurzel erneuert sich nicht selbst und löst nur eine Warn-E-Mail aus — für beides muss oben ein Benachrichtigungsempfänger eingetragen sein, damit tatsächlich eine E-Mail verschickt wird.",
     "caRotation": {
       "title": "Rotation der Zertifizierungsstelle (CA-Wurzel)",
       "hint": "Drei getrennte Schritte statt eines einzigen \"Jetzt rotieren\"-Buttons: Vorbereiten erzeugt eine neue Wurzel, ohne sie sofort zu verwenden; Aktivieren schaltet auf sie um und stellt das eigene Zertifikat des Servers sofort neu aus (kein Neustart nötig); Zurückziehen entfernt die alte Wurzel, sobald jeder Agent über sie hinaus erneuert hat. Vor dem Aktivieren abwarten, bis Agents die vorbereitete Wurzel über ihren eigenen Heartbeat-Zyklus übernommen haben — sonst verliert ein Agent, der das noch nicht getan hat, kurzzeitig die Verbindung zum Server.",

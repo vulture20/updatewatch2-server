@@ -10,4 +10,20 @@ public interface IEmailNotificationService
     /// the red login-page warning banner (CLAUDE.md section 6.3) when false.
     /// </summary>
     Task<bool> IsHealthyAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Sends a plain-text automated notification — the first real one this
+    /// project sends, used today by <see cref="Certificates.CertificateExpiryWorker"/>
+    /// for the CA-root/server-certificate expiry warning and renewal
+    /// notice, and intended as the same primitive the still-unimplemented
+    /// update-threshold notification (CLAUDE.md) will eventually use too.
+    /// Unlike <see cref="SendTestEmailAsync"/>, subject/body are caller-
+    /// supplied rather than hardcoded — this method has no opinion about
+    /// what it's announcing. Throws <see cref="InvalidOperationException"/>
+    /// if SMTP isn't configured, same as <see cref="SendTestEmailAsync"/> —
+    /// callers that can't guarantee that's already true should check
+    /// <see cref="Admin.IAdminSettingsStore"/>'s live <c>Smtp.IsConfigured</c>
+    /// first rather than relying on this to fail gracefully.
+    /// </summary>
+    Task SendNotificationAsync(string toAddress, string subject, string body, CancellationToken ct = default);
 }

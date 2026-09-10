@@ -35,6 +35,27 @@ public class EmailNotificationService(IAdminSettingsStore settingsStore, ILogger
         logger.LogInformation("Sent test email to {ToAddress}", toAddress);
     }
 
+    public async Task SendNotificationAsync(string toAddress, string subject, string body, CancellationToken ct = default)
+    {
+        var opts = settingsStore.Smtp;
+        if (!opts.IsConfigured)
+        {
+            throw new InvalidOperationException("SMTP is not configured.");
+        }
+
+        using var client = BuildClient(opts);
+        using var message = new MailMessage
+        {
+            From = new MailAddress(opts.FromAddress, opts.FromName),
+            Subject = subject,
+            Body = body,
+        };
+        message.To.Add(toAddress);
+
+        await client.SendMailAsync(message, ct);
+        logger.LogInformation("Sent notification email to {ToAddress}: {Subject}", toAddress, subject);
+    }
+
     public async Task<bool> IsHealthyAsync(CancellationToken ct = default)
     {
         var opts = settingsStore.Smtp;

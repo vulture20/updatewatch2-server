@@ -23,6 +23,7 @@ public record UpdateAdminSettingsRequest(
     string SmtpEncryption,
     string SmtpFromAddress,
     string SmtpFromName,
+    string? NotificationRecipientAddress,
     int NotificationUpdatesPerMachineThreshold,
     int NotificationAffectedMachinesThreshold,
     bool AdEnabled,
@@ -38,4 +39,5 @@ public record UpdateAdminSettingsRequest(
     bool AgentAutoUpdateEnabled = true,
     string? GitHubToken = null,
     int AgentAutoUpdateCheckIntervalHours = 6,
-    int AuditLogRetentionDays = 90);
+    int AuditLogRetentionDays = 90,
+    int CertificateExpiryWarningLeadDays = 60);

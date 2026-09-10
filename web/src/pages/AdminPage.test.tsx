@@ -75,6 +75,7 @@ const baseSettings = {
   smtpEncryption: 'StartTls' as const,
   smtpFromAddress: 'updatewatch2@example.com',
   smtpFromName: 'UpdateWatch2',
+  notificationRecipientAddress: null,
   smtpConfigured: true,
   notificationUpdatesPerMachineThreshold: 5,
   notificationAffectedMachinesThreshold: 10,
@@ -93,6 +94,7 @@ const baseSettings = {
   gitHubTokenSet: false,
   agentAutoUpdateCheckIntervalHours: 6,
   auditLogRetentionDays: 90,
+  certificateExpiryWarningLeadDays: 60,
 };
 
 describe('AdminPage', () => {
@@ -119,6 +121,7 @@ describe('AdminPage', () => {
   });
 
   it('renders the loaded settings into the form fields', async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter>
         <AdminPage />
@@ -130,6 +133,9 @@ describe('AdminPage', () => {
     expect(screen.getByLabelText('Log level')).toHaveValue('INFO');
     // The current password is never sent by the server — the field starts empty.
     expect(screen.getByLabelText('SMTP password')).toHaveValue('');
+    expect(screen.getByLabelText('Notification recipient')).toHaveValue('');
+    await user.click(screen.getByRole('tab', { name: 'Certificates' }));
+    expect(screen.getByLabelText('Certificate expiry lead time (days)')).toHaveValue(60);
   });
 
   it('submits the edited form and shows a saved confirmation', async () => {
@@ -377,6 +383,30 @@ describe('AdminPage', () => {
     await user.click(screen.getByRole('tab', { name: 'Audit Log' }));
 
     expect(screen.getByRole('option', { name: 'Unlimited (never discard)' })).toHaveValue('0');
+  });
+
+  it('submits an edited notification recipient and certificate expiry lead time', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, notificationRecipientAddress: 'alerts@example.com', certificateExpiryWarningLeadDays: 30 });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.type(screen.getByLabelText('Notification recipient'), 'alerts@example.com');
+    await user.click(screen.getByRole('tab', { name: 'Certificates' }));
+    const leadDays = screen.getByLabelText('Certificate expiry lead time (days)');
+    await user.clear(leadDays);
+    await user.type(leadDays, '30');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ notificationRecipientAddress: 'alerts@example.com', certificateExpiryWarningLeadDays: 30 }),
+    );
   });
 
   it('sends a typed GitHub token as gitHubToken, and omits it when left blank', async () => {

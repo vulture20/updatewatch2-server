@@ -11,6 +11,50 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.0] - 2026-09-10
+
+### Added
+
+- **Email notification when the CA root or the server's own TLS certificate
+  is approaching expiry — including a distinct notice when the server
+  certificate renews itself automatically.** At the user's explicit
+  request. New `AdminSettings.NotificationRecipientAddress` (Notifications
+  tab) is where these go — separate from `SmtpFromAddress`, which is this
+  server's own identity as a *sender*, not a destination; empty means the
+  checks still run but nothing gets emailed. New
+  `AdminSettings.CertificateExpiryWarningLeadDays` (Certificates tab,
+  default 60 — matches the agent's own `CertificateRenewalLeadTimeDays`
+  default) controls how far ahead of `NotAfter` either certificate counts
+  as "approaching expiry".
+  - The **server leaf** self-heals: `ICertificateAuthority.RenewServerLeafIfNearExpiry`
+    proactively regenerates it once it's within the lead time — running
+    unconditionally, regardless of whether email is even configured,
+    since an expired server leaf breaks every agent's mTLS connection
+    outright and is worth fixing on its own merits. The email here is a
+    courtesy "this happened, no action needed" notice.
+  - The **CA root** never renews itself (root rotation stays a deliberate,
+    multi-step admin action, per `InternalCertificateAuthority`'s own
+    long-standing design) — this is a pure warning: "plan a rotation."
+  - New third server-side `BackgroundService`, `CertificateExpiryWorker`
+    (after `AgentUpdateCheckWorker`/`AuditLogRetentionWorker`) — checks
+    immediately on startup, then every 24 hours. A new
+    `CertificateNotificationState` singleton row (same one-row-table
+    convention as `AdminSettings`/`AgentUpdateState`) tracks, by
+    thumbprint, which certificate generation has already been
+    audit-logged/emailed about, so the same warning doesn't repeat every
+    single day for up to 60 days straight — a CA-root warning stays
+    "handled" until the root actually changes; a server-leaf renewal's
+    notification specifically survives a transient SMTP failure and
+    retries whole (audit-log + email together) on the next tick, since
+    `RenewServerLeafIfNearExpiry` itself only ever fires once per actual
+    renewal and wouldn't naturally resurface the event otherwise.
+  - New `IEmailNotificationService.SendNotificationAsync(toAddress, subject, body)` —
+    the first real automated notification email this project sends
+    (previously only a manual test-mail button existed); also the
+    primitive the still-unimplemented update-threshold notification
+    (CLAUDE.md) is expected to reuse.
+  - DB schema bumped to `0.15.0`.
+
 ## [0.29.1] - 2026-09-10
 
 ### Fixed

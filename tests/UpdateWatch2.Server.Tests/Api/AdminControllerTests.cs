@@ -218,6 +218,7 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
         SmtpEncryption: "StartTls",
         SmtpFromAddress: "updatewatch2@example.com",
         SmtpFromName: "UpdateWatch2",
+        NotificationRecipientAddress: null,
         NotificationUpdatesPerMachineThreshold: 5,
         NotificationAffectedMachinesThreshold: 10,
         AdEnabled: false,

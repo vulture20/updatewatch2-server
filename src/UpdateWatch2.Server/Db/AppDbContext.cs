@@ -21,6 +21,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<CertificateRejectionAcknowledgement> CertificateRejectionAcknowledgements => Set<CertificateRejectionAcknowledgement>();
 
+    public DbSet<CertificateNotificationState> CertificateNotificationStates => Set<CertificateNotificationState>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agent>()

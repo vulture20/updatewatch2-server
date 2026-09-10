@@ -39,7 +39,15 @@ namespace UpdateWatch2.Server.Certificates;
 /// leaf's identity/thumbprint, so rotating the leaf never breaks an
 /// already-onboarded agent, provided that agent already trusts the new
 /// root — see the class-level remarks on <see cref="ActivateRotation"/> for
-/// why that ordering matters.
+/// why that ordering matters. A third trigger, approaching expiry, exists
+/// too but only via <see cref="RenewServerLeafIfNearExpiry"/> — the
+/// periodic <see cref="CertificateExpiryWorker"/> calls that on its own
+/// cadence, using the live admin-configured
+/// <see cref="CertificateOptions.CertificateExpiryWarningLeadDays"/>;
+/// <see cref="EnsureServerLeaf"/> itself never checks expiry, since
+/// Program.cs's own startup call site has no live settings store to read
+/// a lead time from yet (same reason <see cref="CertificateOptions.AgentCertificateValidityDays"/>
+/// can't be read there either — see that class's doc comment).
 ///
 /// Rotation (updatewatch2-server#6) keeps at most three roots on disk at
 /// once: <c>ca.pfx</c> (current, signs everything new), <c>ca-previous.pfx</c>
@@ -137,6 +145,24 @@ public class InternalCertificateAuthority : ICertificateAuthority
             _serverLeafSanHostname = sanHostname;
             _serverLeaf = LoadOrCreateServerLeaf(sanHostname);
             return _serverLeaf;
+        }
+    }
+
+    public X509Certificate2? RenewServerLeafIfNearExpiry(TimeSpan leadTime)
+    {
+        lock (_rotationLock)
+        {
+            if (_serverLeafSanHostname is null)
+            {
+                // EnsureServerLeaf hasn't run yet (startup ordering issue, or
+                // a test calling this in isolation) — nothing to renew.
+                return null;
+            }
+
+            var beforeThumbprint = _serverLeaf?.GetCertHashString(HashAlgorithmName.SHA256);
+            _serverLeaf = LoadOrCreateServerLeaf(_serverLeafSanHostname, leadTime);
+            var afterThumbprint = _serverLeaf.GetCertHashString(HashAlgorithmName.SHA256);
+            return afterThumbprint == beforeThumbprint ? null : _serverLeaf;
         }
     }
 
@@ -261,21 +287,26 @@ public class InternalCertificateAuthority : ICertificateAuthority
         }
     }
 
-    private X509Certificate2 LoadOrCreateServerLeaf(string sanHostname)
+    private X509Certificate2 LoadOrCreateServerLeaf(string sanHostname, TimeSpan? leadTimeForExpiry = null)
     {
         var path = Path.Combine(_certsDirectory, "server.pfx");
         if (File.Exists(path))
         {
             var existing = X509CertificateLoader.LoadPkcs12FromFile(path, password: null, X509KeyStorageFlags.Exportable);
-            if (HasSan(existing, sanHostname) && ChainsTo(existing, _current))
+            var nearExpiry = leadTimeForExpiry.HasValue && existing.NotAfter <= DateTime.UtcNow.Add(leadTimeForExpiry.Value);
+            if (HasSan(existing, sanHostname) && ChainsTo(existing, _current) && !nearExpiry)
             {
                 return existing;
             }
 
             // Either the configured hostname changed since this leaf was
-            // issued, or (updatewatch2-server#6) the current root has
-            // rotated since — regenerate rather than fail; see the
-            // class-level remarks on why this is always safe.
+            // issued, (updatewatch2-server#6) the current root has rotated
+            // since, or — only when a caller opts in via leadTimeForExpiry,
+            // i.e. CertificateExpiryWorker's periodic check, never the
+            // plain EnsureServerLeaf call Program.cs makes once at startup
+            // — it's now within CertificateOptions.CertificateExpiryWarningLeadDays
+            // of its own NotAfter. Regenerate rather than fail in every
+            // case; see the class-level remarks on why that's always safe.
             existing.Dispose();
         }
 

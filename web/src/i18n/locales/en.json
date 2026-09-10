@@ -144,6 +144,8 @@
     "smtpEncryption": "Encryption",
     "smtpFromAddress": "From address",
     "smtpFromName": "From name",
+    "notificationRecipientAddress": "Notification recipient",
+    "notificationRecipientAddressHint": "Where automated alert emails go — the certificate-expiry warning below, and the update-threshold notification. Leave empty to receive none of them (the checks themselves still run either way).",
     "notificationUpdatesPerMachine": "Updates-per-machine threshold",
     "notificationAffectedMachines": "Affected-machines threshold",
     "adEnabled": "Enable Active Directory login",
@@ -160,6 +162,8 @@
     "adLoginGroupDnHint": "Only members of this group are granted login — checked via the group's own \"member\" attribute.",
     "agentCertificateValidityDays": "Agent certificate validity (days)",
     "agentCertificateValidityDaysHint": "Applies to newly issued or renewed agent certificates only, not retroactively to already-issued ones. Each CA root's own lifetime is fixed and isn't configurable — rotate it below instead once it's due.",
+    "certificateExpiryWarningLeadDays": "Certificate expiry lead time (days)",
+    "certificateExpiryWarningLeadDaysHint": "How long before expiry the server acts: the server's own certificate (used for agent connections) renews itself automatically and sends a notice; the CA root does not renew itself and only gets a warning email — both need a notification recipient configured above to actually be emailed.",
     "caRotation": {
       "title": "Certificate authority root rotation",
       "hint": "Three separate steps, not one \"rotate now\" button: prepare generates a new root without using it for anything yet; activate switches to it and re-issues this server's own certificate immediately (no restart needed); retire drops the old root once every agent has renewed past it. Wait for agents to pick up a prepared root on their own heartbeat cadence before activating — an agent that hasn't yet will briefly lose its connection to the server otherwise.",

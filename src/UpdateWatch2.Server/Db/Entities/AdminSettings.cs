@@ -33,6 +33,9 @@ public class AdminSettings
 
     public required string SmtpFromName { get; set; }
 
+    /// <summary>Where automated alert emails go — see <see cref="Notifications.SmtpOptions.NotificationRecipientAddress"/>'s doc comment.</summary>
+    public string? NotificationRecipientAddress { get; set; }
+
     public int NotificationUpdatesPerMachineThreshold { get; set; }
 
     public int NotificationAffectedMachinesThreshold { get; set; }
@@ -92,6 +95,9 @@ public class AdminSettings
     /// enum-constrained. Default 90 days.
     /// </summary>
     public int AuditLogRetentionDays { get; set; } = 90;
+
+    /// <summary>See <see cref="Certificates.CertificateOptions.CertificateExpiryWarningLeadDays"/>'s doc comment. Default 60.</summary>
+    public int CertificateExpiryWarningLeadDays { get; set; } = 60;
 
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

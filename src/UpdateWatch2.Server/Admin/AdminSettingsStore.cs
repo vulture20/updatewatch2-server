@@ -113,6 +113,7 @@ public class AdminSettingsStore(
         row.SmtpEncryption = request.SmtpEncryption;
         row.SmtpFromAddress = request.SmtpFromAddress;
         row.SmtpFromName = request.SmtpFromName;
+        row.NotificationRecipientAddress = string.IsNullOrWhiteSpace(request.NotificationRecipientAddress) ? null : request.NotificationRecipientAddress;
         row.NotificationUpdatesPerMachineThreshold = request.NotificationUpdatesPerMachineThreshold;
         row.NotificationAffectedMachinesThreshold = request.NotificationAffectedMachinesThreshold;
         row.AdEnabled = request.AdEnabled;
@@ -135,6 +136,7 @@ public class AdminSettingsStore(
         }
         row.AgentAutoUpdateCheckIntervalHours = request.AgentAutoUpdateCheckIntervalHours;
         row.AuditLogRetentionDays = request.AuditLogRetentionDays;
+        row.CertificateExpiryWarningLeadDays = request.CertificateExpiryWarningLeadDays;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -159,6 +161,7 @@ public class AdminSettingsStore(
                 _smtp.Encryption.ToString(),
                 _smtp.FromAddress,
                 _smtp.FromName,
+                _smtp.NotificationRecipientAddress,
                 _smtp.IsConfigured,
                 _notificationThresholds.UpdatesPerMachine,
                 _notificationThresholds.AffectedMachines,
@@ -176,7 +179,8 @@ public class AdminSettingsStore(
                 _agentAutoUpdate.Enabled,
                 !string.IsNullOrEmpty(_agentAutoUpdate.GitHubToken),
                 _agentAutoUpdate.CheckIntervalHours,
-                _auditLogRetentionDays);
+                _auditLogRetentionDays,
+                _certificate.CertificateExpiryWarningLeadDays);
         }
     }
 
@@ -197,6 +201,7 @@ public class AdminSettingsStore(
         SmtpEncryption = defaultSmtp.Value.Encryption.ToString(),
         SmtpFromAddress = defaultSmtp.Value.FromAddress,
         SmtpFromName = defaultSmtp.Value.FromName,
+        NotificationRecipientAddress = defaultSmtp.Value.NotificationRecipientAddress,
         NotificationUpdatesPerMachineThreshold = defaultNotificationThresholds.Value.UpdatesPerMachine,
         NotificationAffectedMachinesThreshold = defaultNotificationThresholds.Value.AffectedMachines,
         AdEnabled = defaultAd.Value.Enabled,
@@ -213,6 +218,7 @@ public class AdminSettingsStore(
         GitHubToken = defaultAgentAutoUpdate.Value.GitHubToken,
         AgentAutoUpdateCheckIntervalHours = defaultAgentAutoUpdate.Value.CheckIntervalHours,
         AuditLogRetentionDays = DefaultAuditLogRetentionDays,
+        CertificateExpiryWarningLeadDays = defaultCertificate.Value.CertificateExpiryWarningLeadDays,
     };
 
     private void Apply(AdminSettings row)
@@ -232,6 +238,7 @@ public class AdminSettingsStore(
             Encryption = Enum.Parse<SmtpEncryption>(row.SmtpEncryption),
             FromAddress = row.SmtpFromAddress,
             FromName = row.SmtpFromName,
+            NotificationRecipientAddress = row.NotificationRecipientAddress,
         };
         var thresholds = new NotificationThresholdOptions
         {
@@ -253,6 +260,7 @@ public class AdminSettingsStore(
         var certificate = new CertificateOptions
         {
             AgentCertificateValidityDays = row.AgentCertificateValidityDays,
+            CertificateExpiryWarningLeadDays = row.CertificateExpiryWarningLeadDays,
         };
         var agentAutoUpdate = new AgentAutoUpdateOptions
         {

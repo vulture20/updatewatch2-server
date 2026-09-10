@@ -17,6 +17,7 @@ public record AdminSettingsDto(
     string SmtpEncryption,
     string SmtpFromAddress,
     string SmtpFromName,
+    string? NotificationRecipientAddress,
     bool SmtpConfigured,
     int NotificationUpdatesPerMachineThreshold,
     int NotificationAffectedMachinesThreshold,
@@ -34,4 +35,5 @@ public record AdminSettingsDto(
     bool AgentAutoUpdateEnabled,
     bool GitHubTokenSet,
     int AgentAutoUpdateCheckIntervalHours,
-    int AuditLogRetentionDays);
+    int AuditLogRetentionDays,
+    int CertificateExpiryWarningLeadDays);

@@ -145,6 +145,19 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
             errors.Add($"AuditLogRetentionDays must be one of: {string.Join(", ", ValidAuditLogRetentionDays)} (0 = unlimited).");
         }
 
+        // Upper bound is arbitrary but generous — a year's notice is more
+        // than any admin plausibly needs, and it keeps this in the same
+        // free-form-but-bounded style as AgentCertificateValidityDays above.
+        if (request.CertificateExpiryWarningLeadDays is < 1 or > 365)
+        {
+            errors.Add("CertificateExpiryWarningLeadDays must be between 1 and 365.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.NotificationRecipientAddress) && !request.NotificationRecipientAddress.Contains('@'))
+        {
+            errors.Add("NotificationRecipientAddress must be a valid email address.");
+        }
+
         return errors;
     }
 }

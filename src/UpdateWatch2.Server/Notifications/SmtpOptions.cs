@@ -31,6 +31,21 @@ public class SmtpOptions
 
     public string FromName { get; set; } = "UpdateWatch2";
 
+    /// <summary>
+    /// Where automated alert emails go — the CA-root/server-certificate
+    /// expiry warning (<see cref="Certificates.CertificateExpiryWorker"/>)
+    /// today, and the still-unimplemented update-threshold notification
+    /// CLAUDE.md already anticipates, tomorrow. Deliberately separate from
+    /// <see cref="FromAddress"/>: that one is this server's own identity as
+    /// a sender, this one is an admin's own inbox (or a distribution list)
+    /// as the destination — the two are unrelated addresses that happen to
+    /// often belong to the same organization. Empty/unset means "nothing
+    /// configured to receive these" — CertificateExpiryWorker still runs
+    /// its checks and self-heals (the server leaf still auto-renews) either
+    /// way, it just has nowhere to email about it.
+    /// </summary>
+    public string? NotificationRecipientAddress { get; set; }
+
     public bool IsConfigured => !string.IsNullOrWhiteSpace(Host) && !string.IsNullOrWhiteSpace(FromAddress);
 }
 

@@ -388,6 +388,15 @@ export function AdminPage() {
             {t('admin.smtpFromName')}
             <input type="text" value={form.smtpFromName} onChange={(e) => update('smtpFromName', e.target.value)} />
           </label>
+          <label>
+            {t('admin.notificationRecipientAddress')}
+            <input
+              type="email"
+              value={form.notificationRecipientAddress ?? ''}
+              onChange={(e) => update('notificationRecipientAddress', e.target.value || null)}
+            />
+          </label>
+          <p className="field-hint">{t('admin.notificationRecipientAddressHint')}</p>
           </div>
 
           <div className="card">
@@ -508,6 +517,17 @@ export function AdminPage() {
             />
           </label>
           <p className="field-hint">{t('admin.agentCertificateValidityDaysHint')}</p>
+          <label>
+            {t('admin.certificateExpiryWarningLeadDays')}
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={form.certificateExpiryWarningLeadDays}
+              onChange={(e) => update('certificateExpiryWarningLeadDays', Number(e.target.value))}
+            />
+          </label>
+          <p className="field-hint">{t('admin.certificateExpiryWarningLeadDaysHint')}</p>
 
           <div className="tab-save-row tab-save-row-divided">
             <button type="submit" className="btn-accent" disabled={saving}>

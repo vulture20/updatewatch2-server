@@ -77,6 +77,48 @@ public class InternalCertificateAuthorityTests : IDisposable
     }
 
     [Fact]
+    public void RenewServerLeafIfNearExpiry_does_nothing_when_the_current_leaf_is_nowhere_near_expiry()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+        var original = ca.EnsureServerLeaf("updatewatch2.example.com");
+
+        var result = ca.RenewServerLeafIfNearExpiry(TimeSpan.FromDays(1));
+
+        Assert.Null(result);
+        Assert.Equal(original.Thumbprint, ca.CurrentServerLeaf.Thumbprint);
+    }
+
+    [Fact]
+    public void RenewServerLeafIfNearExpiry_regenerates_the_leaf_once_its_own_NotAfter_falls_inside_the_lead_time()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+        var original = ca.EnsureServerLeaf("updatewatch2.example.com");
+
+        // The freshly-issued leaf is ~2 years out (ServerLeafValidity) — a
+        // lead time comfortably longer than that makes "within the lead
+        // time of NotAfter" trivially true without needing to fabricate an
+        // actually-near-expiry certificate directly.
+        var result = ca.RenewServerLeafIfNearExpiry(TimeSpan.FromDays(3650));
+
+        Assert.NotNull(result);
+        Assert.NotEqual(original.Thumbprint, result.Thumbprint);
+        Assert.Equal(result.Thumbprint, ca.CurrentServerLeaf.Thumbprint);
+        var sanExtension = result.Extensions.OfType<X509SubjectAlternativeNameExtension>().Single();
+        Assert.Contains("updatewatch2.example.com", sanExtension.EnumerateDnsNames());
+        AssertChainsToRoot(result, ca.RootCertificate);
+    }
+
+    [Fact]
+    public void RenewServerLeafIfNearExpiry_is_a_no_op_before_EnsureServerLeaf_has_ever_been_called()
+    {
+        var ca = new InternalCertificateAuthority(_certsDirectory);
+
+        var result = ca.RenewServerLeafIfNearExpiry(TimeSpan.FromDays(3650));
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public void Issued_agent_leaf_chains_to_the_root_carries_client_auth_EKU_and_a_matching_SHA256_thumbprint()
     {
         var ca = new InternalCertificateAuthority(_certsDirectory);

@@ -133,6 +133,7 @@ builder.Services.AddHttpClient<IGitHubReleaseClient, GitHubReleaseClient>(client
 builder.Services.AddScoped<IAgentUpdateService, AgentUpdateService>();
 builder.Services.AddHostedService<AgentUpdateCheckWorker>();
 builder.Services.AddHostedService<AuditLogRetentionWorker>();
+builder.Services.AddHostedService<CertificateExpiryWorker>();
 
 // The frontend (server/web) is a separate origin in development (its own
 // Vite dev server port) and, even in a same-origin production deployment

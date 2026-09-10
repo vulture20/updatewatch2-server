@@ -43,6 +43,7 @@ const baseSettings = {
   smtpEncryption: 'StartTls' as const,
   smtpFromAddress: '',
   smtpFromName: '',
+  notificationRecipientAddress: null,
   smtpConfigured: false,
   notificationUpdatesPerMachineThreshold: 5,
   notificationAffectedMachinesThreshold: 10,
@@ -61,6 +62,7 @@ const baseSettings = {
   gitHubTokenSet: false,
   agentAutoUpdateCheckIntervalHours: 6,
   auditLogRetentionDays: 90,
+  certificateExpiryWarningLeadDays: 60,
 };
 
 // Renders both siblings the way App.tsx actually does — SmtpWarningBanner

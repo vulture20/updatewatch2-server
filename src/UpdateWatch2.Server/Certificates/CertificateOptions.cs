@@ -22,4 +22,17 @@ public class CertificateOptions
     public const string SectionName = "Certificate";
 
     public int AgentCertificateValidityDays { get; set; } = 730;
+
+    /// <summary>
+    /// How many days before <c>NotAfter</c> <see cref="CertificateExpiryWorker"/>
+    /// treats the CA root/server leaf as "approaching expiry" — matches
+    /// the agent's own <c>AgentOptions.CertificateRenewalLeadTimeDays</c>
+    /// default (60) for the same reasoning: long enough that an admin (or,
+    /// for the server leaf, the worker itself) has real time to act before
+    /// anything actually breaks. Unlike <see cref="AgentCertificateValidityDays"/>,
+    /// this one IS read live by a DI-scoped worker rather than only at
+    /// pre-DI startup, so the "no live settings store yet" caveat on this
+    /// class's own doc comment doesn't apply to it.
+    /// </summary>
+    public int CertificateExpiryWarningLeadDays { get; set; } = 60;
 }
