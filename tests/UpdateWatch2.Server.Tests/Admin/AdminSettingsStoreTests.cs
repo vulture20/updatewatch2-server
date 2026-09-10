@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.AgentUpdates;
@@ -140,6 +142,58 @@ public class AdminSettingsStoreTests : IDisposable
         var row = await db.AdminSettings.SingleAsync();
         Assert.Equal("smtp.example.com", row.SmtpHost);
         Assert.Equal("s3cret!", row.SmtpPassword);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_hot_reloads_a_live_loggers_effective_minimum_level_with_no_restart()
+    {
+        // A dedicated ServiceCollection, not the shared _services one this
+        // file's other tests use — building a real IConfiguration +
+        // AddLogging(builder.AddConfiguration(...)) pipeline here mirrors
+        // exactly what Program.cs itself wires up (the only way to prove
+        // the fix reaches a REAL ILogger.IsEnabled check, not just that
+        // AdminSettingsStore writes a config key nobody reads).
+        var dbPath = Path.Combine(Path.GetTempPath(), $"updatewatch2-settings-store-hotreload-test-{Guid.NewGuid()}.sqlite");
+        try
+        {
+            var configuration = new ConfigurationManager();
+            configuration["Logging:LogLevel:Default"] = "Information";
+
+            var services = new ServiceCollection();
+            services.AddSingleton<IConfiguration>(configuration);
+            services.AddLogging(builder => builder.AddConfiguration(configuration.GetSection("Logging")).AddConsole());
+            services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={dbPath}"));
+            services.Configure<BruteForceOptions>(o => { o.MaxAttempts = 6; o.WindowMinutes = 5; o.LockoutMinutes = 30; });
+            services.Configure<SmtpOptions>(o => { o.Host = ""; o.Port = 587; o.FromAddress = ""; o.FromName = "UpdateWatch2"; });
+            services.Configure<NotificationThresholdOptions>(o => { o.UpdatesPerMachine = 5; o.AffectedMachines = 10; });
+            services.Configure<CertificateOptions>(o => { o.AgentCertificateValidityDays = 730; });
+            services.Configure<AgentAutoUpdateOptions>(o => { o.Enabled = true; });
+            services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
+            using var provider = services.BuildServiceProvider();
+
+            using (var scope = provider.CreateScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+            }
+
+            var store = provider.GetRequiredService<IAdminSettingsStore>();
+            await store.InitializeAsync();
+            var logger = provider.GetRequiredService<ILogger<AdminSettingsStoreTests>>();
+
+            // Default seeded level is INFO — Debug-level messages are
+            // correctly filtered out before any change.
+            Assert.False(logger.IsEnabled(LogLevel.Debug));
+
+            await store.UpdateAsync(BaseRequest() with { LogLevel = "DEBUG" });
+
+            // No restart, no new logger/factory resolved — the exact same
+            // ILogger instance now allows Debug through.
+            Assert.True(logger.IsEnabled(LogLevel.Debug));
+        }
+        finally
+        {
+            File.Delete(dbPath);
+        }
     }
 
     [Fact]

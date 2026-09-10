@@ -11,6 +11,16 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.2] - 2026-09-11
+
+### Fixed
+
+- **Changing the log level via the admin UI had no effect on a running container's `docker logs` — reported by the user as "the Docker container's logging is still broken."** This was a known, documented limitation (`IAdminSettingsStore.LogLevel`'s own doc comment: "does NOT hot-reload... only re-reads this value on next process start"), but confirmed live against a real container to be the actual cause of the report: a fresh install defaults to `INFO`; if an admin (or an earlier debugging session) ever changed it, `docker logs` would show almost nothing afterward until the container was restarted, including basic host startup messages, since a lowered level like `WARNING` even suppresses those.
+  - `AdminSettingsStore.Apply` now pushes a changed log level straight onto the running `IConfiguration`'s `Logging:LogLevel:Default` key — the same mechanism `Program.cs` already used at pre-DI startup, just re-triggered on every settings load/update instead of only once.
+  - That alone wasn't sufficient, and a throwaway harness proved it wasn't before this shipped: mutating a value through `IConfigurationRoot`'s indexer does **not** itself raise that root's reload/change token (only an underlying provider's own reload mechanism, or an explicit `IConfigurationRoot.Reload()` call, does) — and `Microsoft.Extensions.Logging`'s `IOptionsMonitor<LoggerFilterOptions>` only re-evaluates `Logging:LogLevel:*` when that token fires. Without an explicit `Reload()` call added right after the indexer write, `ILogger.IsEnabled(...)` never changed post-startup — this is exactly why `Program.cs`'s own pre-`Build()` indexer write "just worked" without one: nothing had read/cached `LoggerFilterOptions` yet at that point, a fundamentally different situation from changing an already-cached value on a fully running host.
+  - Live-verified against a real Docker container end to end, not just reasoned about: logged in via the real API, `PUT /api/admin/settings` with `logLevel: "DEBUG"`, then — with **no restart** — a subsequent request produced `dbug:`-level EF Core log lines in `docker logs` immediately.
+  - New `LogLevelMapper` (shared by `Program.cs` and `AdminSettingsStore`, replacing a near-identical local function that used to live only in `Program.cs`).
+
 ## [0.30.1] - 2026-09-10
 
 ### Added

@@ -30,11 +30,15 @@ public interface IAdminSettingsStore
     AgentAutoUpdateOptions AgentAutoUpdate { get; }
 
     /// <summary>
-    /// The persisted log level. Reflected here immediately on change, but
-    /// — unlike the other settings — does NOT hot-reload the running
-    /// logger's minimum level; that only re-reads this value on next
-    /// process start (see the comment in Program.cs). CLAUDE.md already
-    /// scopes "dynamic log-level push" as a separate, harder problem.
+    /// The persisted log level. Reflected here immediately on change, and
+    /// (server v0.30.2, found missing by a user report) now hot-reloads
+    /// the running logger's minimum level too — <see cref="AdminSettingsStore.Apply"/>
+    /// pushes it straight onto the live <c>IConfiguration</c>'s
+    /// <c>Logging:LogLevel:Default</c> key, the same mechanism
+    /// <c>Program.cs</c> uses at pre-DI startup, so a running container's
+    /// `docker logs` reacts to a saved change with no restart needed —
+    /// this used to be the one admin setting on this whole interface that
+    /// required one.
     /// </summary>
     string LogLevel { get; }
 

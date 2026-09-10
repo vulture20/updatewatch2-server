@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Auth;
@@ -16,7 +17,8 @@ public class AdminSettingsStore(
     IOptions<NotificationThresholdOptions> defaultNotificationThresholds,
     IOptions<AdOptions> defaultAd,
     IOptions<CertificateOptions> defaultCertificate,
-    IOptions<AgentAutoUpdateOptions> defaultAgentAutoUpdate) : IAdminSettingsStore
+    IOptions<AgentAutoUpdateOptions> defaultAgentAutoUpdate,
+    IConfiguration? configuration = null) : IAdminSettingsStore
 {
     private readonly object _lock = new();
 
@@ -283,6 +285,45 @@ public class AdminSettingsStore(
             _agentAutoUpdate = agentAutoUpdate;
             _logLevel = row.LogLevel;
             _auditLogRetentionDays = row.AuditLogRetentionDays;
+        }
+
+        // Pushes the change to the ACTUAL running logger, not just this
+        // store's own cache — closing the one long-standing exception to
+        // "every admin setting takes effect immediately" this class's own
+        // interface doc comment used to call out (found by a user report:
+        // changing this in the UI had no effect on a running container's
+        // `docker logs`, "just" needing a restart no other setting here
+        // does). `configuration` is the same `IConfiguration`/`ConfigurationManager`
+        // instance `Program.cs` set `Logging:LogLevel:Default` on before
+        // `builder.Build()`.
+        //
+        // The indexer write alone is NOT enough post-startup — confirmed
+        // by hand with a throwaway harness, not from documentation: unlike
+        // `appsettings.json`'s own `reloadOnChange`, mutating a value
+        // through `ConfigurationRoot`'s indexer never raises that root's
+        // own reload/change token by itself (only an underlying provider's
+        // *own* reload mechanism — e.g. a file watcher — or an explicit
+        // `IConfigurationRoot.Reload()` call does), and the logging
+        // subsystem's `IOptionsMonitor<LoggerFilterOptions>` only
+        // re-evaluates `Logging:LogLevel:*` when that token fires. Before
+        // `Reload()` was added here, `ILogger.IsEnabled(...)` never
+        // changed after the very first read — this is exactly why
+        // `Program.cs`'s OWN pre-`Build()` indexer write "just works" with
+        // no `Reload()` call of its own: nothing has read/cached
+        // `LoggerFilterOptions` yet at that point (the host isn't even
+        // built), so the mutated value is simply what's picked up on that
+        // eventual first read — a fundamentally different situation from
+        // changing an ALREADY-cached value on a fully running host, which
+        // this call site is. Null only in the one test that constructs
+        // this class directly without DI (`LegacyAdminSettingsMigrationTests`);
+        // every real path resolves the genuine `IConfiguration` instead.
+        if (configuration is not null && LogLevelMapper.IsValid(row.LogLevel))
+        {
+            configuration["Logging:LogLevel:Default"] = LogLevelMapper.ToConfigurationValue(row.LogLevel);
+            if (configuration is IConfigurationRoot root)
+            {
+                root.Reload();
+            }
         }
     }
 }

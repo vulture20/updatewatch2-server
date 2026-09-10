@@ -48,9 +48,9 @@ var builder = WebApplication.CreateBuilder(args);
 var logLevelEnv = Environment.GetEnvironmentVariable("UPDATEWATCH2_LOGLEVEL");
 var effectiveLogLevel = logLevelEnv ?? TryReadPersistedLogLevel(
     Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["Database:Path"] ?? "data/updatewatch2.sqlite")));
-if (effectiveLogLevel is not null && Enum.TryParse<LogLevel>(MapLogLevel(effectiveLogLevel), out _))
+if (effectiveLogLevel is not null && LogLevelMapper.IsValid(effectiveLogLevel))
 {
-    builder.Configuration["Logging:LogLevel:Default"] = MapLogLevel(effectiveLogLevel);
+    builder.Configuration["Logging:LogLevel:Default"] = LogLevelMapper.ToConfigurationValue(effectiveLogLevel);
 }
 
 builder.Services.AddControllers();
@@ -478,15 +478,6 @@ static bool IsDemoModeEnabled()
     var value = Environment.GetEnvironmentVariable("UPDATEWATCH2_DEMOMODE");
     return value is not null && (value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1");
 }
-
-static string MapLogLevel(string value) => value.Trim().ToUpperInvariant() switch
-{
-    "DEBUG" => nameof(LogLevel.Debug),
-    "INFO" => nameof(LogLevel.Information),
-    "WARNING" => nameof(LogLevel.Warning),
-    "ERROR" => nameof(LogLevel.Error),
-    _ => value,
-};
 
 // Exposes the implicitly generated Program class for WebApplicationFactory<Program> in tests.
 public partial class Program;
