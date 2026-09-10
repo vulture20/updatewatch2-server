@@ -49,16 +49,17 @@ export function AuditLogTab() {
   const totalPages = data ? Math.max(1, Math.ceil(data.totalCount / data.pageSize)) : 1;
 
   return (
-    <div>
-      <h2>{t('auditLog.title')}</h2>
-
-      <label>
-        {t('auditLog.search')}
-        <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={onSearchKeyDown} />
-      </label>{' '}
-      <button type="button" onClick={submitSearch}>
-        {t('auditLog.searchButton')}
-      </button>
+    <div className="card table-card">
+      <div className="audit-log-header">
+        <span className="card-kicker">{t('auditLog.title')}</span>
+        <label>
+          {t('auditLog.search')}
+          <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={onSearchKeyDown} />
+        </label>
+        <button type="button" onClick={submitSearch}>
+          {t('auditLog.searchButton')}
+        </button>
+      </div>
 
       {error && <div role="alert" className="login-error">{error}</div>}
 
@@ -78,22 +79,24 @@ export function AuditLogTab() {
             <tbody>
               {data.entries.map((entry) => (
                 <tr key={entry.id}>
-                  <td>{new Date(entry.timestamp).toLocaleString(i18n.language)}</td>
+                  <td className="text-muted">{new Date(entry.timestamp).toLocaleString(i18n.language)}</td>
                   <td>{entry.actor}</td>
                   <td>{entry.action}</td>
-                  <td>{entry.details ?? '—'}</td>
+                  <td className="text-muted">{entry.details ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            {t('auditLog.previousPage')}
-          </button>{' '}
-          <span>{t('auditLog.pageIndicator', { page, totalPages })}</span>{' '}
-          <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-            {t('auditLog.nextPage')}
-          </button>
+          <div className="audit-log-pagination">
+            <button type="button" className="btn-ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              {t('auditLog.previousPage')}
+            </button>
+            <span className="text-muted">{t('auditLog.pageIndicator', { page, totalPages })}</span>
+            <button type="button" className="btn-ghost" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              {t('auditLog.nextPage')}
+            </button>
+          </div>
         </>
       )}
     </div>

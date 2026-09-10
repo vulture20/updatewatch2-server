@@ -6,6 +6,7 @@
   },
   "login": {
     "title": "Anmelden",
+    "subtitle": "Update- und Patch-Verwaltung für Windows & Linux",
     "username": "Benutzername",
     "password": "Passwort",
     "submit": "Anmelden",
@@ -24,7 +25,27 @@
     "loading": "Agents werden geladen…",
     "yes": "Ja",
     "no": "Nein",
-    "certificateRejectedIcon": "Dieser Agent hat innerhalb der letzten 24 Stunden ein abgelehntes Zertifikat vorgelegt ({{reason}})."
+    "status": "Status",
+    "lastSeen": "Zuletzt gesehen",
+    "filteredCount": "{{filtered}} von {{total}} Agents",
+    "certificateRejectedIcon": "Dieser Agent hat innerhalb der letzten 24 Stunden ein abgelehntes Zertifikat vorgelegt ({{reason}}).",
+    "stats": {
+      "total": "Agents gesamt",
+      "pendingApproval": "Genehmigung ausstehend",
+      "rebootRequired": "Neustart erforderlich",
+      "totalPending": "Offene Updates"
+    },
+    "filters": {
+      "osType": "OS-Art",
+      "all": "Alle",
+      "pending": "Ausstehend",
+      "status": "Status",
+      "present": "Vorhanden",
+      "none": "Keine",
+      "warning": "Warnung",
+      "warningPresent": "Zertifikat abgelehnt",
+      "clear": "Filter zurücksetzen"
+    }
   },
   "agentDetail": {
     "dnsName": "DNS-Name",
@@ -42,7 +63,16 @@
       "Failed": "Fehlgeschlagen"
     },
     "updates": "Ausstehende Updates",
+    "updateTitle": "Titel",
+    "updatePackageId": "Paket-ID",
+    "updateDetectedAt": "Erkannt am",
     "noUpdates": "Keine ausstehenden Updates.",
+    "cards": {
+      "identity": "Identität",
+      "certificate": "Zertifikat",
+      "install": "Installationsstatus",
+      "installCompletedAt": "Abgeschlossen"
+    },
     "certificateThumbprintSha256": "Zertifikats-Fingerabdruck (SHA-256)",
     "certificateThumbprintSha1": "Zertifikats-Fingerabdruck (SHA-1)",
     "certificateIssuedAt": "Zertifikat ausgestellt",
@@ -101,7 +131,8 @@
       "checking": "Wird geprüft…",
       "checkNowDisabledHint": "Obige Einstellung aktivieren und speichern, um manuell zu prüfen."
     },
-    "notifications": "Benachrichtigungen",
+    "notifications": "SMTP-Server",
+    "notificationThresholds": "Schwellenwerte",
     "smtpConfigured": "SMTP konfiguriert",
     "smtpHost": "SMTP-Host",
     "smtpPort": "SMTP-Port",
@@ -160,6 +191,7 @@
       "delete": "Löschen",
       "deleteConfirm": "Filter \"{{name}}\" löschen? Dadurch verborgene Updates erscheinen sofort wieder in der Anzeige ausstehender Updates."
     },
+    "auditLogRetention": "Aufbewahrung",
     "auditLogRetentionDays": "Aufbewahrungsdauer Audit-Log",
     "auditLogRetentionDaysHint": "Einträge, die älter sind, werden durch eine regelmäßige Bereinigung endgültig gelöscht — ein Verkürzen löscht beim nächsten Durchlauf auch bereits vorhandene ältere Einträge, nicht nur künftige.",
     "auditLogRetentionDaysOption": "{{count}} Tage",

@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Displays a secret that is shown exactly once and never retrievable again
  * — first used for the admin-mediated certificate re-issuance token
- * (updatewatch2-server#8). No modal/dialog library is in use anywhere in
- * this app, so this is a plain in-flow banner (role="alert", matching
- * SmtpWarningBanner's style) rather than a portal/focus-trap component.
+ * (updatewatch2-server#8). A real overlay dialog (backdrop + centered box,
+ * Escape or a backdrop click closes it) — no library, just a fixed-position
+ * div; this app has no other modal to share code with yet, and Nocturne's
+ * own dialog pattern (`.dialog-backdrop`/`.dialog`) is plain CSS on plain
+ * HTML, so there's nothing a library would add here. Not a focus trap —
+ * for a single-admin internal tool showing one short-lived token, that's
+ * an acceptable simplification, not an oversight.
  */
 export function OneTimeSecretDialog({
   label,
@@ -26,6 +30,16 @@ export function OneTimeSecretDialog({
 }) {
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   const copy = () => {
     void navigator.clipboard
       .writeText(value)
@@ -38,17 +52,29 @@ export function OneTimeSecretDialog({
   };
 
   return (
-    <div role="alert" className="one-time-secret">
-      <p className="one-time-secret-label">{label}</p>
-      <p>{body}</p>
-      <code>{value}</code>
-      <div className="one-time-secret-actions">
-        <button type="button" onClick={copy}>
-          {copied ? copiedLabel : copyLabel}
-        </button>
-        <button type="button" onClick={onClose}>
-          {closeLabel}
-        </button>
+    <div className="dialog-backdrop" onClick={onClose}>
+      <div
+        className="dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="one-time-secret-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <p id="one-time-secret-title" className="dialog-title">
+          {label}
+        </p>
+        <div className="dialog-body">
+          {body}
+          <code className="dialog-token">{value}</code>
+        </div>
+        <div className="dialog-actions">
+          <button type="button" onClick={copy}>
+            {copied ? copiedLabel : copyLabel}
+          </button>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            {closeLabel}
+          </button>
+        </div>
       </div>
     </div>
   );

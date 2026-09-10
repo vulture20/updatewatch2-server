@@ -1,73 +1,105 @@
-/* Design tokens derived from /opt/UpdateWatch2/claude/DESIGN.md (Discord's
-   marketing design language) — colors reference DESIGN.md's `colors.*`,
-   radii reference `rounded.*`. DESIGN.md itself only specifies a dark
-   theme (deep-indigo canvas, white ink); the light theme below keeps the
-   same brand hues (Blurple primary, green accent, magenta) but deepens the
-   accent/magenta and lightens the surface so they hold contrast on white,
-   since CLAUDE.md requires a real light theme, not just a dimmed dark one.
-   Kept in sync by hand with
+/* Design tokens derived from /opt/UpdateWatch2/claude/DESIGN.md, now
+   describing the "Nocturne" design system: a quiet, compact dark interface
+   — a near-neutral blue-grey ground, Inter at medium weight, soft 8px
+   radii, and a single blurple accent used as a line/glow rather than a
+   flood. Replaces the earlier Discord-derived Blurple/green/magenta system
+   (adopted from a Claude Design canvas the user shared, "UpdateWatch2
+   Redesign" — project a061d3fe-1a17-4c55-bf42-aae5bfebfee4).
+   Dark is the system's native/default theme here (unlike the previous
+   system, which treated light as the base case) — light is the derived
+   override. Kept in sync by hand with
    src/UpdateWatch2.Server/Resources/Themes/{light,dark}.json — see
    updatewatch2-server#5 for making one of the two the source of truth. */
 
-:root,
-[data-theme='light'] {
-  --color-background: #ffffff;
-  --color-surface: #f2f3fb;
-  --color-surface-alt: #e7e8f6;
-  --color-hairline: #dcdef0;
-  --color-text: #23272a;
-  --color-primary: #5865f2;
-  --color-on-primary: #ffffff;
-  --color-accent: #1d9d55;
-  --color-on-accent: #ffffff;
-  --color-magenta: #b32e94;
-  --color-danger: #d83c3e;
-}
-
-[data-theme='dark'] {
-  --color-background: #0a0d3a;
-  --color-surface: #1e2353;
-  --color-surface-alt: #23272a;
-  --color-hairline: #2c3266;
-  --color-text: #ffffff;
-  --color-primary: #5865f2;
-  --color-on-primary: #ffffff;
-  --color-accent: #35ed7e;
-  --color-on-accent: #000000;
-  --color-magenta: #ec48bd;
-  --color-danger: #ed4245;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --color-background: #0a0d3a;
-    --color-surface: #1e2353;
-    --color-surface-alt: #23272a;
-    --color-hairline: #2c3266;
-    --color-text: #ffffff;
-    --color-primary: #5865f2;
-    --color-on-primary: #ffffff;
-    --color-accent: #35ed7e;
-    --color-on-accent: #000000;
-    --color-magenta: #ec48bd;
-    --color-danger: #ed4245;
-  }
-}
-
 :root {
-  /* ABC Ginto Nord / ggsans are proprietary — DESIGN.md's own suggested
-     open substitutes, loaded from Google Fonts in index.html. */
-  --font-display: 'Space Grotesk', 'Hanken Grotesk', system-ui, sans-serif;
-  --font-body: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-bg: #161826;
+  --color-surface: #232532;
+  --color-text: #e9e9ed;
+  --color-accent: #9184d9;
+  --color-accent-2: #a7a1db;
+  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
 
-  --radius-xs: 6px;
-  --radius-sm: 12px;
-  --radius-md: 14px;
-  --radius-lg: 16px;
-  --radius-xl: 40px;
-  --radius-pill: 50px;
+  /* Tonal ramps, generated in OKLCH on one shared lightness scale — the
+     same step of any role carries the same visual weight. Use the dark
+     steps (700-900) for tinted fills/hovers/subtle borders, 500 as the
+     role's base, and the light steps (100-300) for text on those tints. */
+  --color-neutral-100: #f3f5fe;
+  --color-neutral-200: #e4e7f5;
+  --color-neutral-300: #cfd3e5;
+  --color-neutral-400: #b2b6ca;
+  --color-neutral-500: #9397ab;
+  --color-neutral-600: #75798c;
+  --color-neutral-700: #595d6c;
+  --color-neutral-800: #3f424d;
+  --color-neutral-900: #292b31;
 
-  /* DESIGN.md's one extracted shadow — a wide, violet-tinted diffuse glow
-     used to lift a surface off the canvas instead of a hard-edged shadow. */
-  --shadow-float: 0 3px 68px rgba(69, 42, 124, 0.15);
+  --color-accent-100: #f5f4ff;
+  --color-accent-200: #e7e5fe;
+  --color-accent-300: #d2cefd;
+  --color-accent-400: #b5abfc;
+  --color-accent-500: #968ae0;
+  --color-accent-600: #796cbf;
+  --color-accent-700: #5d5294;
+  --color-accent-800: #423a6a;
+  --color-accent-900: #2b2741;
+
+  --color-accent-2-100: #f5f4ff;
+  --color-accent-2-200: #e7e5fe;
+  --color-accent-2-300: #d2cefd;
+  --color-accent-2-400: #b5afe8;
+  --color-accent-2-500: #9690c9;
+  --color-accent-2-600: #7972a9;
+  --color-accent-2-700: #5c5783;
+  --color-accent-2-800: #423e5d;
+  --color-accent-2-900: #2b293a;
+
+  /* Not a Nocturne role — this system has no "danger" concept of its own
+     (see its readme: no saturated flood outside the accent). Kept as its
+     own red so destructive actions/errors still read as red, not accent-
+     tinted; same hex the previous system used, since neither DESIGN.md nor
+     Nocturne dictates a replacement and there's no reason to invent one. */
+  --color-danger: #ed4245;
+
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-heading-weight: 500;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --space-1: 2.8px;
+  --space-2: 5.6px;
+  --space-3: 8.4px;
+  --space-4: 11.2px;
+  --space-6: 16.8px;
+  --space-8: 22.4px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  /* Elevation — a hairline edge plus ambient darkness rather than a soft
+     glow (this ground is dark by default, unlike the previous system's
+     light-first --shadow-float). */
+  --shadow-sm: 0 0 0 1px var(--color-neutral-800);
+  --shadow-md: 0 0 0 1px var(--color-neutral-700), 0 6px 18px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 0 0 1px var(--color-neutral-500), 0 16px 40px rgba(0, 0, 0, 0.65);
+}
+
+/* Light override — Nocturne's own canvas defines this explicitly (its
+   demo toggles between the two): background/surface/text/divider shift,
+   the accent stays byte-for-byte identical in both themes (deliberate —
+   this is a mono-accent system, not one that needs re-tuning for
+   contrast per theme the way the old dual-accent one did). */
+[data-theme='light'] {
+  --color-bg: #f4f3fa;
+  --color-surface: #ffffff;
+  --color-text: #211f2e;
+  --color-divider: color-mix(in srgb, #211f2e 14%, transparent);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --color-bg: #f4f3fa;
+    --color-surface: #ffffff;
+    --color-text: #211f2e;
+    --color-divider: color-mix(in srgb, #211f2e 14%, transparent);
+  }
 }

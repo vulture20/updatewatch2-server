@@ -122,7 +122,7 @@ describe('AgentDetailPage certificate re-issuance', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Last certificate rejection')).toBeInTheDocument();
+    expect(await screen.findByText(/Last certificate rejection/)).toBeInTheDocument();
     expect(screen.getByText(/Certificate expired/)).toBeInTheDocument();
   });
 
@@ -140,7 +140,7 @@ describe('AgentDetailPage certificate re-issuance', () => {
 
     renderPage();
 
-    await screen.findByText('host-1');
+    await screen.findByRole('heading', { name: 'host-1' });
     expect(screen.queryByRole('button', { name: /reissue certificate/i })).not.toBeInTheDocument();
   });
 
@@ -151,12 +151,14 @@ describe('AgentDetailPage certificate re-issuance', () => {
 
     renderPage();
 
-    await screen.findByText('host-1');
+    await screen.findByRole('heading', { name: 'host-1' });
     await user.click(screen.getByRole('button', { name: /reissue certificate/i }));
 
     expect(window.confirm).toHaveBeenCalled();
     await waitFor(() => expect(mockedReissueCertificate).toHaveBeenCalledWith('host-1'));
     expect(await screen.findByText('fresh-token-value')).toBeInTheDocument();
+    // A real overlay dialog now, not an inline banner.
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /close/i }));
 
@@ -171,7 +173,7 @@ describe('AgentDetailPage certificate re-issuance', () => {
 
     renderPage();
 
-    await screen.findByText('host-1');
+    await screen.findByRole('heading', { name: 'host-1' });
     await user.click(screen.getByRole('button', { name: /reissue certificate/i }));
 
     expect(mockedReissueCertificate).not.toHaveBeenCalled();
@@ -204,7 +206,7 @@ describe('AgentDetailPage install trigger', () => {
 
     renderPage();
 
-    await screen.findByText('host-1');
+    await screen.findByRole('heading', { name: 'host-1' });
     await user.click(screen.getByRole('button', { name: /install updates now/i }));
 
     await waitFor(() => expect(mockedTriggerInstall).toHaveBeenCalledWith('host-1'));
@@ -217,7 +219,7 @@ describe('AgentDetailPage install trigger', () => {
 
     renderPage();
 
-    await screen.findByText('host-1');
+    await screen.findByRole('heading', { name: 'host-1' });
     expect(screen.queryByRole('button', { name: /install updates now/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /install pending/i })).toBeDisabled();
   });
@@ -231,8 +233,44 @@ describe('AgentDetailPage install trigger', () => {
 
     renderPage();
 
-    await screen.findByText('host-1');
+    await screen.findByRole('heading', { name: 'host-1' });
     expect(screen.getByText(/succeeded/i)).toBeInTheDocument();
+  });
+});
+
+describe('AgentDetailPage layout', () => {
+  beforeEach(() => {
+    mockedGet.mockReset();
+    mockedUpdates.mockReset();
+  });
+
+  it('splits agent info into three cards', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+    mockedUpdates.mockResolvedValue([]);
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    expect(screen.getByText('Identity')).toBeInTheDocument();
+    expect(screen.getByText('Certificate')).toBeInTheDocument();
+    expect(screen.getByText('Install status')).toBeInTheDocument();
+  });
+
+  it('sorts the pending updates table when a column header is clicked', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+    mockedUpdates.mockResolvedValue([
+      { id: 1, title: 'Bravo update', packageId: null, description: null, detectedAt: '2026-01-01T00:00:00Z', installed: false },
+      { id: 2, title: 'Alpha update', packageId: null, description: null, detectedAt: '2026-01-02T00:00:00Z', installed: false },
+    ]);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('Bravo update');
+    await user.click(screen.getByRole('button', { name: /^Title/ }));
+
+    const titles = screen.getAllByRole('row').slice(1).map((row) => row.querySelector('td')?.textContent);
+    expect(titles).toEqual(['Alpha update', 'Bravo update']);
   });
 });
 
@@ -255,7 +293,7 @@ describe('AgentDetailPage polling', () => {
 
     renderPage();
 
-    expect(await screen.findByText('host-1')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'host-1' })).toBeInTheDocument();
     expect(mockedGet).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(5000);
@@ -270,12 +308,12 @@ describe('AgentDetailPage polling', () => {
 
     renderPage();
 
-    expect(await screen.findByText('host-1')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'host-1' })).toBeInTheDocument();
 
     await vi.advanceTimersByTimeAsync(5000);
     await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
 
-    expect(screen.getByText('host-1')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'host-1' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
@@ -300,7 +338,7 @@ describe('AgentDetailPage deletion', () => {
 
     renderPage();
 
-    await screen.findByText('host-1');
+    await screen.findByRole('heading', { name: 'host-1' });
     await user.click(screen.getByRole('button', { name: /delete agent/i }));
 
     expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('host-1'));
@@ -314,10 +352,10 @@ describe('AgentDetailPage deletion', () => {
 
     renderPage();
 
-    await screen.findByText('host-1');
+    await screen.findByRole('heading', { name: 'host-1' });
     await user.click(screen.getByRole('button', { name: /delete agent/i }));
 
     expect(mockedDelete).not.toHaveBeenCalled();
-    expect(screen.getByText('host-1')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'host-1' })).toBeInTheDocument();
   });
 });

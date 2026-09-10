@@ -11,6 +11,30 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.28.0] - 2026-09-10
+
+### Added
+
+- **Admin UI redesign: "Nocturne".** Adopted wholesale from a Claude Design
+  canvas the user shared ("UpdateWatch2 Redesign"), replacing the
+  Discord-derived Blurple/green/magenta system `DESIGN.md` previously
+  described. Dark blue-grey ground by default (`#161826`), a single
+  blurple accent (`#9184d9`, identical in both themes — no second brand
+  color), Inter throughout for headings and body, an 8px-based radius
+  scale, outlined-not-filled buttons, and fading-at-both-ends table/divider
+  rules. `web/src/theme/tokens.css` and
+  `Resources/Themes/{light,dark}.json` updated to match; `DESIGN.md`
+  rewritten to describe the new system as its own source of truth.
+  `AgentListItemDto` gained `OperatingSystem`/`LastAliveAt` (mirroring
+  fields `AgentDetailDto` already had) so the redesigned overview list can
+  show a per-row OS icon, an OS filter, and a "last seen" column without a
+  per-agent round trip — no protocol or schema bump, since both already
+  existed as `Agent` columns, just not surfaced on the list DTO before.
+  See CLAUDE.md's own "Key configurable behaviors to preserve" entry for
+  the full breakdown of what changed structurally (stat cards, filters,
+  sortable columns, the agent-detail 3-card layout, a real modal dialog
+  for certificate reissuance, the settings page's vertical tab list).
+
 ## [0.27.0] - 2026-09-10
 
 ### Added

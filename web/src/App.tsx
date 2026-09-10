@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import logo from './assets/logo.svg';
 import { CertificateRejectionBanner } from './components/CertificateRejectionBanner';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
@@ -30,8 +30,12 @@ export default function App() {
                   <span>UpdateWatch2</span>
                 </div>
                 <nav>
-                  <Link to="/agents">{t('nav.agents')}</Link>
-                  <Link to="/admin">{t('nav.admin')}</Link>
+                  <NavLink to="/agents" className={({ isActive }) => (isActive ? 'active' : undefined)}>
+                    {t('nav.agents')}
+                  </NavLink>
+                  <NavLink to="/admin" className={({ isActive }) => (isActive ? 'active' : undefined)}>
+                    {t('nav.admin')}
+                  </NavLink>
                 </nav>
                 <div className="app-shell-controls">
                   <LanguageSwitcher />

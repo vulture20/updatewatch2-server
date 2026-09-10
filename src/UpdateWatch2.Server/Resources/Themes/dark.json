@@ -1,11 +1,10 @@
 {
   "name": "dark",
   "colors": {
-    "background": "#0a0d3a",
-    "surface": "#1e2353",
-    "text": "#ffffff",
-    "primary": "#5865f2",
-    "accent": "#35ed7e",
+    "background": "#161826",
+    "surface": "#232532",
+    "text": "#e9e9ed",
+    "accent": "#9184d9",
     "danger": "#ed4245"
   }
 }

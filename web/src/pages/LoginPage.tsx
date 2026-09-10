@@ -41,10 +41,13 @@ export function LoginPage() {
   };
 
   return (
-    <main className="login-page">
-      <form className="login-form" onSubmit={(event) => void handleSubmit(event)}>
-        <img src={logo} alt="UpdateWatch2" width={64} height={64} className="login-logo" />
-        <h1>{t('login.title')}</h1>
+    <main className="login-page" aria-label={t('login.title')}>
+      <form className="login-form card elev-lg" onSubmit={(event) => void handleSubmit(event)}>
+        <div className="login-logo-block">
+          <img src={logo} alt="" width={46} height={46} />
+          <h1>UpdateWatch2</h1>
+          <p className="card-body">{t('login.subtitle')}</p>
+        </div>
         {error && <div role="alert" className="login-error">{error}</div>}
         <label>
           {t('login.username')}
@@ -68,8 +71,11 @@ export function LoginPage() {
             required
           />
         </label>
-        <button type="submit" className="btn-accent" disabled={submitting}>
+        <button type="submit" className="btn-accent btn-block" disabled={submitting}>
           {t('login.submit')}
+          <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
+          </svg>
         </button>
       </form>
     </main>

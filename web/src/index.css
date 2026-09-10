@@ -1,9 +1,10 @@
-/* Base rules follow the design system in /opt/UpdateWatch2/claude/DESIGN.md
-   — Blurple/green/magenta brand chord, heavy display type over generously
-   rounded surfaces. Toned down from DESIGN.md's marketing-hero scale
-   (82px all-caps headlines, 40px+ media radii) to something a dense admin
-   UI can actually work in — see tokens.css for the derived light/dark
-   palettes and radius/font tokens this file consumes. */
+/* Base rules follow the "Nocturne" design system (adopted from a Claude
+   Design canvas the user shared, "UpdateWatch2 Redesign") — a quiet,
+   compact dark interface: near-neutral ground, Inter at medium weight,
+   soft 8px radii, outlined (never filled) buttons, and rules that fade to
+   transparent at both ends instead of stopping cleanly. See tokens.css for
+   the token values this file consumes, and
+   /opt/UpdateWatch2/claude/DESIGN.md for the full written spec. */
 
 * {
   box-sizing: border-box;
@@ -12,25 +13,63 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--color-background);
+  background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
 }
 
 h1,
-h2 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  line-height: 1.1;
-  margin: 0 0 1rem;
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--space-2);
 }
 
 h1 {
-  font-size: 2rem;
+  font-size: 32px;
 }
 
 h2 {
-  font-size: 1.375rem;
+  font-size: 22px;
+}
+
+h3 {
+  font-size: 18px;
+}
+
+h4 {
+  font-size: 16px;
+}
+
+h5 {
+  font-size: 14px;
+}
+
+h6 {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
 button,
@@ -39,85 +78,385 @@ select {
   font: inherit;
 }
 
-button {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 1.25rem;
-  font-weight: 500;
-  cursor: pointer;
+a {
+  color: var(--color-accent);
+  text-underline-offset: 3px;
 }
 
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* — form fields —
+   This app wraps a field as <label>{text}<input/></label> (the text and
+   the control are siblings inside one label, not a separate label+input
+   pair) — styling the bare <label> itself as the "field caption" row
+   achieves Nocturne's compact field look without touching every call
+   site's markup. A checkbox field (<input type=checkbox/> first, then
+   text) needs the opposite layout — :has() picks it out. */
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  margin-bottom: var(--space-4);
 }
 
-/* The single highest-intent action on a page (per DESIGN.md: reserve the
-   electric-green accent for that one CTA, never as a general accent) —
-   applied to Login's Sign in, and the Approve actions that gate a new
-   agent into the fleet. */
-.btn-accent {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-}
-
-/* Secondary chrome (theme toggle, log out) — DESIGN.md's button-ghost:
-   a quieter surface fill instead of a second/third solid brand pill
-   competing with the actual page CTA. */
-.btn-ghost {
-  background: var(--color-surface);
+label:has(> input[type='checkbox']) {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
   color: var(--color-text);
-  border-radius: var(--radius-lg);
-}
-
-/* A destructive, hard-to-reverse action (deleting an agent) — reuses the
-   same --color-danger token the SMTP warning banner/one-time-secret box
-   already use, rather than introducing a new color for "this is risky". */
-.btn-danger {
-  background: var(--color-danger);
-  color: white;
 }
 
 input,
 select {
-  background: var(--color-background);
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 14px;
   color: var(--color-text);
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-xs);
-  padding: 0.45rem 0.6rem;
+  caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+}
+
+input:hover,
+select:hover {
+  border-color: color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+
+input:focus-visible,
+select:focus-visible {
+  border-color: var(--color-accent);
+  outline-offset: 0;
 }
 
 input[type='checkbox'] {
-  width: auto;
+  width: 16px;
+  min-height: 0;
+  height: 16px;
+  padding: 0;
+  accent-color: var(--color-accent);
+}
+
+/* — buttons — outlined, never filled: this system's one first-class
+   difference from the button convention it replaces. */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) calc(var(--space-3) * 1.2);
+}
+
+button:hover {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+button:active {
+  background: color-mix(in srgb, var(--color-text) 14%, transparent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* The single highest-intent action on a page (login submit, an Approve
+   action) — an accent outline, never a fill, per Nocturne's own rule. */
+.btn-accent {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.btn-accent:hover {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.btn-accent:active {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+/* Secondary chrome (theme toggle, log out, pagination) — no border, just
+   accent-tinted text/hover; quieter than a bordered secondary button. */
+.btn-ghost {
+  color: var(--color-accent);
+  border-color: transparent;
+  padding-inline: var(--space-2);
+}
+
+.btn-ghost:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.btn-ghost:active {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
   padding: 0;
 }
 
-a {
-  color: var(--color-primary);
-}
-
-table {
+.btn-block {
   width: 100%;
-  border-collapse: collapse;
 }
 
-thead th {
-  font-size: 0.8125rem;
-  font-weight: 600;
+/* A destructive, hard-to-reverse action (deleting an agent) — reuses
+   --color-danger, the one role Nocturne itself doesn't define. */
+.btn-danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.btn-danger:hover {
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+
+/* — cards — the surface unit stat tiles, settings sections and the agent
+   detail page's info groups are all built from. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.card-kicker {
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.card-title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.card-body {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.elev-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.elev-md {
+  box-shadow: var(--shadow-md);
+}
+
+.elev-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+/* — tags — status/reboot badges, replacing plain "Yes"/"No" text. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
   letter-spacing: 0.02em;
-  opacity: 0.7;
+  padding: 3px 10px;
+  border-radius: calc(var(--radius-md) * 0.75);
 }
 
-th,
-td {
+.tag-accent {
+  background: var(--color-accent-800);
+  color: var(--color-accent-100);
+}
+
+.tag-neutral {
+  background: var(--color-neutral-800);
+  color: var(--color-neutral-100);
+}
+
+.tag-outline {
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+}
+
+.text-muted {
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+/* — agents overview: stat cards, filter card, table wrapper — */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.stat-card {
+  width: 100%;
   text-align: left;
-  padding: 0.6rem 0.5rem;
-  border-bottom: 1px solid var(--color-hairline);
+  align-items: flex-start;
+  cursor: pointer;
 }
 
+.stat-card-active {
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.filter-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  margin-bottom: var(--space-4);
+}
+
+.filter-card > button {
+  white-space: nowrap;
+  height: 36px;
+}
+
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.table-card table {
+  margin: 0;
+}
+
+.table-card > p,
+.table-card > .login-error {
+  margin: var(--space-4);
+}
+
+.audit-log-header {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) 0;
+  flex-wrap: wrap;
+}
+
+.audit-log-header label {
+  flex: 1;
+  min-width: 160px;
+  margin-bottom: 0;
+}
+
+.audit-log-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.os-cell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+/* Dark-on-transparent PNG — inverted to read as light-on-dark by default
+   (this system's default theme), shown as-is once the light override
+   flips --color-bg/--color-text. */
+.tux-icon {
+  flex: none;
+  object-fit: contain;
+  filter: invert(1);
+  opacity: 0.55;
+}
+
+[data-theme='light'] .tux-icon {
+  filter: none;
+}
+
+/* — agent detail — */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: 13px;
+}
+
+.breadcrumb a {
+  text-decoration: none;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+}
+
+.detail-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.detail-header-title h1 {
+  margin: 0;
+}
+
+.detail-header-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.detail-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px var(--space-4);
+  font-size: 13px;
+}
+
+dt,
+dd {
+  margin: 0;
+}
+
+dd {
+  overflow-wrap: anywhere;
+}
+
+/* — nav shell — */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -128,138 +467,363 @@ td {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 1rem 1.5rem;
-  background: var(--color-background);
-  border-bottom: 1px solid var(--color-hairline);
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
 }
 
 .app-shell > header nav {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4);
+}
+
+.app-shell > header nav a {
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.app-shell > header nav a:hover,
+.app-shell > header nav a.active {
+  color: var(--color-accent);
 }
 
 .app-shell-brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.125rem;
+  gap: 9px;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 18px;
+  margin-right: auto;
 }
 
 .app-shell-controls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-4);
+}
+
+.app-shell-controls label {
+  margin-bottom: 0;
 }
 
 .app-shell > .table-wrapper,
+.app-shell > section,
 .app-shell section {
-  padding: 1.5rem;
+  padding: var(--space-6) var(--space-4) 60px;
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
+/* Language switcher's segmented control (replaces a bare <select>). */
+.seg {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+}
+
+.seg-opt {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  margin-bottom: 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.seg-opt input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.seg-opt + .seg-opt {
+  border-left: 1px solid var(--color-divider);
+}
+
+.seg-opt:has(input:checked) {
+  color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.seg-opt:not(:has(input:checked)):hover {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+/* — tables — rules fade to transparent at both ends (a 48px ramp) rather
+   than stopping cleanly, a Nocturne signature; replaces a flat
+   border-bottom everywhere a table row/header used one. */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+thead th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+  font-weight: 600;
+  opacity: 1;
+}
+
+th,
+td {
+  padding: var(--space-2);
+  border-bottom: 1px solid transparent;
+}
+
+thead tr {
+  background:
+    linear-gradient(
+        to right,
+        transparent,
+        var(--color-divider) 48px,
+        var(--color-divider) calc(100% - 48px),
+        transparent
+      )
+      no-repeat bottom / 100% 1px;
+}
+
+tbody tr {
+  background:
+    linear-gradient(
+        to right,
+        transparent,
+        color-mix(in srgb, var(--color-text) 8%, transparent) 48px,
+        color-mix(in srgb, var(--color-text) 8%, transparent) calc(100% - 48px),
+        transparent
+      )
+      no-repeat bottom / 100% 1px;
+}
+
+tbody tr:hover {
+  background:
+    linear-gradient(
+        color-mix(in srgb, var(--color-text) 4%, transparent),
+        color-mix(in srgb, var(--color-text) 4%, transparent)
+      )
+      no-repeat 0 0 / 100% 100%,
+    linear-gradient(
+        to right,
+        transparent,
+        color-mix(in srgb, var(--color-text) 8%, transparent) 48px,
+        color-mix(in srgb, var(--color-text) 8%, transparent) calc(100% - 48px),
+        transparent
+      )
+      no-repeat bottom / 100% 1px;
+}
+
+/* A clickable sortable column header. */
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+.sort-arrow {
+  opacity: 0.6;
+  font-size: 10px;
+}
+
+/* — login — */
 .login-page {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 1rem;
-  background: var(--color-background);
+  padding: var(--space-4);
+  background:
+    radial-gradient(circle at 25% 15%, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 55%),
+    var(--color-bg);
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-4);
   width: 100%;
-  max-width: 24rem;
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  padding: 2.5rem;
-  box-shadow: var(--shadow-float);
+  max-width: 380px;
+  padding: 36px 30px;
 }
 
-.login-form label {
+.login-logo-block {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+  text-align: center;
 }
 
-.login-logo {
-  align-self: center;
+.login-logo-block h1 {
+  font-size: 22px;
+  margin: 0 0 4px;
 }
 
-.smtp-warning {
-  background: var(--color-danger);
-  color: white;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-lg);
-  margin-bottom: 1rem;
-}
-
-.one-time-secret {
-  border: 1px solid var(--color-danger);
-  border-radius: var(--radius-lg);
-  padding: 0.75rem 1rem;
-  margin: 1rem 0;
-}
-
-.one-time-secret-label {
-  font-weight: 600;
-  margin: 0 0 0.25rem;
-}
-
-.one-time-secret code {
-  display: block;
-  overflow-wrap: anywhere;
-  background: var(--color-surface);
-  padding: 0.5rem;
-  border-radius: var(--radius-sm);
-  margin: 0.5rem 0;
-}
-
-.one-time-secret-actions {
+/* — banners — */
+.banner {
+  margin-bottom: var(--space-4);
+  padding: 11px 16px;
+  border-radius: var(--radius-md);
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.banner svg {
+  flex: none;
+}
+
+.banner-neutral {
+  border: 1px solid var(--color-divider);
+  background: var(--color-surface);
+}
+
+.banner-accent {
+  border: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.banner span {
+  flex: 1;
+}
+
+/* — dialog — */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+}
+
+.dialog {
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.dialog-title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 20px;
+}
+
+.dialog-body {
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.dialog-token {
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .field-hint {
-  font-size: 0.875rem;
-  opacity: 0.75;
-  margin: -0.5rem 0 1rem;
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 2px 0 var(--space-4);
+}
+
+/* — settings tabs — a vertical list, not a horizontal strip. */
+.admin-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--space-6);
+  align-items: start;
 }
 
 .admin-tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  border-bottom: 1px solid var(--color-hairline);
-  margin-bottom: 1rem;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .admin-tab {
-  background: none;
+  text-align: left;
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-size: 14px;
+  font-weight: var(--font-heading-weight);
   border: none;
-  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
-  border-bottom: 2px solid transparent;
-  padding: 0.5rem 0.75rem;
-  cursor: pointer;
+  background: transparent;
   color: var(--color-text);
-  font-weight: 500;
 }
 
-.admin-tab-active {
-  border-bottom-color: var(--color-primary);
-  font-weight: 700;
+.admin-tab:hover {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+.admin-tab-active,
+.admin-tab-active:hover {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tab-save-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .login-error {
   color: var(--color-danger);
   border: 1px solid var(--color-danger);
-  border-radius: var(--radius-lg);
-  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.saved-message {
+  font-size: 13px;
+  color: var(--color-accent);
 }
 
 /* On narrow viewports the agents table scrolls horizontally instead of
@@ -269,5 +833,14 @@ td {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
+  }
+
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 }

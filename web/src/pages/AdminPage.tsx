@@ -199,127 +199,143 @@ export function AdminPage() {
 
       <form onSubmit={(event) => void handleSubmit(event)}>
         {error && <div role="alert" className="login-error">{error}</div>}
-        {savedMessage && <div role="status">{t('admin.saved')}</div>}
 
-        <div role="tablist" className="admin-tabs">
-          {TABS.map((tabName) => (
-            <button
-              key={tabName}
-              type="button"
-              role="tab"
-              aria-selected={tab === tabName}
-              className={tab === tabName ? 'admin-tab admin-tab-active' : 'admin-tab'}
-              onClick={() => setTab(tabName)}
-            >
-              {t(`admin.tabs.${tabName}`)}
-            </button>
-          ))}
-        </div>
+        <div className="admin-layout">
+          <div role="tablist" className="admin-tabs">
+            {TABS.map((tabName) => (
+              <button
+                key={tabName}
+                type="button"
+                role="tab"
+                aria-selected={tab === tabName}
+                className={tab === tabName ? 'admin-tab admin-tab-active' : 'admin-tab'}
+                onClick={() => setTab(tabName)}
+              >
+                {t(`admin.tabs.${tabName}`)}
+              </button>
+            ))}
+          </div>
 
+          <div>
         {/* hidden, not unmounted, so switching tabs never loses edits made
             on another tab — the whole form submits together regardless of
             which tab is active. */}
-        <div hidden={tab !== 'general'}>
-          <label>
-            {t('admin.logLevel')}
-            <select value={form.logLevel} onChange={(e) => update('logLevel', e.target.value)}>
-              {LOG_LEVELS.map((level) => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p className="field-hint">{t('admin.logLevelHint')}</p>
+        <div hidden={tab !== 'general'} className="tab-panel">
+          <div className="card">
+            <span className="card-kicker">{t('admin.tabs.general')}</span>
+            <label>
+              {t('admin.logLevel')}
+              <select value={form.logLevel} onChange={(e) => update('logLevel', e.target.value)}>
+                {LOG_LEVELS.map((level) => (
+                  <option key={level} value={level}>
+                    {level}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="field-hint">{t('admin.logLevelHint')}</p>
+          </div>
 
-          <h2>{t('admin.bruteForce')}</h2>
-          <label>
-            {t('admin.bruteForceMaxAttempts')}
-            <input
-              type="number"
-              min={1}
-              value={form.bruteForceMaxAttempts}
-              onChange={(e) => update('bruteForceMaxAttempts', Number(e.target.value))}
-            />
-          </label>
-          <label>
-            {t('admin.bruteForceWindowMinutes')}
-            <input
-              type="number"
-              min={1}
-              value={form.bruteForceWindowMinutes}
-              onChange={(e) => update('bruteForceWindowMinutes', Number(e.target.value))}
-            />
-          </label>
-          <label>
-            {t('admin.bruteForceLockoutMinutes')}
-            <input
-              type="number"
-              min={1}
-              value={form.bruteForceLockoutMinutes}
-              onChange={(e) => update('bruteForceLockoutMinutes', Number(e.target.value))}
-            />
-          </label>
+          <div className="card">
+            <span className="card-kicker">{t('admin.bruteForce')}</span>
+            <label>
+              {t('admin.bruteForceMaxAttempts')}
+              <input
+                type="number"
+                min={1}
+                value={form.bruteForceMaxAttempts}
+                onChange={(e) => update('bruteForceMaxAttempts', Number(e.target.value))}
+              />
+            </label>
+            <label>
+              {t('admin.bruteForceWindowMinutes')}
+              <input
+                type="number"
+                min={1}
+                value={form.bruteForceWindowMinutes}
+                onChange={(e) => update('bruteForceWindowMinutes', Number(e.target.value))}
+              />
+            </label>
+            <label>
+              {t('admin.bruteForceLockoutMinutes')}
+              <input
+                type="number"
+                min={1}
+                value={form.bruteForceLockoutMinutes}
+                onChange={(e) => update('bruteForceLockoutMinutes', Number(e.target.value))}
+              />
+            </label>
+          </div>
 
-          <h2>{t('admin.agentAutoUpdate.title')}</h2>
-          <p className="field-hint">{t('admin.agentAutoUpdate.hint')}</p>
-          <label>
-            <input
-              type="checkbox"
-              checked={form.agentAutoUpdateEnabled}
-              onChange={(e) => update('agentAutoUpdateEnabled', e.target.checked)}
-            />
-            {t('admin.agentAutoUpdate.enabled')}
-          </label>
-          <label>
-            {t('admin.agentAutoUpdate.checkIntervalHours')}
-            <input
-              type="number"
-              min={1}
-              value={form.agentAutoUpdateCheckIntervalHours}
-              onChange={(e) => update('agentAutoUpdateCheckIntervalHours', Number(e.target.value))}
-            />
-          </label>
-          <p className="field-hint">{t('admin.agentAutoUpdate.checkIntervalHoursHint')}</p>
-          <label>
-            {t('admin.agentAutoUpdate.gitHubToken')}
-            <input
-              type="password"
-              autoComplete="new-password"
-              placeholder={t('admin.passwordPlaceholder') ?? ''}
-              onChange={(e) => update('gitHubToken', e.target.value)}
-            />
-          </label>
-          <p className="field-hint">{t('admin.agentAutoUpdate.gitHubTokenHint')}</p>
-          {agentUpdateStatus && (
-            <>
-              <dl>
-                <dt>{t('admin.agentAutoUpdate.latestVersion')}</dt>
-                <dd>{agentUpdateStatus.latestVersion ?? t('admin.agentAutoUpdate.noneYet')}</dd>
-                <dt>{t('admin.agentAutoUpdate.checkedAt')}</dt>
-                <dd>{agentUpdateStatus.checkedAt ? new Date(agentUpdateStatus.checkedAt).toLocaleString(i18n.language) : '—'}</dd>
-                {agentUpdateStatus.lastError && (
-                  <>
-                    <dt>{t('admin.agentAutoUpdate.lastError')}</dt>
-                    <dd role="alert">{agentUpdateStatus.lastError}</dd>
-                  </>
-                )}
-              </dl>
-              {agentUpdateError && <div role="alert" className="login-error">{agentUpdateError}</div>}
-              <button
-                type="button"
-                disabled={agentUpdateBusy || !agentUpdateStatus.enabled}
-                onClick={runAgentUpdateCheck}
-              >
-                {agentUpdateBusy ? t('admin.agentAutoUpdate.checking') : t('admin.agentAutoUpdate.checkNow')}
-              </button>
-              {!agentUpdateStatus.enabled && <p className="field-hint">{t('admin.agentAutoUpdate.checkNowDisabledHint')}</p>}
-            </>
-          )}
+          <div className="card">
+            <span className="card-kicker">{t('admin.agentAutoUpdate.title')}</span>
+            <p className="card-body">{t('admin.agentAutoUpdate.hint')}</p>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.agentAutoUpdateEnabled}
+                onChange={(e) => update('agentAutoUpdateEnabled', e.target.checked)}
+              />
+              {t('admin.agentAutoUpdate.enabled')}
+            </label>
+            <label>
+              {t('admin.agentAutoUpdate.checkIntervalHours')}
+              <input
+                type="number"
+                min={1}
+                value={form.agentAutoUpdateCheckIntervalHours}
+                onChange={(e) => update('agentAutoUpdateCheckIntervalHours', Number(e.target.value))}
+              />
+            </label>
+            <p className="field-hint">{t('admin.agentAutoUpdate.checkIntervalHoursHint')}</p>
+            <label>
+              {t('admin.agentAutoUpdate.gitHubToken')}
+              <input
+                type="password"
+                autoComplete="new-password"
+                placeholder={t('admin.passwordPlaceholder') ?? ''}
+                onChange={(e) => update('gitHubToken', e.target.value)}
+              />
+            </label>
+            <p className="field-hint">{t('admin.agentAutoUpdate.gitHubTokenHint')}</p>
+            {agentUpdateStatus && (
+              <>
+                <dl>
+                  <dt>{t('admin.agentAutoUpdate.latestVersion')}</dt>
+                  <dd>{agentUpdateStatus.latestVersion ?? t('admin.agentAutoUpdate.noneYet')}</dd>
+                  <dt>{t('admin.agentAutoUpdate.checkedAt')}</dt>
+                  <dd>{agentUpdateStatus.checkedAt ? new Date(agentUpdateStatus.checkedAt).toLocaleString(i18n.language) : '—'}</dd>
+                  {agentUpdateStatus.lastError && (
+                    <>
+                      <dt>{t('admin.agentAutoUpdate.lastError')}</dt>
+                      <dd role="alert">{agentUpdateStatus.lastError}</dd>
+                    </>
+                  )}
+                </dl>
+                {agentUpdateError && <div role="alert" className="login-error">{agentUpdateError}</div>}
+                <button
+                  type="button"
+                  disabled={agentUpdateBusy || !agentUpdateStatus.enabled}
+                  onClick={runAgentUpdateCheck}
+                >
+                  {agentUpdateBusy ? t('admin.agentAutoUpdate.checking') : t('admin.agentAutoUpdate.checkNow')}
+                </button>
+                {!agentUpdateStatus.enabled && <p className="field-hint">{t('admin.agentAutoUpdate.checkNowDisabledHint')}</p>}
+              </>
+            )}
+          </div>
+
+          <div className="tab-save-row">
+            <button type="submit" className="btn-accent" disabled={saving}>
+              {t('admin.save')}
+            </button>
+            {savedMessage && <span className="saved-message" role="status">{t('admin.saved')}</span>}
+          </div>
         </div>
 
-        <div hidden={tab !== 'notifications'}>
-          <h2>{t('admin.notifications')}</h2>
+        <div hidden={tab !== 'notifications'} className="tab-panel">
+          <div className="card">
+          <span className="card-kicker">{t('admin.notifications')}</span>
           <label>
             {t('admin.smtpHost')}
             <input type="text" value={form.smtpHost} onChange={(e) => update('smtpHost', e.target.value)} />
@@ -373,6 +389,10 @@ export function AdminPage() {
             {t('admin.smtpFromName')}
             <input type="text" value={form.smtpFromName} onChange={(e) => update('smtpFromName', e.target.value)} />
           </label>
+          </div>
+
+          <div className="card">
+          <span className="card-kicker">{t('admin.notificationThresholds')}</span>
           <label>
             {t('admin.notificationUpdatesPerMachine')}
             <input
@@ -391,10 +411,19 @@ export function AdminPage() {
               onChange={(e) => update('notificationAffectedMachinesThreshold', Number(e.target.value))}
             />
           </label>
+          </div>
+
+          <div className="tab-save-row">
+            <button type="submit" className="btn-accent" disabled={saving}>
+              {t('admin.save')}
+            </button>
+            {savedMessage && <span className="saved-message" role="status">{t('admin.saved')}</span>}
+          </div>
         </div>
 
-        <div hidden={tab !== 'activeDirectory'}>
-          <h2>{t('admin.tabs.activeDirectory')}</h2>
+        <div hidden={tab !== 'activeDirectory'} className="tab-panel">
+          <div className="card">
+          <span className="card-kicker">{t('admin.tabs.activeDirectory')}</span>
           <label>
             <input type="checkbox" checked={form.adEnabled} onChange={(e) => update('adEnabled', e.target.checked)} />
             {t('admin.adEnabled')}
@@ -456,10 +485,19 @@ export function AdminPage() {
             <input type="text" value={form.adLoginGroupDn} onChange={(e) => update('adLoginGroupDn', e.target.value)} />
           </label>
           <p className="field-hint">{t('admin.adLoginGroupDnHint')}</p>
+
+          <div className="tab-save-row">
+            <button type="submit" className="btn-accent" disabled={saving}>
+              {t('admin.save')}
+            </button>
+            {savedMessage && <span className="saved-message" role="status">{t('admin.saved')}</span>}
+          </div>
+          </div>
         </div>
 
-        <div hidden={tab !== 'certificates'}>
-          <h2>{t('admin.tabs.certificates')}</h2>
+        <div hidden={tab !== 'certificates'} className="tab-panel">
+          <div className="card">
+          <span className="card-kicker">{t('admin.tabs.certificates')}</span>
           <label>
             {t('admin.agentCertificateValidityDays')}
             <input
@@ -472,7 +510,16 @@ export function AdminPage() {
           </label>
           <p className="field-hint">{t('admin.agentCertificateValidityDaysHint')}</p>
 
-          <h2>{t('admin.caRotation.title')}</h2>
+          <div className="tab-save-row">
+            <button type="submit" className="btn-accent" disabled={saving}>
+              {t('admin.save')}
+            </button>
+            {savedMessage && <span className="saved-message" role="status">{t('admin.saved')}</span>}
+          </div>
+          </div>
+
+          <div className="card">
+          <span className="card-kicker">{t('admin.caRotation.title')}</span>
           <p className="field-hint">{t('admin.caRotation.hint')}</p>
           {caError && <div role="alert" className="login-error">{caError}</div>}
           {caStatus && (
@@ -541,10 +588,12 @@ export function AdminPage() {
               </button>
             </>
           )}
+          </div>
         </div>
 
-        <div hidden={tab !== 'updateFilters'}>
-          <h2>{t('admin.updateFilters.title')}</h2>
+        <div hidden={tab !== 'updateFilters'} className="tab-panel">
+          <div className="card">
+          <span className="card-kicker">{t('admin.updateFilters.title')}</span>
           <p className="field-hint">{t('admin.updateFilters.hint')}</p>
           {updateFiltersError && <div role="alert" className="login-error">{updateFiltersError}</div>}
 
@@ -602,9 +651,19 @@ export function AdminPage() {
           <button type="button" className="btn-accent" disabled={!newFilterName || !newFilterPattern} onClick={addUpdateFilter}>
             {t('admin.updateFilters.add')}
           </button>
+
+          <div className="tab-save-row">
+            <button type="submit" className="btn-accent" disabled={saving}>
+              {t('admin.save')}
+            </button>
+            {savedMessage && <span className="saved-message" role="status">{t('admin.saved')}</span>}
+          </div>
+          </div>
         </div>
 
-        <div hidden={tab !== 'auditLog'}>
+        <div hidden={tab !== 'auditLog'} className="tab-panel">
+          <div className="card">
+          <span className="card-kicker">{t('admin.auditLogRetention')}</span>
           <label>
             {t('admin.auditLogRetentionDays')}
             <select
@@ -620,12 +679,18 @@ export function AdminPage() {
           </label>
           <p className="field-hint">{t('admin.auditLogRetentionDaysHint')}</p>
 
+          <div className="tab-save-row">
+            <button type="submit" className="btn-accent" disabled={saving}>
+              {t('admin.save')}
+            </button>
+            {savedMessage && <span className="saved-message" role="status">{t('admin.saved')}</span>}
+          </div>
+          </div>
+
           <AuditLogTab />
         </div>
-
-        <button type="submit" disabled={saving}>
-          {t('admin.save')}
-        </button>
+          </div>
+        </div>
       </form>
     </section>
   );

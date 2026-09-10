@@ -12,7 +12,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
     {
         var agents = await db.Agents
             .OrderBy(a => a.Hostname)
-            .Select(a => new { a.Id, a.Hostname, a.Approved, a.RebootRequired, a.LastAliveAt })
+            .Select(a => new { a.Id, a.Hostname, a.Approved, a.RebootRequired, a.LastAliveAt, a.OperatingSystem })
             .ToListAsync(ct);
 
         var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct);
@@ -21,7 +21,8 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
         return agents
             .Select(a => new AgentListItemDto(
                 a.Hostname, a.Approved, a.RebootRequired, countsByAgent.GetValueOrDefault(a.Id),
-                ResolveActiveRejection(rejectionsByHostname.GetValueOrDefault(a.Hostname), a.LastAliveAt)?.Reason))
+                ResolveActiveRejection(rejectionsByHostname.GetValueOrDefault(a.Hostname), a.LastAliveAt)?.Reason,
+                a.OperatingSystem, a.LastAliveAt))
             .ToList();
     }
 

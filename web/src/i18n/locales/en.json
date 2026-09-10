@@ -6,6 +6,7 @@
   },
   "login": {
     "title": "Sign in",
+    "subtitle": "Update and patch management for Windows & Linux",
     "username": "Username",
     "password": "Password",
     "submit": "Sign in",
@@ -24,7 +25,27 @@
     "loading": "Loading agents…",
     "yes": "Yes",
     "no": "No",
-    "certificateRejectedIcon": "This agent presented a rejected certificate ({{reason}}) within the last 24 hours."
+    "status": "Status",
+    "lastSeen": "Last seen",
+    "filteredCount": "{{filtered}} of {{total}} agents",
+    "certificateRejectedIcon": "This agent presented a rejected certificate ({{reason}}) within the last 24 hours.",
+    "stats": {
+      "total": "Total agents",
+      "pendingApproval": "Pending approval",
+      "rebootRequired": "Reboot required",
+      "totalPending": "Pending updates"
+    },
+    "filters": {
+      "osType": "OS type",
+      "all": "All",
+      "pending": "Pending",
+      "status": "Status",
+      "present": "Present",
+      "none": "None",
+      "warning": "Warning",
+      "warningPresent": "Certificate rejected",
+      "clear": "Clear filters"
+    }
   },
   "agentDetail": {
     "dnsName": "DNS name",
@@ -42,7 +63,16 @@
       "Failed": "Failed"
     },
     "updates": "Pending updates",
+    "updateTitle": "Title",
+    "updatePackageId": "Package ID",
+    "updateDetectedAt": "Detected",
     "noUpdates": "No pending updates.",
+    "cards": {
+      "identity": "Identity",
+      "certificate": "Certificate",
+      "install": "Install status",
+      "installCompletedAt": "Completed"
+    },
     "certificateThumbprintSha256": "Certificate thumbprint (SHA-256)",
     "certificateThumbprintSha1": "Certificate thumbprint (SHA-1)",
     "certificateIssuedAt": "Certificate issued",
@@ -101,7 +131,8 @@
       "checking": "Checking…",
       "checkNowDisabledHint": "Enable and save the setting above to check manually."
     },
-    "notifications": "Notifications",
+    "notifications": "SMTP server",
+    "notificationThresholds": "Thresholds",
     "smtpConfigured": "SMTP configured",
     "smtpHost": "SMTP host",
     "smtpPort": "SMTP port",
@@ -160,6 +191,7 @@
       "delete": "Delete",
       "deleteConfirm": "Delete the filter \"{{name}}\"? Updates it currently hides will reappear in the pending-updates display immediately."
     },
+    "auditLogRetention": "Retention",
     "auditLogRetentionDays": "Audit log retention",
     "auditLogRetentionDaysHint": "Entries older than this are permanently deleted by a periodic cleanup — lowering this also purges already-existing older entries on the next pass, not just new ones going forward.",
     "auditLogRetentionDaysOption": "{{count}} days",

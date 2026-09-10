@@ -13,7 +13,17 @@ public record AgentListItemDto(
     /// — flags the row in the overview list with a warning icon. One of
     /// <see cref="Certificates.CertificateRejectionReason"/>'s values.
     /// </summary>
-    string? LastCertificateRejectionReason);
+    string? LastCertificateRejectionReason,
+    /// <summary>
+    /// Same free-text self-reported string as <see cref="AgentDetailDto.OperatingSystem"/>
+    /// (e.g. "Windows Server 2022", "Ubuntu 22.04 LTS") — added so the
+    /// overview list can show a per-row OS icon and offer an OS/OS-family
+    /// filter without a per-agent round trip. No family enum on the wire;
+    /// "Windows vs. Linux" is a client-side `os.includes('Windows')` check,
+    /// same as every other OS-family branch in this codebase.
+    /// </summary>
+    string? OperatingSystem,
+    DateTimeOffset? LastAliveAt);
 
 /// <summary>Full shape for the per-agent detail view.</summary>
 public record AgentDetailDto(

@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminApi } from '../api/endpoints';
+import { WarningTriangleIcon } from './WarningTriangleIcon';
 
 /**
- * Red warning shown to admins when the mail server is unreachable or
+ * Warning shown to admins when the mail server is unreachable or
  * misconfigured (CLAUDE.md section 6.3). Currently only reflects
  * `smtpConfigured` (host/from-address present) from `/api/admin/settings`
  * — the live reachability check already exists server-side
  * (`IEmailNotificationService.IsHealthyAsync`) but isn't exposed via that
  * endpoint yet. TODO: switch this to the reachability check once it is.
+ * Neutral, divider-bordered treatment (`.banner-neutral`) — a
+ * misconfiguration, not an active security event, unlike
+ * CertificateRejectionBanner's accent-tinted styling.
  */
 export function SmtpWarningBanner() {
   const { t } = useTranslation();
@@ -37,8 +41,9 @@ export function SmtpWarningBanner() {
   }
 
   return (
-    <div role="alert" className="smtp-warning">
-      {t('login.smtpWarning')}
+    <div role="alert" className="banner banner-neutral">
+      <WarningTriangleIcon />
+      <span>{t('login.smtpWarning')}</span>
     </div>
   );
 }

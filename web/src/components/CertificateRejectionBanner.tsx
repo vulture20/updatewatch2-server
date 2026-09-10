@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { certificateRejectionsApi } from '../api/endpoints';
+import { WarningTriangleIcon } from './WarningTriangleIcon';
 
 // Certificate rejections are high-priority/security-relevant (CLAUDE.md) —
 // polled rather than fetched once like SmtpWarningBanner, so a rejection
@@ -60,8 +61,9 @@ export function CertificateRejectionBanner() {
   }
 
   return (
-    <div role="alert" className="smtp-warning">
-      <span>{t('certificateRejections.banner', { count })}</span>{' '}
+    <div role="alert" className="banner banner-accent">
+      <WarningTriangleIcon />
+      <span>{t('certificateRejections.banner', { count })}</span>
       <button type="button" className="btn-ghost" disabled={acknowledging} onClick={acknowledge}>
         {t('certificateRejections.acknowledge')}
       </button>

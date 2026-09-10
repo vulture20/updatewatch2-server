@@ -18,6 +18,9 @@ export interface AgentListItem {
   pendingUpdateCount: number;
   /** Set when this agent presented an invalid/expired/unrecognized client certificate within the last 24 hours — flags the row with a warning icon. */
   lastCertificateRejectionReason: string | null;
+  /** Same free-text string as AgentDetail.operatingSystem (e.g. "Windows Server 2022") — drives the per-row OS icon and the OS/OS-family filter. */
+  operatingSystem: string | null;
+  lastAliveAt: string | null;
 }
 
 export interface AgentDetail {

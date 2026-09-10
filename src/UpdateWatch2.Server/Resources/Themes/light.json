@@ -1,11 +1,10 @@
 {
   "name": "light",
   "colors": {
-    "background": "#ffffff",
-    "surface": "#f2f3fb",
-    "text": "#23272a",
-    "primary": "#5865f2",
-    "accent": "#1d9d55",
-    "danger": "#d83c3e"
+    "background": "#f4f3fa",
+    "surface": "#ffffff",
+    "text": "#211f2e",
+    "accent": "#9184d9",
+    "danger": "#ed4245"
   }
 }

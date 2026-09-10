@@ -1,21 +1,23 @@
 import { useTranslation } from 'react-i18next';
 
-const LANGUAGES = ['en', 'de'] as const;
+const LANGUAGES = ['de', 'en'] as const;
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation();
 
   return (
-    <select
-      aria-label="Language"
-      value={i18n.resolvedLanguage}
-      onChange={(event) => void i18n.changeLanguage(event.target.value)}
-    >
+    <div className="seg" role="radiogroup" aria-label="Language">
       {LANGUAGES.map((lng) => (
-        <option key={lng} value={lng}>
+        <label key={lng} className="seg-opt">
+          <input
+            type="radio"
+            name="lang"
+            checked={i18n.resolvedLanguage === lng}
+            onChange={() => void i18n.changeLanguage(lng)}
+          />
           {lng.toUpperCase()}
-        </option>
+        </label>
       ))}
-    </select>
+    </div>
   );
 }

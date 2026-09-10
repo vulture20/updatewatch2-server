@@ -318,6 +318,27 @@ public class AgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAllAsync_surfaces_operating_system_and_last_alive_at_for_the_overview_list()
+    {
+        // These two fields (added so AgentsListPage can show a per-row OS
+        // icon, an OS filter, and a "last seen" column without a per-agent
+        // round trip) already exist on AgentDetailDto — this just confirms
+        // GetAllAsync's own projection carries them too, not only the
+        // detail lookup.
+        var hostname = await RegisterApproveAndCertifyAsync("os-and-alive-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.OperatingSystem = "Ubuntu 22.04 LTS";
+        agent.LastAliveAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var list = await _service.GetAllAsync();
+
+        var item = Assert.Single(list, a => a.Hostname == hostname);
+        Assert.Equal("Ubuntu 22.04 LTS", item.OperatingSystem);
+        Assert.Equal(agent.LastAliveAt, item.LastAliveAt);
+    }
+
+    [Fact]
     public async Task GetByHostnameAsync_surfaces_the_rejection_reason_and_timestamp()
     {
         var hostname = await RegisterApproveAndCertifyAsync("cert-flagged-detail-host");
