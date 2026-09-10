@@ -85,6 +85,28 @@ public class CertificateExpiryWorkerTests : IDisposable
     }
 
     [Fact]
+    public async Task Sends_no_email_when_CertificateExpiryNotificationsEnabled_is_off_even_with_a_recipient_configured()
+    {
+        var renewed = _certSource.EnsureServerLeaf("disabled-toggle-host");
+        _certificateAuthority.RenewalResult = renewed;
+        _settingsStore.Smtp = new SmtpOptions { Host = "smtp.example.com", FromAddress = "uw2@example.com", NotificationRecipientAddress = "alerts@example.com" };
+        _settingsStore.Certificate = new CertificateOptions { CertificateExpiryNotificationsEnabled = false, CertificateExpiryWarningLeadDays = 5000 };
+        var worker = CreateWorker(TimeSpan.FromHours(999));
+
+        await worker.StartAsync(CancellationToken.None);
+        await WaitUntilAsync(() => _certificateAuthority.RenewCallCount >= 1);
+        await worker.StopAsync(CancellationToken.None);
+
+        // The renewal itself and the CA-root-within-window condition both
+        // still apply (leadDays: 5000 makes the root "near expiry" too) —
+        // only the toggle being off must be what suppresses the email.
+        Assert.Empty(_email.SentNotifications);
+        var page = await GetAuditPageAsync();
+        Assert.Contains(page.Entries, e => e.Action == "certificate.server-leaf.renewed");
+        Assert.Contains(page.Entries, e => e.Action == "certificate.ca-root.expiry-warning");
+    }
+
+    [Fact]
     public async Task Retries_the_renewal_notice_email_on_a_later_tick_after_the_first_send_attempt_fails()
     {
         var renewed = _certSource.EnsureServerLeaf("retry-host");

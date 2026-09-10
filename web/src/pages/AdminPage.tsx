@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { announceAdminSettingsSaved } from '../adminSettingsEvents';
-import { adminApi, agentUpdatesApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
+import { adminApi, agentUpdatesApi, certificateAuthorityApi, notificationsApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { AuditLogTab } from '../components/AuditLogTab';
 import type { AdEncryption, AdminSettings, AgentUpdateStatus, CaRotationStatus, SmtpEncryption, UpdateFilter, VersionInfo } from '../api/types';
@@ -72,6 +72,21 @@ export function AdminPage() {
   const [editingFilterId, setEditingFilterId] = useState<number | null>(null);
   const [editFilterName, setEditFilterName] = useState('');
   const [editFilterPattern, setEditFilterPattern] = useState('');
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [testEmailBusy, setTestEmailBusy] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<'success' | null>(null);
+  const [testEmailError, setTestEmailError] = useState<string | null>(null);
+
+  const sendTestEmail = () => {
+    setTestEmailError(null);
+    setTestEmailResult(null);
+    setTestEmailBusy(true);
+    notificationsApi
+      .testEmail(testEmailAddress)
+      .then(() => setTestEmailResult('success'))
+      .catch((err) => setTestEmailError(err instanceof ApiError ? err.message : t('login.genericError')))
+      .finally(() => setTestEmailBusy(false));
+  };
 
   const reloadCaStatus = () =>
     certificateAuthorityApi
@@ -397,6 +412,30 @@ export function AdminPage() {
             />
           </label>
           <p className="field-hint">{t('admin.notificationRecipientAddressHint')}</p>
+          <label>
+            {t('admin.testEmailAddress')}
+            <input type="email" value={testEmailAddress} onChange={(e) => setTestEmailAddress(e.target.value)} />
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <button type="button" disabled={testEmailBusy || !testEmailAddress} onClick={sendTestEmail}>
+              {testEmailBusy ? t('admin.testEmailSending') : t('admin.testEmailSend')}
+            </button>
+            {testEmailResult === 'success' && <span className="saved-message" role="status">{t('admin.testEmailSuccess')}</span>}
+          </div>
+          {testEmailError && <div role="alert" className="login-error">{testEmailError}</div>}
+          </div>
+
+          <div className="card">
+          <span className="card-kicker">{t('admin.certificateExpiryNotifications.title')}</span>
+          <label>
+            <input
+              type="checkbox"
+              checked={form.certificateExpiryNotificationsEnabled}
+              onChange={(e) => update('certificateExpiryNotificationsEnabled', e.target.checked)}
+            />
+            {t('admin.certificateExpiryNotifications.enabled')}
+          </label>
+          <p className="field-hint">{t('admin.certificateExpiryNotifications.hint')}</p>
           </div>
 
           <div className="card">

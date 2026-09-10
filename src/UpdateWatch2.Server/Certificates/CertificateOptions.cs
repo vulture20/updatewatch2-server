@@ -35,4 +35,18 @@ public class CertificateOptions
     /// class's own doc comment doesn't apply to it.
     /// </summary>
     public int CertificateExpiryWarningLeadDays { get; set; } = 60;
+
+    /// <summary>
+    /// Admin on/off switch for the CA-root/server-leaf expiry emails
+    /// specifically — at the user's explicit request, an explicit toggle
+    /// rather than only the implicit "no recipient configured" off-switch
+    /// <see cref="Notifications.SmtpOptions.NotificationRecipientAddress"/>
+    /// already provides. Default <see langword="true"/>. Gates
+    /// <see cref="CertificateExpiryWorker"/>'s emails only — the server
+    /// leaf's own proactive self-renewal (<see cref="ICertificateAuthority.RenewServerLeafIfNearExpiry"/>)
+    /// and the audit log entries for both certificates keep happening
+    /// unconditionally either way, since those matter independently of
+    /// whether anyone gets emailed about them.
+    /// </summary>
+    public bool CertificateExpiryNotificationsEnabled { get; set; } = true;
 }

@@ -53,6 +53,11 @@ export const adminApi = {
     apiClient.put<AdminSettings>('/api/admin/settings', settings),
 };
 
+/** See NotificationsController — wires up the previously-unreachable SendTestEmailAsync. */
+export const notificationsApi = {
+  testEmail: (toAddress: string) => apiClient.post<void>('/api/admin/notifications/test-email', { toAddress }),
+};
+
 /** CA root rotation (updatewatch2-server#6) — see CertificateAuthorityController. */
 export const certificateAuthorityApi = {
   getStatus: () => apiClient.get<CaRotationStatus>('/api/admin/certificate-authority'),

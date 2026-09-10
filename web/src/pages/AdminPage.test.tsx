@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { adminApi, agentUpdatesApi, auditLogApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
+import { adminApi, agentUpdatesApi, auditLogApi, certificateAuthorityApi, notificationsApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { AdminPage } from './AdminPage';
 
@@ -10,6 +10,9 @@ vi.mock('../api/endpoints', () => ({
   adminApi: {
     getSettings: vi.fn(),
     updateSettings: vi.fn(),
+  },
+  notificationsApi: {
+    testEmail: vi.fn(),
   },
   versionApi: {
     get: vi.fn(),
@@ -38,6 +41,7 @@ vi.mock('../api/endpoints', () => ({
 
 const mockedGetSettings = vi.mocked(adminApi.getSettings);
 const mockedUpdateSettings = vi.mocked(adminApi.updateSettings);
+const mockedTestEmail = vi.mocked(notificationsApi.testEmail);
 const mockedGetVersion = vi.mocked(versionApi.get);
 const mockedGetCaStatus = vi.mocked(certificateAuthorityApi.getStatus);
 const mockedPrepareRotation = vi.mocked(certificateAuthorityApi.prepareRotation);
@@ -95,6 +99,7 @@ const baseSettings = {
   agentAutoUpdateCheckIntervalHours: 6,
   auditLogRetentionDays: 90,
   certificateExpiryWarningLeadDays: 60,
+  certificateExpiryNotificationsEnabled: true,
 };
 
 describe('AdminPage', () => {
@@ -118,6 +123,7 @@ describe('AdminPage', () => {
     mockedCreateUpdateFilter.mockReset();
     mockedUpdateUpdateFilter.mockReset();
     mockedDeleteUpdateFilter.mockReset();
+    mockedTestEmail.mockReset();
   });
 
   it('renders the loaded settings into the form fields', async () => {
@@ -409,6 +415,65 @@ describe('AdminPage', () => {
     );
   });
 
+  it('turns certificate expiry notifications off and submits the change', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, certificateExpiryNotificationsEnabled: false });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Notifications' }));
+
+    const toggle = screen.getByLabelText('Enabled', { selector: 'input[type="checkbox"]' });
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    expect(toggle).not.toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ certificateExpiryNotificationsEnabled: false }));
+  });
+
+  it('sends a test email and shows a confirmation', async () => {
+    mockedTestEmail.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Notifications' }));
+
+    await user.type(screen.getByLabelText('Send a test email to'), 'me@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send test email' }));
+
+    expect(await screen.findByText('Sent.')).toBeInTheDocument();
+    expect(mockedTestEmail).toHaveBeenCalledWith('me@example.com');
+  });
+
+  it('shows an error message when sending a test email fails', async () => {
+    mockedTestEmail.mockRejectedValue(new ApiError(400, 'SMTP is not configured.'));
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Notifications' }));
+
+    await user.type(screen.getByLabelText('Send a test email to'), 'me@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send test email' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('SMTP is not configured.');
+  });
+
   it('sends a typed GitHub token as gitHubToken, and omits it when left blank', async () => {
     mockedUpdateSettings.mockResolvedValue(baseSettings);
     const user = userEvent.setup();
@@ -490,6 +555,7 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     mockedCreateUpdateFilter.mockReset();
     mockedUpdateUpdateFilter.mockReset();
     mockedDeleteUpdateFilter.mockReset();
+    mockedTestEmail.mockReset();
   });
 
   const openCertificatesTab = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -635,6 +701,7 @@ describe('AdminPage update filters', () => {
     mockedCreateUpdateFilter.mockReset();
     mockedUpdateUpdateFilter.mockReset();
     mockedDeleteUpdateFilter.mockReset();
+    mockedTestEmail.mockReset();
   });
 
   const openUpdateFiltersTab = async (user: ReturnType<typeof userEvent.setup>) => {

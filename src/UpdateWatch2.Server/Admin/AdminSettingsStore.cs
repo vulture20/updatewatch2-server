@@ -137,6 +137,7 @@ public class AdminSettingsStore(
         row.AgentAutoUpdateCheckIntervalHours = request.AgentAutoUpdateCheckIntervalHours;
         row.AuditLogRetentionDays = request.AuditLogRetentionDays;
         row.CertificateExpiryWarningLeadDays = request.CertificateExpiryWarningLeadDays;
+        row.CertificateExpiryNotificationsEnabled = request.CertificateExpiryNotificationsEnabled;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -180,7 +181,8 @@ public class AdminSettingsStore(
                 !string.IsNullOrEmpty(_agentAutoUpdate.GitHubToken),
                 _agentAutoUpdate.CheckIntervalHours,
                 _auditLogRetentionDays,
-                _certificate.CertificateExpiryWarningLeadDays);
+                _certificate.CertificateExpiryWarningLeadDays,
+                _certificate.CertificateExpiryNotificationsEnabled);
         }
     }
 
@@ -219,6 +221,7 @@ public class AdminSettingsStore(
         AgentAutoUpdateCheckIntervalHours = defaultAgentAutoUpdate.Value.CheckIntervalHours,
         AuditLogRetentionDays = DefaultAuditLogRetentionDays,
         CertificateExpiryWarningLeadDays = defaultCertificate.Value.CertificateExpiryWarningLeadDays,
+        CertificateExpiryNotificationsEnabled = defaultCertificate.Value.CertificateExpiryNotificationsEnabled,
     };
 
     private void Apply(AdminSettings row)
@@ -261,6 +264,7 @@ public class AdminSettingsStore(
         {
             AgentCertificateValidityDays = row.AgentCertificateValidityDays,
             CertificateExpiryWarningLeadDays = row.CertificateExpiryWarningLeadDays,
+            CertificateExpiryNotificationsEnabled = row.CertificateExpiryNotificationsEnabled,
         };
         var agentAutoUpdate = new AgentAutoUpdateOptions
         {

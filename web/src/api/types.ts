@@ -141,6 +141,8 @@ export interface AdminSettings {
   auditLogRetentionDays: number;
   /** Days before NotAfter the server treats the CA root/server leaf as "approaching expiry" — see CertificateExpiryWorker. Default 60. */
   certificateExpiryWarningLeadDays: number;
+  /** On/off switch for the CA-root/server-leaf expiry emails specifically — doesn't affect the server leaf's own unconditional self-renewal. Default true. */
+  certificateExpiryNotificationsEnabled: boolean;
 }
 
 /**

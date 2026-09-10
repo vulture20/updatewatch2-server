@@ -59,6 +59,16 @@ namespace UpdateWatch2.Server.Certificates;
 /// notification email alone (without re-renewing anything) if the first
 /// send attempt failed.
 ///
+/// <see cref="CertificateOptions.CertificateExpiryNotificationsEnabled"/>
+/// (server v0.30.1, at the user's explicit request — an explicit off
+/// switch, not just the implicit "no recipient configured" one) folds
+/// into the same "can we actually email about this" gate a missing
+/// recipient already produces: disabled behaves exactly like no
+/// recipient, in both branches — audit-logged immediately, no email
+/// attempt, nothing left pending to retry. It never affects the server
+/// leaf's own unconditional self-renewal, only whether anyone gets
+/// emailed about either certificate.
+///
 /// Both branches follow the same "audit-log and mark done only once
 /// actually handled" rule: if there's no recipient configured, "handled"
 /// means immediately (nothing to retry); if there is, "handled" means the
@@ -108,7 +118,12 @@ public class CertificateExpiryWorker(
         var leadTime = TimeSpan.FromDays(leadDays);
         var smtp = settingsStore.Smtp;
         var recipient = smtp.NotificationRecipientAddress;
-        var canEmail = smtp.IsConfigured && !string.IsNullOrWhiteSpace(recipient);
+        // The explicit CertificateExpiryNotificationsEnabled toggle folds
+        // into the same "can we actually email about this" gate a missing
+        // recipient already produces — disabling it behaves exactly like
+        // leaving the recipient empty: audit-log immediately, no email
+        // attempt, nothing left pending to retry.
+        var canEmail = smtp.IsConfigured && !string.IsNullOrWhiteSpace(recipient) && settingsStore.Certificate.CertificateExpiryNotificationsEnabled;
 
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

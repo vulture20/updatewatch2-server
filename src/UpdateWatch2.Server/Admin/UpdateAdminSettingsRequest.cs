@@ -40,4 +40,5 @@ public record UpdateAdminSettingsRequest(
     string? GitHubToken = null,
     int AgentAutoUpdateCheckIntervalHours = 6,
     int AuditLogRetentionDays = 90,
-    int CertificateExpiryWarningLeadDays = 60);
+    int CertificateExpiryWarningLeadDays = 60,
+    bool CertificateExpiryNotificationsEnabled = true);

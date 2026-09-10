@@ -99,5 +99,8 @@ public class AdminSettings
     /// <summary>See <see cref="Certificates.CertificateOptions.CertificateExpiryWarningLeadDays"/>'s doc comment. Default 60.</summary>
     public int CertificateExpiryWarningLeadDays { get; set; } = 60;
 
+    /// <summary>See <see cref="Certificates.CertificateOptions.CertificateExpiryNotificationsEnabled"/>'s doc comment. Default true.</summary>
+    public bool CertificateExpiryNotificationsEnabled { get; set; } = true;
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

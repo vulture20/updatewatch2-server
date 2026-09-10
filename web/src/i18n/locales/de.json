@@ -146,6 +146,15 @@
     "smtpFromName": "Absendername",
     "notificationRecipientAddress": "Benachrichtigungsempfänger",
     "notificationRecipientAddressHint": "Wohin automatische Benachrichtigungs-E-Mails gehen — die Zertifikatsablauf-Warnung unten sowie die Update-Schwellenwert-Benachrichtigung. Leer lassen, um keine davon zu erhalten (die Prüfungen selbst laufen trotzdem weiter).",
+    "testEmailAddress": "Test-E-Mail senden an",
+    "testEmailSend": "Test-E-Mail senden",
+    "testEmailSending": "Wird gesendet…",
+    "testEmailSuccess": "Gesendet.",
+    "certificateExpiryNotifications": {
+      "title": "Zertifikatsablauf-Benachrichtigungen",
+      "enabled": "Aktiviert",
+      "hint": "Schaltet die CA-Wurzel-/Server-Zertifikat-Ablaufwarnungen oben vollständig ab, unabhängig davon, ob ein Empfänger eingetragen ist. Die automatische Erneuerung des Server-Zertifikats selbst (und die Audit-Log-Einträge für beide Zertifikate) laufen trotzdem weiter — dies steuert nur, ob jemand per E-Mail darüber informiert wird."
+    },
     "notificationUpdatesPerMachine": "Schwelle Updates pro Maschine",
     "notificationAffectedMachines": "Schwelle betroffene Maschinen",
     "adEnabled": "Active-Directory-Anmeldung aktivieren",

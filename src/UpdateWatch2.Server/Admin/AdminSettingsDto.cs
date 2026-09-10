@@ -36,4 +36,5 @@ public record AdminSettingsDto(
     bool GitHubTokenSet,
     int AgentAutoUpdateCheckIntervalHours,
     int AuditLogRetentionDays,
-    int CertificateExpiryWarningLeadDays);
+    int CertificateExpiryWarningLeadDays,
+    bool CertificateExpiryNotificationsEnabled);

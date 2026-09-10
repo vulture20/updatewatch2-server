@@ -146,6 +146,15 @@
     "smtpFromName": "From name",
     "notificationRecipientAddress": "Notification recipient",
     "notificationRecipientAddressHint": "Where automated alert emails go — the certificate-expiry warning below, and the update-threshold notification. Leave empty to receive none of them (the checks themselves still run either way).",
+    "testEmailAddress": "Send a test email to",
+    "testEmailSend": "Send test email",
+    "testEmailSending": "Sending…",
+    "testEmailSuccess": "Sent.",
+    "certificateExpiryNotifications": {
+      "title": "Certificate expiry notifications",
+      "enabled": "Enabled",
+      "hint": "Turns the CA-root/server-certificate expiry emails above off entirely, independent of whether a recipient is configured. The server certificate's own automatic renewal (and both certificates' audit log entries) still happen either way — this only controls whether anyone gets emailed about it."
+    },
     "notificationUpdatesPerMachine": "Updates-per-machine threshold",
     "notificationAffectedMachines": "Affected-machines threshold",
     "adEnabled": "Enable Active Directory login",

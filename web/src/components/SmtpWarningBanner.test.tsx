@@ -63,6 +63,7 @@ const baseSettings = {
   agentAutoUpdateCheckIntervalHours: 6,
   auditLogRetentionDays: 90,
   certificateExpiryWarningLeadDays: 60,
+  certificateExpiryNotificationsEnabled: true,
 };
 
 // Renders both siblings the way App.tsx actually does — SmtpWarningBanner

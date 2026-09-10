@@ -11,6 +11,14 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.1] - 2026-09-10
+
+### Added
+
+- **A real test-mail mechanism — found missing by a user report.** `IEmailNotificationService.SendTestEmailAsync` existed since this project's earliest SMTP work, with a doc comment claiming it backed "the Administration test-mail button", but no controller had ever actually injected `IEmailNotificationService` — the endpoint/button it was written for was never built, so an admin had no way to confirm SMTP host/port/credentials/encryption actually work before relying on any of it. New `POST /api/admin/notifications/test-email` (`NotificationsController`) plus a "Send test email" field+button in the Notifications tab close the gap.
+- **`AdminSettings.CertificateExpiryNotificationsEnabled`** (Notifications tab, default true, at the user's explicit request for an explicit switch — not just the already-existing implicit "no recipient configured" off-switch). Turns the CA-root/server-certificate expiry emails off entirely; the server leaf's own unconditional self-renewal and both certificates' audit log entries keep happening regardless — this only controls whether anyone gets emailed. `CertificateExpiryWorker` folds it into the same gate a missing recipient already produced.
+- DB schema bumped to `0.15.1`.
+
 ## [0.30.0] - 2026-09-10
 
 ### Added
