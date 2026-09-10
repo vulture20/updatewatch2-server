@@ -1,7 +1,7 @@
 {
   "nav": {
     "agents": "Agents",
-    "admin": "Administration",
+    "admin": "Settings",
     "logout": "Log out"
   },
   "login": {
@@ -11,6 +11,7 @@
     "password": "Password",
     "submit": "Sign in",
     "smtpWarning": "Mail server is unreachable or misconfigured.",
+    "smtpWarningLink": "Configure SMTP",
     "lockedOut": "Too many failed attempts. Try again later.",
     "genericError": "Something went wrong. Please try again."
   },
@@ -97,7 +98,7 @@
     "deleteConfirm": "Permanently delete \"{{hostname}}\"? Its certificate stops being accepted immediately, its update history is removed, and it can only reconnect by registering again from scratch as a new, unapproved agent. This cannot be undone."
   },
   "admin": {
-    "title": "Administration",
+    "title": "Settings",
     "serverVersion": "Server version",
     "protocolVersion": "Protocol version",
     "databaseVersion": "Database schema version",
@@ -107,7 +108,8 @@
       "activeDirectory": "Active Directory",
       "certificates": "Certificates",
       "updateFilters": "Update filters",
-      "auditLog": "Audit Log"
+      "auditLog": "Audit Log",
+      "info": "Info"
     },
     "logLevel": "Log level",
     "logLevelHint": "Takes effect on the server's next restart.",

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { adminApi } from '../api/endpoints';
 import { WarningTriangleIcon } from './WarningTriangleIcon';
 
@@ -44,6 +45,7 @@ export function SmtpWarningBanner() {
     <div role="alert" className="banner banner-neutral">
       <WarningTriangleIcon />
       <span>{t('login.smtpWarning')}</span>
+      <Link to="/admin?tab=notifications">{t('login.smtpWarningLink')}</Link>
     </div>
   );
 }

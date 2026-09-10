@@ -1,7 +1,7 @@
 {
   "nav": {
     "agents": "Agents",
-    "admin": "Administration",
+    "admin": "Einstellungen",
     "logout": "Abmelden"
   },
   "login": {
@@ -11,6 +11,7 @@
     "password": "Passwort",
     "submit": "Anmelden",
     "smtpWarning": "Der Mailserver ist nicht erreichbar oder falsch konfiguriert.",
+    "smtpWarningLink": "SMTP einrichten",
     "lockedOut": "Zu viele Fehlversuche. Bitte später erneut versuchen.",
     "genericError": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
   },
@@ -97,7 +98,7 @@
     "deleteConfirm": "\"{{hostname}}\" endgültig löschen? Sein Zertifikat wird sofort nicht mehr akzeptiert, sein Update-Verlauf wird entfernt, und er kann sich nur wieder verbinden, indem er sich als neuer, nicht bestätigter Agent komplett neu registriert. Dies kann nicht rückgängig gemacht werden."
   },
   "admin": {
-    "title": "Administration",
+    "title": "Einstellungen",
     "serverVersion": "Server-Version",
     "protocolVersion": "Protokollversion",
     "databaseVersion": "Datenbankversion",
@@ -107,7 +108,8 @@
       "activeDirectory": "Active Directory",
       "certificates": "Zertifikate",
       "updateFilters": "Update-Filter",
-      "auditLog": "Audit-Log"
+      "auditLog": "Audit-Log",
+      "info": "Info"
     },
     "logLevel": "Log-Stufe",
     "logLevelHint": "Wird beim nächsten Neustart des Servers wirksam.",

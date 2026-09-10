@@ -46,7 +46,7 @@ export function LoginPage() {
         <div className="login-logo-block">
           <img src={logo} alt="" width={46} height={46} />
           <h1>UpdateWatch2</h1>
-          <p className="card-body">{t('login.subtitle')}</p>
+          <p className="text-muted">{t('login.subtitle')}</p>
         </div>
         {error && <div role="alert" className="login-error">{error}</div>}
         <label>

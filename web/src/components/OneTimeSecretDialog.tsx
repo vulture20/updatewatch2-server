@@ -71,7 +71,7 @@ export function OneTimeSecretDialog({
           <button type="button" onClick={copy}>
             {copied ? copiedLabel : copyLabel}
           </button>
-          <button type="button" className="btn-secondary" onClick={onClose}>
+          <button type="button" onClick={onClose}>
             {closeLabel}
           </button>
         </div>

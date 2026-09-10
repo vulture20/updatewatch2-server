@@ -11,6 +11,79 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.29.0] - 2026-09-10
+
+### Added
+
+- **A new "Info" settings tab, holding the server/protocol/database schema
+  version numbers previously shown unconditionally above the tabs.** At
+  the user's request. `Administration` is renamed to `Settings`
+  (`Einstellungen`) throughout — matching the source Nocturne mockup's own
+  nav label exactly, not just an arbitrary new name.
+- The SMTP-not-configured banner now carries a "Configure SMTP" link
+  straight to the Notifications tab (`/admin?tab=notifications`,
+  `AdminPage` reads `?tab=` on mount), matching a mockup affordance the
+  first redesign pass had left out — previously just static text with no
+  way to act on it from the banner itself.
+
+### Changed
+
+- **Closer alignment with the source "UpdateWatch2 Redesign" mockup**, at
+  the user's request that the admin UI "still deviates massively from the
+  template." A line-by-line comparison against the mockup's own markup
+  and its Nocturne `styles.css` (re-fetched via `DesignSync`) turned up
+  several real gaps the first redesign pass (`v0.28.0`) had missed:
+  - **Heading scale was compressed to roughly 3/4 of Nocturne's own
+    sizes** (h1 32px vs. the source's 42px, h2 22 vs. 32, down to h6 12
+    vs. 13) — every page read quieter/denser than intended. Restored to
+    the source's exact 42/32/25/20/16/13 scale; `AgentDetailPage`'s
+    "Pending updates" sub-heading gets the same explicit 18px override
+    the mockup itself gives it, so it doesn't balloon along with the new
+    h2 default.
+  - **`.card-title` (the stat-card numbers on the Agents overview) was
+    22px against the source's 17px**, and `.card` padding used
+    `--space-4` (11.2px) instead of the source's tighter `--space-3`
+    (8.4px) — both now match exactly.
+  - **Destructive actions (delete agent, delete update filter) used a
+    red `.btn-danger` treatment the source design system has no
+    equivalent for** — Nocturne is deliberately a mono-accent system
+    with "no saturated flood outside the accent" (its own `styles.css`
+    comment), and the mockup renders both as plain, unremarkable
+    secondary/ghost buttons, relying on the native `confirm()` dialog
+    for the "are you sure" friction instead of button color. Matched
+    exactly; `--color-danger`/`.btn-danger` stay defined for genuine
+    error states (`.login-error` banners), just no longer applied to
+    these two buttons.
+  - The theme-toggle button used `.btn-ghost` (borderless) instead of
+    the source's bordered `.btn-secondary` treatment for an icon button;
+    the header had no `border-bottom` separating it from page content
+    even though the mockup's `.nav` always has one; the logged-in
+    username lacked the source's muted, 13px treatment; the login card's
+    internal gap used the `--space-4` token (11.2px) instead of the
+    source's literal 16px, and its subtitle used `.card-body` (opacity
+    0.8) instead of the source's `.text-muted` (a noticeably fainter
+    ~55% mix) — all now matched exactly.
+  - A settings tab's "Save"/"Saved" row gets a `border-top` divider
+    only when it's nested inside that tab's last card (Active Directory,
+    Certificates, Update filters, Audit log) — never when it's its own
+    standalone row after the cards (General, Notifications), exactly
+    following the source's own inconsistency between tabs rather than
+    picking one treatment for all six. New `.tab-save-row-divided`
+    modifier class captures this.
+  - `OneTimeSecretDialog`'s Close button referenced a `.btn-secondary`
+    class that was never actually defined anywhere in `index.css` —
+    dead code, functionally harmless (an unclassed button already
+    renders identically) but cleaned up.
+  - The Agents overview table's "Reboot required" column only wrapped
+    the value in a `.tag-neutral` pill for the true case, leaving a bare
+    unstyled "—" for the false case — the mockup always wraps both in
+    the same pill. Now consistent.
+  - Removed an "Add filter" `<h3>` sub-heading in the Update filters tab
+    that doesn't exist in the source mockup at all (the field labels
+    already make the form's purpose clear without it) — at the h3 size
+    the corrected scale above gives it (25px), it read as a second,
+    oddly-placed page title.
+
 ## [0.28.1] - 2026-09-10
 
 ### Fixed

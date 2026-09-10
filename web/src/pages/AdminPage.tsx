@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { adminApi, agentUpdatesApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { AuditLogTab } from '../components/AuditLogTab';
@@ -12,7 +13,7 @@ const AD_ENCRYPTIONS: AdEncryption[] = ['None', 'StartTls', 'Ldaps'];
 // 0 is the "unlimited, never discard" sentinel, listed last since it reads
 // more naturally as the final, most-permissive step in the dropdown.
 const AUDIT_LOG_RETENTION_DAYS_OPTIONS = [30, 60, 90, 180, 365, 0] as const;
-const TABS = ['general', 'notifications', 'activeDirectory', 'certificates', 'updateFilters', 'auditLog'] as const;
+const TABS = ['general', 'notifications', 'activeDirectory', 'certificates', 'updateFilters', 'auditLog', 'info'] as const;
 type Tab = (typeof TABS)[number];
 
 type FormState = Omit<
@@ -44,9 +45,16 @@ function toFormState(settings: AdminSettings): FormState {
  */
 export function AdminPage() {
   const { t, i18n } = useTranslation();
+  const [searchParams] = useSearchParams();
   const [version, setVersion] = useState<VersionInfo | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
-  const [tab, setTab] = useState<Tab>('general');
+  // Lets SmtpWarningBanner's "Configure SMTP" link land straight on the
+  // Notifications tab (?tab=notifications) instead of always opening on
+  // General — matches the source mockup's own goSmtpSettings behavior.
+  const requestedTab = searchParams.get('tab');
+  const [tab, setTab] = useState<Tab>(
+    requestedTab && (TABS as readonly string[]).includes(requestedTab) ? (requestedTab as Tab) : 'general',
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState(false);
@@ -185,17 +193,6 @@ export function AdminPage() {
   return (
     <section>
       <h1>{t('admin.title')}</h1>
-
-      {version && (
-        <dl>
-          <dt>{t('admin.serverVersion')}</dt>
-          <dd>{version.server}</dd>
-          <dt>{t('admin.protocolVersion')}</dt>
-          <dd>{version.protocol}</dd>
-          <dt>{t('admin.databaseVersion')}</dt>
-          <dd>{version.database}</dd>
-        </dl>
-      )}
 
       <form onSubmit={(event) => void handleSubmit(event)}>
         {error && <div role="alert" className="login-error">{error}</div>}
@@ -486,7 +483,7 @@ export function AdminPage() {
           </label>
           <p className="field-hint">{t('admin.adLoginGroupDnHint')}</p>
 
-          <div className="tab-save-row">
+          <div className="tab-save-row tab-save-row-divided">
             <button type="submit" className="btn-accent" disabled={saving}>
               {t('admin.save')}
             </button>
@@ -510,7 +507,7 @@ export function AdminPage() {
           </label>
           <p className="field-hint">{t('admin.agentCertificateValidityDaysHint')}</p>
 
-          <div className="tab-save-row">
+          <div className="tab-save-row tab-save-row-divided">
             <button type="submit" className="btn-accent" disabled={saving}>
               {t('admin.save')}
             </button>
@@ -629,7 +626,7 @@ export function AdminPage() {
                     <button type="button" onClick={() => startEditingUpdateFilter(filter)}>
                       {t('admin.updateFilters.edit')}
                     </button>{' '}
-                    <button type="button" className="btn-danger" onClick={() => deleteUpdateFilter(filter)}>
+                    <button type="button" className="btn-ghost" onClick={() => deleteUpdateFilter(filter)}>
                       {t('admin.updateFilters.delete')}
                     </button>
                   </li>
@@ -638,7 +635,6 @@ export function AdminPage() {
             </ul>
           )}
 
-          <h3>{t('admin.updateFilters.addTitle')}</h3>
           <label>
             {t('admin.updateFilters.name')}
             <input type="text" value={newFilterName} onChange={(e) => setNewFilterName(e.target.value)} />
@@ -652,7 +648,7 @@ export function AdminPage() {
             {t('admin.updateFilters.add')}
           </button>
 
-          <div className="tab-save-row">
+          <div className="tab-save-row tab-save-row-divided">
             <button type="submit" className="btn-accent" disabled={saving}>
               {t('admin.save')}
             </button>
@@ -679,7 +675,7 @@ export function AdminPage() {
           </label>
           <p className="field-hint">{t('admin.auditLogRetentionDaysHint')}</p>
 
-          <div className="tab-save-row">
+          <div className="tab-save-row tab-save-row-divided">
             <button type="submit" className="btn-accent" disabled={saving}>
               {t('admin.save')}
             </button>
@@ -688,6 +684,22 @@ export function AdminPage() {
           </div>
 
           <AuditLogTab />
+        </div>
+
+        <div hidden={tab !== 'info'} className="tab-panel">
+          <div className="card">
+            <span className="card-kicker">{t('admin.tabs.info')}</span>
+            {version && (
+              <dl>
+                <dt className="text-muted">{t('admin.serverVersion')}</dt>
+                <dd>{version.server}</dd>
+                <dt className="text-muted">{t('admin.protocolVersion')}</dt>
+                <dd>{version.protocol}</dd>
+                <dt className="text-muted">{t('admin.databaseVersion')}</dt>
+                <dd>{version.database}</dd>
+              </dl>
+            )}
+          </div>
         </div>
           </div>
         </div>

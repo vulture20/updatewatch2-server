@@ -8,7 +8,7 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="btn-ghost btn-icon"
+      className="btn-icon"
       aria-label={theme === 'light' ? t('theme.dark') : t('theme.light')}
       title={theme === 'light' ? t('theme.dark') : t('theme.light')}
       onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}

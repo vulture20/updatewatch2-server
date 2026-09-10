@@ -141,7 +141,7 @@ export function AgentDetailPage() {
           >
             {agent.pendingInstallRequestedAt ? t('agentDetail.installPending') : t('agentDetail.triggerInstall')}
           </button>
-          <button type="button" className="btn-danger" onClick={deleteAgent}>
+          <button type="button" onClick={deleteAgent}>
             {t('agentDetail.delete')}
           </button>
         </div>
@@ -224,7 +224,7 @@ export function AgentDetailPage() {
         />
       )}
 
-      <h2>{t('agentDetail.updates')}</h2>
+      <h2 style={{ fontSize: '18px', margin: '22px 0 10px' }}>{t('agentDetail.updates')}</h2>
       {updates.length === 0 ? (
         <p>{t('agentDetail.noUpdates')}</p>
       ) : (

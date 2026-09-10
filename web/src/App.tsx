@@ -26,7 +26,7 @@ export default function App() {
             <div className="app-shell">
               <header>
                 <div className="app-shell-brand">
-                  <img src={logo} alt="" width={28} height={28} />
+                  <img src={logo} alt="" width={24} height={24} />
                   <span>UpdateWatch2</span>
                 </div>
                 <nav>
@@ -40,7 +40,7 @@ export default function App() {
                 <div className="app-shell-controls">
                   <LanguageSwitcher />
                   <ThemeToggle />
-                  {username && <span>{username}</span>}
+                  {username && <span className="text-muted">{username}</span>}
                   <button type="button" className="btn-ghost" onClick={() => void logout()}>
                     {t('nav.logout')}
                   </button>

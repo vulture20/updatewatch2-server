@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { adminApi, agentUpdatesApi, auditLogApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
@@ -118,7 +119,11 @@ describe('AdminPage', () => {
   });
 
   it('renders the loaded settings into the form fields', async () => {
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByLabelText('SMTP host')).toHaveValue('smtp.example.com');
     expect(screen.getByLabelText('Max attempts')).toHaveValue(6);
@@ -131,7 +136,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockResolvedValue({ ...baseSettings, bruteForceMaxAttempts: 9 });
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
 
     const maxAttempts = screen.getByLabelText('Max attempts');
@@ -149,7 +158,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockResolvedValue(baseSettings);
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     await user.click(screen.getByRole('tab', { name: 'Notifications' }));
     await user.type(screen.getByLabelText('SMTP password'), 'new-secret');
@@ -163,7 +176,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockResolvedValue({ ...baseSettings, adEnabled: true });
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     await user.click(screen.getByRole('tab', { name: 'Active Directory' }));
 
@@ -190,7 +207,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockResolvedValue({ ...baseSettings, agentCertificateValidityDays: 90 });
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     await user.click(screen.getByRole('tab', { name: 'Certificates' }));
 
@@ -212,7 +233,11 @@ describe('AdminPage', () => {
     });
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     await user.click(screen.getByRole('tab', { name: 'Audit Log' }));
 
@@ -229,7 +254,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockResolvedValue({ ...baseSettings, agentAutoUpdateEnabled: false });
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
 
     expect(await screen.findByText('0.11.0')).toBeInTheDocument();
@@ -256,7 +285,11 @@ describe('AdminPage', () => {
     });
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     expect(await screen.findByText('0.11.0')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Check now' }));
@@ -269,7 +302,11 @@ describe('AdminPage', () => {
     mockedCheckNow.mockRejectedValue(new ApiError(500, 'GitHub is unreachable.'));
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     await user.click(screen.getByRole('button', { name: 'Check now' }));
 
@@ -279,7 +316,11 @@ describe('AdminPage', () => {
   it('disables Check now while the feature itself is off', async () => {
     mockedGetAgentUpdateStatus.mockResolvedValue({ enabled: false, latestVersion: null, checkedAt: null, lastError: null });
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByRole('button', { name: 'Check now' })).toBeDisabled();
   });
@@ -288,7 +329,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockResolvedValue({ ...baseSettings, agentAutoUpdateCheckIntervalHours: 24 });
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
 
     const interval = screen.getByLabelText('Check interval (hours)');
@@ -304,7 +349,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockResolvedValue({ ...baseSettings, auditLogRetentionDays: 30 });
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
 
     await user.selectOptions(screen.getByLabelText('Audit log retention'), '30');
@@ -316,7 +365,11 @@ describe('AdminPage', () => {
 
   it('offers unlimited as a retention option', async () => {
     const user = userEvent.setup();
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     // The dropdown's own tab isn't active by default — its <option>s are
     // only in the accessibility tree (and so findable by role) once its
@@ -330,7 +383,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockResolvedValue(baseSettings);
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     await screen.findByRole('status');
@@ -348,7 +405,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockResolvedValue(baseSettings);
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
 
     const maxAttempts = screen.getByLabelText('Max attempts');
@@ -366,7 +427,11 @@ describe('AdminPage', () => {
     mockedUpdateSettings.mockRejectedValue(new ApiError(400, 'SmtpPort must be between 1 and 65535.'));
     const user = userEvent.setup();
 
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -398,7 +463,11 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
   });
 
   const openCertificatesTab = async (user: ReturnType<typeof userEvent.setup>) => {
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     await user.click(screen.getByRole('tab', { name: 'Certificates' }));
   };
@@ -539,7 +608,11 @@ describe('AdminPage update filters', () => {
   });
 
   const openUpdateFiltersTab = async (user: ReturnType<typeof userEvent.setup>) => {
-    render(<AdminPage />);
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
     await screen.findByLabelText('SMTP host');
     await user.click(screen.getByRole('tab', { name: 'Update filters' }));
   };

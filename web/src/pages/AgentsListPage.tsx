@@ -326,7 +326,7 @@ export function AgentsListPage() {
                       </span>
                     </td>
                     <td>
-                      {agent.rebootRequired ? <span className="tag tag-neutral">{t('agents.yes')}</span> : '—'}
+                      <span className="tag tag-neutral">{agent.rebootRequired ? t('agents.yes') : '—'}</span>
                     </td>
                     <td>{agent.pendingUpdateCount}</td>
                     <td className="text-muted">{formatRelativeTime(agent.lastAliveAt, i18n.language) ?? t('agentDetail.never')}</td>
