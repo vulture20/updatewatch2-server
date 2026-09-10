@@ -38,6 +38,13 @@ public interface IAdminSettingsStore
     /// </summary>
     string LogLevel { get; }
 
+    /// <summary>
+    /// Days of audit log history to keep before <c>Audit.AuditLogRetentionWorker</c>'s
+    /// periodic cleanup permanently discards older entries — 0 means
+    /// unlimited/never discard. Default 90.
+    /// </summary>
+    int AuditLogRetentionDays { get; }
+
     /// <summary>Loads the persisted row into the cache, seeding one from appsettings.json's defaults if none exists yet. Call once at startup.</summary>
     Task InitializeAsync(CancellationToken ct = default);
 

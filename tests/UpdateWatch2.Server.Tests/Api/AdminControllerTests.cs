@@ -48,6 +48,7 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
         Assert.False(settings.SmtpConfigured);
         Assert.False(settings.SmtpPasswordSet);
         Assert.Equal(730, settings.AgentCertificateValidityDays);
+        Assert.Equal(90, settings.AuditLogRetentionDays);
     }
 
     [Fact]
@@ -135,6 +136,31 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
         var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AgentAutoUpdateCheckIntervalHours = 0 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_rejects_an_audit_log_retention_outside_the_fixed_set_of_steps()
+    {
+        // Not just "must be positive" — the admin UI only ever offers a
+        // fixed dropdown (30/60/90/180/365, plus 0 for unlimited), so the
+        // API rejects anything else too rather than silently accepting an
+        // arbitrary value the UI could never have produced.
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AuditLogRetentionDays = 45 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(0)] // the "unlimited — never discard" sentinel
+    [InlineData(30)]
+    [InlineData(365)]
+    public async Task Put_persists_a_valid_audit_log_retention(int retentionDays)
+    {
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AuditLogRetentionDays = retentionDays });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var settings = await _client.GetFromJsonAsync<AdminSettingsDto>("/api/admin/settings");
+        Assert.Equal(retentionDays, settings!.AuditLogRetentionDays);
     }
 
     [Fact]

@@ -160,6 +160,10 @@
       "delete": "Löschen",
       "deleteConfirm": "Filter \"{{name}}\" löschen? Dadurch verborgene Updates erscheinen sofort wieder in der Anzeige ausstehender Updates."
     },
+    "auditLogRetentionDays": "Aufbewahrungsdauer Audit-Log",
+    "auditLogRetentionDaysHint": "Einträge, die älter sind, werden durch eine regelmäßige Bereinigung endgültig gelöscht — ein Verkürzen löscht beim nächsten Durchlauf auch bereits vorhandene ältere Einträge, nicht nur künftige.",
+    "auditLogRetentionDaysOption": "{{count}} Tage",
+    "auditLogRetentionDaysUnlimited": "Unbegrenzt (nie verwerfen)",
     "save": "Speichern",
     "saved": "Einstellungen gespeichert."
   },

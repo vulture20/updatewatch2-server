@@ -34,6 +34,8 @@ public class FakeAdminSettingsStore(CertificateOptions? certificate = null, Agen
 
     public string LogLevel => throw new NotSupportedException();
 
+    public int AuditLogRetentionDays { get; set; } = 90;
+
     public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
     public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>

@@ -9,8 +9,9 @@ public static class WebApplicationFactoryTestExtensions
 {
     /// <summary>
     /// Strips every registered <see cref="IHostedService"/> — as of this
-    /// writing, just <c>AgentUpdateCheckWorker</c> (updatewatch2-server#14)
-    /// — from a <c>WebApplicationFactory</c>-backed test host. Without
+    /// writing, <c>AgentUpdateCheckWorker</c> (updatewatch2-server#14) and
+    /// <c>AuditLogRetentionWorker</c> — from a <c>WebApplicationFactory</c>-backed
+    /// test host. Without
     /// this, every <c>WebApplicationFactory&lt;Program&gt;</c>-based
     /// integration test in this project starts that worker for real,
     /// which makes a genuine outbound HTTPS call to the live GitHub API

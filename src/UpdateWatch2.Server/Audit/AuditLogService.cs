@@ -60,4 +60,43 @@ public class AuditLogService(AppDbContext db) : IAuditLogService
 
         return new AuditLogPageDto(entries, totalCount, page, pageSize);
     }
+
+    public async Task<int> PurgeOlderThanAsync(int retentionDays, CancellationToken ct = default)
+    {
+        if (retentionDays <= 0)
+        {
+            return 0;
+        }
+
+        var cutoff = DateTimeOffset.UtcNow - TimeSpan.FromDays(retentionDays);
+
+        // Same EF-Core-on-SQLite "a DateTimeOffset comparison operator in a
+        // LINQ predicate can't be translated" gap GetPageAsync's own
+        // comments above and CertificateRejectionService.GetStatusAsync
+        // already document — worked around differently here than either
+        // of those: project down to just (Id, Timestamp), a lightweight
+        // pair rather than full rows (Details included), filter for the
+        // stale ones client-side, then bulk-delete by the resulting Id
+        // list via ExecuteDeleteAsync — a real, single SQL DELETE, not a
+        // load-entity-then-Remove-then-SaveChanges round trip. Filtering
+        // by Id (an int) rather than Timestamp again for the delete itself
+        // sidesteps the same translation gap a second time.
+        var candidates = await db.AuditLogEntries
+            .Select(e => new { e.Id, e.Timestamp })
+            .ToListAsync(ct);
+        var staleIds = candidates.Where(e => e.Timestamp < cutoff).Select(e => e.Id).ToList();
+
+        if (staleIds.Count == 0)
+        {
+            return 0;
+        }
+
+        var deleted = await db.AuditLogEntries.Where(e => staleIds.Contains(e.Id)).ExecuteDeleteAsync(ct);
+        if (deleted > 0)
+        {
+            await LogAsync("system", "audit-log.purged", $"{deleted} entr{(deleted == 1 ? "y" : "ies")} older than {retentionDays}d", ct);
+        }
+
+        return deleted;
+    }
 }

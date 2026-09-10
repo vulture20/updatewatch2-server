@@ -132,6 +132,8 @@ export interface AdminSettings {
   agentAutoUpdateEnabled: boolean;
   gitHubTokenSet: boolean;
   agentAutoUpdateCheckIntervalHours: number;
+  /** 0 = unlimited/never discard. Fixed UI steps: 30/60/90/180/365, or unlimited — see AdminController's server-side validation. */
+  auditLogRetentionDays: number;
 }
 
 /**

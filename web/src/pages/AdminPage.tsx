@@ -8,6 +8,10 @@ import type { AdEncryption, AdminSettings, AgentUpdateStatus, CaRotationStatus, 
 const LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const;
 const SMTP_ENCRYPTIONS: SmtpEncryption[] = ['None', 'StartTls', 'SslTls'];
 const AD_ENCRYPTIONS: AdEncryption[] = ['None', 'StartTls', 'Ldaps'];
+// Matches AdminController's server-side ValidAuditLogRetentionDays exactly —
+// 0 is the "unlimited, never discard" sentinel, listed last since it reads
+// more naturally as the final, most-permissive step in the dropdown.
+const AUDIT_LOG_RETENTION_DAYS_OPTIONS = [30, 60, 90, 180, 365, 0] as const;
 const TABS = ['general', 'notifications', 'activeDirectory', 'certificates', 'updateFilters', 'auditLog'] as const;
 type Tab = (typeof TABS)[number];
 
@@ -601,6 +605,21 @@ export function AdminPage() {
         </div>
 
         <div hidden={tab !== 'auditLog'}>
+          <label>
+            {t('admin.auditLogRetentionDays')}
+            <select
+              value={form.auditLogRetentionDays}
+              onChange={(e) => update('auditLogRetentionDays', Number(e.target.value))}
+            >
+              {AUDIT_LOG_RETENTION_DAYS_OPTIONS.map((days) => (
+                <option key={days} value={days}>
+                  {days === 0 ? t('admin.auditLogRetentionDaysUnlimited') : t('admin.auditLogRetentionDaysOption', { count: days })}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="field-hint">{t('admin.auditLogRetentionDaysHint')}</p>
+
           <AuditLogTab />
         </div>
 

@@ -160,6 +160,10 @@
       "delete": "Delete",
       "deleteConfirm": "Delete the filter \"{{name}}\"? Updates it currently hides will reappear in the pending-updates display immediately."
     },
+    "auditLogRetentionDays": "Audit log retention",
+    "auditLogRetentionDaysHint": "Entries older than this are permanently deleted by a periodic cleanup — lowering this also purges already-existing older entries on the next pass, not just new ones going forward.",
+    "auditLogRetentionDaysOption": "{{count}} days",
+    "auditLogRetentionDaysUnlimited": "Unlimited (never discard)",
     "save": "Save",
     "saved": "Settings saved."
   },

@@ -15,6 +15,10 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
 {
     private static readonly string[] ValidLogLevels = ["DEBUG", "INFO", "WARNING", "ERROR"];
 
+    // 0 is the "unlimited — never discard" sentinel (AdminSettings.AuditLogRetentionDays),
+    // the rest are the fixed steps the admin UI's dropdown offers.
+    private static readonly int[] ValidAuditLogRetentionDays = [0, 30, 60, 90, 180, 365];
+
     [HttpGet]
     public IActionResult Get() => Ok(settingsStore.ToDto());
 
@@ -134,6 +138,11 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
         if (request.AgentAutoUpdateCheckIntervalHours < 1)
         {
             errors.Add("AgentAutoUpdateCheckIntervalHours must be at least 1.");
+        }
+
+        if (!ValidAuditLogRetentionDays.Contains(request.AuditLogRetentionDays))
+        {
+            errors.Add($"AuditLogRetentionDays must be one of: {string.Join(", ", ValidAuditLogRetentionDays)} (0 = unlimited).");
         }
 
         return errors;

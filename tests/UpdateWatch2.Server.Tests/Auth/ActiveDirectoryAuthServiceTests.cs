@@ -79,6 +79,8 @@ public class ActiveDirectoryAuthServiceTests
 
         public string LogLevel => throw new NotSupportedException();
 
+        public int AuditLogRetentionDays => throw new NotSupportedException();
+
         public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
         public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>

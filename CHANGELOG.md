@@ -11,6 +11,32 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.27.0] - 2026-09-10
+
+### Added
+
+- **Admin-configurable audit log retention.** New `AdminSettings.AuditLogRetentionDays`
+  (default 90, DB schema bumped to `0.14.0`), editable in the Administration
+  UI's Audit Log tab via a fixed dropdown (30/60/90/180/365 days, or
+  "Unlimited (never discard)" — `0` is the sentinel for that, validated
+  server-side against exactly that set, not just "must be positive").
+  `AuditLogService.PurgeOlderThanAsync` permanently deletes every entry
+  older than the configured window (a no-op when unlimited) and records
+  its own outcome as a new entry (actor `system`, action
+  `audit-log.purged`) whenever it actually deletes something. Driven by
+  a new `AuditLogRetentionWorker` — this project's second server-side
+  `BackgroundService` after `AgentUpdateCheckWorker` — which checks
+  immediately on startup and then once every 24 hours, re-reading the
+  live setting on every tick so an admin lowering it takes effect on the
+  very next pass rather than only for future entries. Worked around the
+  same EF-Core-on-SQLite "a `DateTimeOffset` comparison operator can't be
+  translated" gap this file already documents elsewhere: `PurgeOlderThanAsync`
+  projects down to just `(Id, Timestamp)` pairs, filters for staleness
+  client-side, then bulk-deletes by the resulting `Id` list via
+  `ExecuteDeleteAsync` — a single real SQL `DELETE`, not a
+  load-then-remove-then-`SaveChanges` round trip, and no `DateTimeOffset`
+  predicate anywhere in the translated SQL either way.
+
 ## [0.26.0] - 2026-09-09
 
 ### Added

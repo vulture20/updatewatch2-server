@@ -91,6 +91,7 @@ const baseSettings = {
   agentAutoUpdateEnabled: true,
   gitHubTokenSet: false,
   agentAutoUpdateCheckIntervalHours: 6,
+  auditLogRetentionDays: 90,
 };
 
 describe('AdminPage', () => {
@@ -297,6 +298,32 @@ describe('AdminPage', () => {
 
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ agentAutoUpdateCheckIntervalHours: 24 }));
+  });
+
+  it('submits an edited audit log retention', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, auditLogRetentionDays: 30 });
+    const user = userEvent.setup();
+
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+
+    await user.selectOptions(screen.getByLabelText('Audit log retention'), '30');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ auditLogRetentionDays: 30 }));
+  });
+
+  it('offers unlimited as a retention option', async () => {
+    const user = userEvent.setup();
+    render(<AdminPage />);
+    await screen.findByLabelText('SMTP host');
+    // The dropdown's own tab isn't active by default — its <option>s are
+    // only in the accessibility tree (and so findable by role) once its
+    // hidden={} div is actually shown.
+    await user.click(screen.getByRole('tab', { name: 'Audit Log' }));
+
+    expect(screen.getByRole('option', { name: 'Unlimited (never discard)' })).toHaveValue('0');
   });
 
   it('sends a typed GitHub token as gitHubToken, and omits it when left blank', async () => {

@@ -116,4 +116,75 @@ public class AuditLogServiceTests : IDisposable
         Assert.Equal(0, page.TotalCount);
         Assert.Empty(page.Entries);
     }
+
+    [Fact]
+    public async Task PurgeOlderThanAsync_deletes_only_entries_older_than_the_retention_window()
+    {
+        await AddBackdatedAsync("stale", TimeSpan.FromDays(100));
+        await AddBackdatedAsync("fresh", TimeSpan.FromDays(10));
+
+        var deleted = await _service.PurgeOlderThanAsync(retentionDays: 90);
+
+        Assert.Equal(1, deleted);
+        // "fresh" survives, plus the purge's own audit-log.purged entry it
+        // just wrote (see the next test) — not just "fresh" alone.
+        var remaining = await _service.GetPageAsync(1, 50);
+        Assert.Equal(2, remaining.TotalCount);
+        Assert.Contains(remaining.Entries, e => e.Action == "fresh");
+        Assert.DoesNotContain(remaining.Entries, e => e.Action == "stale");
+    }
+
+    [Fact]
+    public async Task PurgeOlderThanAsync_records_its_own_audit_entry_when_it_deletes_something()
+    {
+        await AddBackdatedAsync("stale", TimeSpan.FromDays(100));
+
+        await _service.PurgeOlderThanAsync(retentionDays: 90);
+
+        var page = await _service.GetPageAsync(1, 50);
+        Assert.Contains(page.Entries, e => e.Actor == "system" && e.Action == "audit-log.purged");
+    }
+
+    [Fact]
+    public async Task PurgeOlderThanAsync_does_not_log_anything_when_nothing_was_deleted()
+    {
+        await AddBackdatedAsync("fresh", TimeSpan.FromDays(1));
+
+        var deleted = await _service.PurgeOlderThanAsync(retentionDays: 90);
+
+        Assert.Equal(0, deleted);
+        var page = await _service.GetPageAsync(1, 50);
+        Assert.Equal(1, page.TotalCount); // just the one entry added above — no purge entry
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task PurgeOlderThanAsync_is_a_no_op_when_retention_is_the_unlimited_sentinel_or_below(int retentionDays)
+    {
+        await AddBackdatedAsync("ancient", TimeSpan.FromDays(10000));
+
+        var deleted = await _service.PurgeOlderThanAsync(retentionDays);
+
+        Assert.Equal(0, deleted);
+        var page = await _service.GetPageAsync(1, 50);
+        Assert.Equal(1, page.TotalCount);
+    }
+
+    /// <summary>
+    /// Writes an entry directly via the DbContext, not <see cref="AuditLogService.LogAsync"/>,
+    /// specifically so its Timestamp can be backdated — LogAsync always
+    /// stamps DateTimeOffset.UtcNow, with no way to control it from the
+    /// outside.
+    /// </summary>
+    private async Task AddBackdatedAsync(string action, TimeSpan age)
+    {
+        _db.AuditLogEntries.Add(new Db.Entities.AuditLogEntry
+        {
+            Actor = "test",
+            Action = action,
+            Timestamp = DateTimeOffset.UtcNow - age,
+        });
+        await _db.SaveChangesAsync();
+    }
 }

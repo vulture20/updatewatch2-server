@@ -82,5 +82,16 @@ public class AdminSettings
     /// <summary>How often (in hours) to check GitHub for a newer agent release — see <see cref="AgentUpdates.AgentAutoUpdateOptions.CheckIntervalHours"/>.</summary>
     public int AgentAutoUpdateCheckIntervalHours { get; set; } = 6;
 
+    /// <summary>
+    /// How many days of audit log entries to keep before a periodic
+    /// cleanup permanently discards them (see <see cref="Audit.AuditLogRetentionWorker"/>).
+    /// Admin-configurable via a fixed set of steps in the UI (30/60/90/180/365),
+    /// plus <c>0</c> as the sentinel for "unlimited — never discard"; the
+    /// API itself doesn't reject an out-of-set positive value, matching
+    /// how every other free-form numeric setting here is only clamped, not
+    /// enum-constrained. Default 90 days.
+    /// </summary>
+    public int AuditLogRetentionDays { get; set; } = 90;
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

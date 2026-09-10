@@ -37,4 +37,5 @@ public record UpdateAdminSettingsRequest(
     int AgentCertificateValidityDays,
     bool AgentAutoUpdateEnabled = true,
     string? GitHubToken = null,
-    int AgentAutoUpdateCheckIntervalHours = 6);
+    int AgentAutoUpdateCheckIntervalHours = 6,
+    int AuditLogRetentionDays = 90);

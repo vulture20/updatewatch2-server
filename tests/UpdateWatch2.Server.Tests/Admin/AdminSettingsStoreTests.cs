@@ -98,7 +98,8 @@ public class AdminSettingsStoreTests : IDisposable
             AgentCertificateValidityDays: 90,
             AgentAutoUpdateEnabled: false,
             GitHubToken: "ghp_secret",
-            AgentAutoUpdateCheckIntervalHours: 12);
+            AgentAutoUpdateCheckIntervalHours: 12,
+            AuditLogRetentionDays: 30);
 
         var dto = await store.UpdateAsync(request);
 
@@ -122,6 +123,8 @@ public class AdminSettingsStoreTests : IDisposable
         Assert.False(dto.AgentAutoUpdateEnabled);
         Assert.True(dto.GitHubTokenSet);
         Assert.Equal(12, dto.AgentAutoUpdateCheckIntervalHours);
+        Assert.Equal(30, store.AuditLogRetentionDays);
+        Assert.Equal(30, dto.AuditLogRetentionDays);
 
         // Neither password ever comes back out through the DTO.
         Assert.True(dto.SmtpPasswordSet);

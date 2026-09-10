@@ -27,6 +27,9 @@ public class AdminSettingsStore(
     private CertificateOptions _certificate = defaultCertificate.Value;
     private AgentAutoUpdateOptions _agentAutoUpdate = defaultAgentAutoUpdate.Value;
     private string _logLevel = "INFO";
+    private int _auditLogRetentionDays = DefaultAuditLogRetentionDays;
+
+    private const int DefaultAuditLogRetentionDays = 90;
 
     public BruteForceOptions BruteForce
     {
@@ -61,6 +64,11 @@ public class AdminSettingsStore(
     public string LogLevel
     {
         get { lock (_lock) return _logLevel; }
+    }
+
+    public int AuditLogRetentionDays
+    {
+        get { lock (_lock) return _auditLogRetentionDays; }
     }
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -126,6 +134,7 @@ public class AdminSettingsStore(
             row.GitHubToken = request.GitHubToken.Length == 0 ? null : request.GitHubToken;
         }
         row.AgentAutoUpdateCheckIntervalHours = request.AgentAutoUpdateCheckIntervalHours;
+        row.AuditLogRetentionDays = request.AuditLogRetentionDays;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -166,7 +175,8 @@ public class AdminSettingsStore(
                 _certificate.AgentCertificateValidityDays,
                 _agentAutoUpdate.Enabled,
                 !string.IsNullOrEmpty(_agentAutoUpdate.GitHubToken),
-                _agentAutoUpdate.CheckIntervalHours);
+                _agentAutoUpdate.CheckIntervalHours,
+                _auditLogRetentionDays);
         }
     }
 
@@ -202,6 +212,7 @@ public class AdminSettingsStore(
         AgentAutoUpdateEnabled = defaultAgentAutoUpdate.Value.Enabled,
         GitHubToken = defaultAgentAutoUpdate.Value.GitHubToken,
         AgentAutoUpdateCheckIntervalHours = defaultAgentAutoUpdate.Value.CheckIntervalHours,
+        AuditLogRetentionDays = DefaultAuditLogRetentionDays,
     };
 
     private void Apply(AdminSettings row)
@@ -259,6 +270,7 @@ public class AdminSettingsStore(
             _certificate = certificate;
             _agentAutoUpdate = agentAutoUpdate;
             _logLevel = row.LogLevel;
+            _auditLogRetentionDays = row.AuditLogRetentionDays;
         }
     }
 }
