@@ -11,6 +11,38 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.28.1] - 2026-09-10
+
+### Fixed
+
+- **The Nocturne redesign (`v0.28.0`) broke the whole Administration
+  area — all six settings tabs (including Audit Log) rendered stacked on
+  top of each other simultaneously instead of one at a time.** Reported
+  by the user as "the admin area isn't formatted right and doesn't work,
+  and neither does the logging [tab]." Root cause: `AdminPage` hides an
+  inactive tab via the plain HTML `hidden` attribute
+  (`<div hidden={tab !== 'general'} className="tab-panel">`), but
+  Nocturne's `.tab-panel { display: flex; ... }` rule — added for the
+  redesign's vertical-tabs layout — overrides the browser's own
+  `[hidden] { display: none }` user-agent rule: per the CSS cascade, an
+  author-stylesheet declaration always wins over a user-agent one
+  regardless of selector specificity, so setting `display` on the same
+  element `hidden` is applied to silently cancels `hidden` out. Every
+  panel was therefore visible at once — General's cards immediately
+  followed by Notifications', Active Directory's, Certificates',
+  Update Filters', and Audit Log's (the user's "logging"), each with
+  its own duplicate Save button, an obviously "not properly formatted"
+  wall of content, and clicking a tab visibly did nothing since
+  everything was already showing. Not caught by the existing test suite
+  (all 90 tests, `AdminPage.test.tsx` included, stayed green before and
+  after this fix) because Vitest's jsdom environment never loads
+  `index.css` at all — Testing Library's `getByRole`/`getByLabelText`
+  queries read the `hidden` attribute's accessibility-tree semantics
+  directly, which stayed correct throughout, regardless of what the real
+  CSS cascade actually rendered. Fixed with one added rule,
+  `.tab-panel[hidden] { display: none; }`, restoring the browser default
+  for exactly the element it was being overridden on.
+
 ## [0.28.0] - 2026-09-10
 
 ### Added

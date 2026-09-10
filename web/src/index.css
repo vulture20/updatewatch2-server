@@ -807,6 +807,20 @@ tbody tr:hover {
   gap: var(--space-4);
 }
 
+/* An author `display` declaration on the same element beats the browser's
+   own `[hidden] { display: none }` UA-stylesheet rule regardless of
+   selector specificity (author styles always win over user-agent styles
+   in the cascade) — without this override, AdminPage's six `hidden={}`
+   tab panels all rendered stacked on top of each other simultaneously,
+   `.tab-panel`'s own `display: flex` silently cancelling out `hidden`.
+   Testing Library's role/label queries never caught this: jsdom doesn't
+   load this stylesheet at all, so a hidden panel's accessibility-tree
+   semantics (and so `getByRole`/`getByLabelText`) stayed correct in every
+   test regardless of what the real, CSS-cascade-driven visual result was. */
+.tab-panel[hidden] {
+  display: none;
+}
+
 .tab-save-row {
   display: flex;
   align-items: center;
