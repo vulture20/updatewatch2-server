@@ -46,5 +46,18 @@ public enum InstallOutcome
     Failed,
 }
 
-/// <summary>Body of <c>POST /api/agents/{hostname}/install-ack</c> — the agent's acknowledgement that it acted on a pending install request.</summary>
-public record InstallAckRequest(InstallOutcome Outcome);
+/// <summary>
+/// Body of <c>POST /api/agents/{hostname}/install-ack</c> — the agent's
+/// acknowledgement that it acted on a pending install request.
+/// <see cref="ErrorDetail"/> (protocol 0.10.0) is only ever meaningful
+/// alongside <see cref="InstallOutcome.Failed"/> — a human-readable reason
+/// (the OS-level tool's own stderr/exit code, or a caught exception's
+/// message) stored on <see cref="Db.Entities.Agent.LastInstallErrorDetail"/>
+/// and surfaced on <c>AgentDetailPage</c>, added after a real production
+/// failure ("apt-get ... exited with code 100: E: There were
+/// unauthenticated packages...") took raising this agent's log level and
+/// live-tailing journalctl to even see — before this, "Failed" was all
+/// the admin UI could ever show. Additive/nullable, an older agent build
+/// simply never sends it.
+/// </summary>
+public record InstallAckRequest(InstallOutcome Outcome, string? ErrorDetail = null);

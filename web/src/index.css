@@ -459,6 +459,14 @@ dd {
   overflow-wrap: anywhere;
 }
 
+/* A raw OS-level tool error (apt-get/dnf stderr, an exception message) shown
+   next to a failed install — same monospace/wrap treatment as .dialog-token,
+   just without its bordered-box chrome since this sits inline in a <dl>. */
+.text-monospace {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
 /* — nav shell — */
 .app-shell {
   display: flex;

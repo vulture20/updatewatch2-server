@@ -138,7 +138,7 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
         return true;
     }
 
-    public async Task<bool> AcknowledgeInstallAsync(string hostname, InstallOutcome outcome, CancellationToken ct = default)
+    public async Task<bool> AcknowledgeInstallAsync(string hostname, InstallOutcome outcome, string? errorDetail, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
         if (agent is null)
@@ -149,6 +149,11 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
         agent.PendingInstallRequestedAt = null;
         agent.PendingInstallUpdateIds = null;
         agent.LastInstallOutcome = outcome.ToString();
+        // Only ever meaningful for a Failed outcome — cleared on a
+        // Succeeded ack rather than left stale from a previous failed
+        // attempt, so AgentDetailPage never shows an old error detail
+        // next to a since-successful install.
+        agent.LastInstallErrorDetail = outcome == InstallOutcome.Failed ? errorDetail : null;
         agent.LastInstallCompletedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
         await auditLog.LogAsync("agent", $"updates.install.{outcome.ToString().ToLowerInvariant()}", hostname, ct);

@@ -63,6 +63,7 @@
       "Succeeded": "Erfolgreich",
       "Failed": "Fehlgeschlagen"
     },
+    "lastInstallErrorDetail": "Fehlerdetail",
     "updates": "Ausstehende Updates",
     "updateTitle": "Titel",
     "updatePackageId": "Paket-ID",

@@ -109,7 +109,7 @@ public class UpdateServiceTests : IDisposable
         _db.Agents.Add(agent);
         await _db.SaveChangesAsync();
 
-        await _service.AcknowledgeInstallAsync("ack-selection-host", InstallOutcome.Succeeded);
+        await _service.AcknowledgeInstallAsync("ack-selection-host", InstallOutcome.Succeeded, errorDetail: null);
 
         var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "ack-selection-host");
         Assert.Null(reloaded.PendingInstallUpdateIds);
@@ -122,7 +122,7 @@ public class UpdateServiceTests : IDisposable
         _db.Agents.Add(agent);
         await _db.SaveChangesAsync();
 
-        var found = await _service.AcknowledgeInstallAsync("ack-host", InstallOutcome.Succeeded);
+        var found = await _service.AcknowledgeInstallAsync("ack-host", InstallOutcome.Succeeded, errorDetail: null);
 
         Assert.True(found);
         var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "ack-host");
@@ -132,7 +132,7 @@ public class UpdateServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AcknowledgeInstallAsync_clears_the_pending_request_even_on_a_failed_outcome()
+    public async Task AcknowledgeInstallAsync_clears_the_pending_request_and_records_the_error_detail_on_a_failed_outcome()
     {
         // A failure must not leave the pending marker set forever, re-
         // delivering the same command on every heartbeat — an admin who
@@ -142,17 +142,39 @@ public class UpdateServiceTests : IDisposable
         _db.Agents.Add(agent);
         await _db.SaveChangesAsync();
 
-        await _service.AcknowledgeInstallAsync("ack-fail-host", InstallOutcome.Failed);
+        await _service.AcknowledgeInstallAsync("ack-fail-host", InstallOutcome.Failed, "apt-get exited with code 100: E: There were unauthenticated packages...");
 
         var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "ack-fail-host");
         Assert.Null(reloaded.PendingInstallRequestedAt);
         Assert.Equal("Failed", reloaded.LastInstallOutcome);
+        Assert.Equal("apt-get exited with code 100: E: There were unauthenticated packages...", reloaded.LastInstallErrorDetail);
+    }
+
+    [Fact]
+    public async Task AcknowledgeInstallAsync_clears_a_stale_error_detail_on_a_subsequent_successful_outcome()
+    {
+        var agent = new Agent
+        {
+            Hostname = "ack-recovers-host",
+            Approved = true,
+            PendingInstallRequestedAt = DateTimeOffset.UtcNow,
+            LastInstallOutcome = "Failed",
+            LastInstallErrorDetail = "a previous failure's detail",
+        };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeInstallAsync("ack-recovers-host", InstallOutcome.Succeeded, errorDetail: null);
+
+        var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "ack-recovers-host");
+        Assert.Equal("Succeeded", reloaded.LastInstallOutcome);
+        Assert.Null(reloaded.LastInstallErrorDetail);
     }
 
     [Fact]
     public async Task AcknowledgeInstallAsync_returns_false_for_an_unknown_agent()
     {
-        var found = await _service.AcknowledgeInstallAsync("no-such-host", InstallOutcome.Succeeded);
+        var found = await _service.AcknowledgeInstallAsync("no-such-host", InstallOutcome.Succeeded, errorDetail: null);
 
         Assert.False(found);
     }

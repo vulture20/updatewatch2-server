@@ -64,7 +64,7 @@ public class UpdatesController(IUpdateService updateService) : ControllerBase
             return Forbid();
         }
 
-        var found = await updateService.AcknowledgeInstallAsync(hostname, request.Outcome, ct);
+        var found = await updateService.AcknowledgeInstallAsync(hostname, request.Outcome, request.ErrorDetail, ct);
         return found ? NoContent() : NotFound();
     }
 }

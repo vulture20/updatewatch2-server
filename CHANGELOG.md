@@ -11,6 +11,13 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.10] - 2026-09-11
+
+### Added
+
+- **`AgentDetailPage` now shows WHY a remote install failed, at the user's explicit request after a real production incident took raising the agent's log level and live-tailing journalctl just to find "apt-get ... exited with code 100: E: There were unauthenticated packages..." — protocol `0.10.0`, DB schema `0.15.5`.** `POST .../install-ack`'s body gained an additive, nullable `errorDetail` field (`InstallAckRequest.ErrorDetail`) — the agent's own OS-level tool output or a caught exception's message, only ever meaningful alongside a `Failed` outcome. Stored on a new `Agent.LastInstallErrorDetail` column (cleared on a subsequent `Succeeded` ack so a stale reason never lingers next to a since-fixed install), surfaced on `AgentDetailDto`, and shown in the Install status card next to "Fehlgeschlagen"/"Failed" whenever present. An older agent build simply never sends the field, so nothing new shows — same backward-compatible pattern as every prior additive heartbeat/ack change.
+- **Root cause of the specific incident that prompted the above, investigated directly rather than assumed: an apt-repository trust/signing problem on the affected host, unrelated to the selective-install feature itself.** `apt-get -y ...` refuses "unauthenticated packages" (an untrusted/unsigned repository) with exit code 100 regardless of whether the install is scoped (`install --only-upgrade -- <selection>`) or unscoped (`dist-upgrade`) — confirmed by re-reading and re-testing `AptUpdateSession.BuildInstallArgs`/`DownloadAndInstallAsync` live against a real package cache in this project's own dev sandbox across several dependency-entangled scenarios (a package pulling in others via automatic dependency resolution), all of which apt resolved and installed successfully; only a package genuinely failing signature verification reproduces the reported error. Not a code bug — the fix is on the affected host (import the missing repository GPG key). The `LastInstallErrorDetail` feature above exists so a report like this is diagnosable straight from the admin UI next time, without needing a live-tailed journalctl session at all.
+
 ## [0.30.9] - 2026-09-11
 
 ### Added

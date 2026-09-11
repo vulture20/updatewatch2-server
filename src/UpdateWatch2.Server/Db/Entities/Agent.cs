@@ -126,6 +126,21 @@ public class Agent
     /// </summary>
     public string? LastInstallOutcome { get; set; }
 
+    /// <summary>
+    /// Human-readable reason for the most recent install acknowledgement,
+    /// only ever meaningful (and only ever set) alongside a
+    /// <see cref="LastInstallOutcome"/> of "Failed" — the agent's own
+    /// OS-level tool output (apt-get/dnf stderr, a Windows Update result
+    /// code) or a caught exception's message, capped agent-side before it
+    /// ever reaches this column. Added (DB schema 0.15.5) after a real
+    /// production install failure took raising the agent's log level and
+    /// live-tailing journalctl to even see — before this, an admin had no
+    /// way to learn WHY an install failed from the admin UI at all. Reset
+    /// to null on a Succeeded ack so a stale error never lingers next to a
+    /// since-successful install.
+    /// </summary>
+    public string? LastInstallErrorDetail { get; set; }
+
     public DateTimeOffset? LastInstallCompletedAt { get; set; }
 
     public DateTimeOffset? LastAliveAt { get; set; }

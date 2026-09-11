@@ -42,6 +42,12 @@ public record AgentDetailDto(
     DateTimeOffset? ClientCertificateExpiresAt,
     DateTimeOffset? PendingInstallRequestedAt,
     string? LastInstallOutcome,
+    /// <summary>
+    /// Only ever non-null alongside a <see cref="LastInstallOutcome"/> of
+    /// "Failed" — see <see cref="Db.Entities.Agent.LastInstallErrorDetail"/>'s
+    /// own doc comment for why this exists.
+    /// </summary>
+    string? LastInstallErrorDetail,
     DateTimeOffset? LastInstallCompletedAt,
     /// <summary>
     /// SHA-256 thumbprint of the internal CA root that actually signed this

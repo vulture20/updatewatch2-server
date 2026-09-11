@@ -40,6 +40,8 @@ export interface AgentDetail {
   /** Set while a remote install (triggerInstall) has been requested but not yet acknowledged by the agent (updatewatch2-server#10). */
   pendingInstallRequestedAt: string | null;
   lastInstallOutcome: 'Succeeded' | 'Failed' | null;
+  /** Only ever non-null alongside lastInstallOutcome === 'Failed' — the agent's own OS-level tool output (apt-get/dnf stderr, a Windows Update result code) or a caught exception's message. */
+  lastInstallErrorDetail: string | null;
   lastInstallCompletedAt: string | null;
   /**
    * SHA-256 thumbprint of the internal CA root that signed this agent's

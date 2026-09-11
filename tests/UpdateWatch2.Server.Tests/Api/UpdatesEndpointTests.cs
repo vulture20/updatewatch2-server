@@ -190,5 +190,5 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
     private record AgentDetail(string Hostname, string? DnsName, string? OperatingSystem, string? IpAddress,
         string? AgentVersion, bool Approved, bool RebootRequired, int PendingUpdateCount, DateTimeOffset? LastAliveAt,
         string? ClientCertificateThumbprint, DateTimeOffset? ClientCertificateIssuedAt, DateTimeOffset? ClientCertificateExpiresAt,
-        DateTimeOffset? PendingInstallRequestedAt, string? LastInstallOutcome, DateTimeOffset? LastInstallCompletedAt);
+        DateTimeOffset? PendingInstallRequestedAt, string? LastInstallOutcome, string? LastInstallErrorDetail, DateTimeOffset? LastInstallCompletedAt);
 }

@@ -36,8 +36,8 @@ public interface IUpdateService
     /// regardless of <paramref name="outcome"/> (a failure doesn't retry
     /// automatically; an admin who wants to retry just triggers again,
     /// matching the existing fire-and-forget trigger semantics) and records
-    /// the outcome/timestamp for the admin UI. Returns false if no agent
-    /// with that hostname exists.
+    /// the outcome/timestamp/<paramref name="errorDetail"/> for the admin
+    /// UI. Returns false if no agent with that hostname exists.
     /// </summary>
-    Task<bool> AcknowledgeInstallAsync(string hostname, InstallOutcome outcome, CancellationToken ct = default);
+    Task<bool> AcknowledgeInstallAsync(string hostname, InstallOutcome outcome, string? errorDetail, CancellationToken ct = default);
 }

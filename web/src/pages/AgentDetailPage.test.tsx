@@ -48,6 +48,7 @@ const approvedAgent: AgentDetail = {
   clientCertificateExpiresAt: '2028-01-01T00:00:00Z',
   pendingInstallRequestedAt: null,
   lastInstallOutcome: null,
+  lastInstallErrorDetail: null,
   lastInstallCompletedAt: null,
   issuingRootThumbprint: 'root-thumb-1',
   lastCertificateRejectionReason: null,
@@ -235,6 +236,38 @@ describe('AgentDetailPage install trigger', () => {
 
     await screen.findByRole('heading', { name: 'host-1' });
     expect(screen.getByText(/succeeded/i)).toBeInTheDocument();
+  });
+
+  // The reason for adding this field at all: an admin used to have to raise
+  // the agent's log level and live-tail journalctl to see why an install
+  // failed — this shows the same reason straight in the admin UI.
+  it('shows the error detail for a failed install', async () => {
+    mockedGet.mockResolvedValue({
+      ...approvedAgent,
+      lastInstallOutcome: 'Failed',
+      lastInstallErrorDetail: 'apt-get exited with code 100: E: There were unauthenticated packages and -y was used without --allow-unauthenticated',
+      lastInstallCompletedAt: '2026-01-02T00:00:00Z',
+    });
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    expect(screen.getByText(/failed/i)).toBeInTheDocument();
+    expect(screen.getByText(/unauthenticated packages/i)).toBeInTheDocument();
+  });
+
+  it('does not show an error detail row for a successful install', async () => {
+    mockedGet.mockResolvedValue({
+      ...approvedAgent,
+      lastInstallOutcome: 'Succeeded',
+      lastInstallErrorDetail: null,
+      lastInstallCompletedAt: '2026-01-02T00:00:00Z',
+    });
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    expect(screen.queryByText(/error detail/i)).not.toBeInTheDocument();
   });
 });
 

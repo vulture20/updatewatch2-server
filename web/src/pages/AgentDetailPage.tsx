@@ -250,6 +250,12 @@ export function AgentDetailPage() {
                 ? '—'
                 : new Date(agent.lastInstallCompletedAt).toLocaleString()}
             </dd>
+            {!agent.pendingInstallRequestedAt && agent.lastInstallOutcome === 'Failed' && agent.lastInstallErrorDetail && (
+              <>
+                <dt className="text-muted">{t('agentDetail.lastInstallErrorDetail')}</dt>
+                <dd className="text-monospace">{agent.lastInstallErrorDetail}</dd>
+              </>
+            )}
           </dl>
         </div>
       </div>
