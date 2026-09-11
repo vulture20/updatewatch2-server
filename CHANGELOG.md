@@ -11,6 +11,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.4] - 2026-09-11
+
+### Added
+
+- **The Info tab now shows every relevant certificate with all available details, at the user's request.** Previously the server's own agent-facing TLS leaf (the certificate Kestrel presents on port 8796) had no admin-facing representation anywhere at all — the Certificates tab only ever showed the CA root's thumbprint/expiry. Now, for the current CA root, the server's own leaf, and (only when present) the previous and pending CA roots from an in-progress rotation, the Info tab shows Subject, Issuer, Serial number, SHA-256 thumbprint, issued date, and expiry date. `GET /api/admin/certificate-authority` (`CertificateAuthorityController`) gained the additive fields to carry this (`current`/`previous`/`pending` `NotBefore`/`Subject`/`Issuer`/`SerialNumber`, plus a new `serverLeaf*` group) — read straight from the live `X509Certificate2` instances rather than added to `ICertificateAuthority.GetRotationStatus`/`CaRotationStatus` itself, so that interface's own core rotation-status shape stays untouched. Live-verified against a real Docker container: the endpoint returns the server's real leaf subject/issuer/serial alongside the CA root's.
+
 ## [0.30.3] - 2026-09-11
 
 ### Fixed

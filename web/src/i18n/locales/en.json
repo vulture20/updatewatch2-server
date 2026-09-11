@@ -102,6 +102,20 @@
     "serverVersion": "Server version",
     "protocolVersion": "Protocol version",
     "databaseVersion": "Database schema version",
+    "info": {
+      "certificates": {
+        "serverCertificate": "Server certificate (agent connections)",
+        "caRoot": "CA root (current)",
+        "caRootPrevious": "CA root (previous, still trusted)",
+        "caRootPending": "CA root (prepared, not yet active)",
+        "subject": "Subject",
+        "issuer": "Issuer",
+        "serialNumber": "Serial number",
+        "thumbprint": "Thumbprint (SHA-256)",
+        "issued": "Issued",
+        "expires": "Expires"
+      }
+    },
     "tabs": {
       "general": "General",
       "notifications": "Notifications",

@@ -58,13 +58,31 @@ const mockedGetAuditLogPage = vi.mocked(auditLogApi.getPage);
 const baseCaStatus = {
   currentThumbprint: 'AAAA',
   currentNotAfter: '2036-01-01T00:00:00Z',
+  currentNotBefore: '2026-01-01T00:00:00Z',
+  currentSubject: 'CN=UpdateWatch2 Internal CA',
+  currentIssuer: 'CN=UpdateWatch2 Internal CA',
+  currentSerialNumber: '01',
   previousThumbprint: null,
   previousNotAfter: null,
+  previousNotBefore: null,
+  previousSubject: null,
+  previousIssuer: null,
+  previousSerialNumber: null,
   pendingThumbprint: null,
   pendingNotAfter: null,
+  pendingNotBefore: null,
+  pendingSubject: null,
+  pendingIssuer: null,
+  pendingSerialNumber: null,
   stillOnPreviousRootCount: 0,
   stillOnPreviousRootHostnames: [] as string[],
   unknownRootAgentCount: 0,
+  serverLeafThumbprint: 'CCCC',
+  serverLeafSubject: 'CN=updatewatch2.example.com',
+  serverLeafIssuer: 'CN=UpdateWatch2 Internal CA',
+  serverLeafSerialNumber: '02',
+  serverLeafNotBefore: '2026-01-01T00:00:00Z',
+  serverLeafNotAfter: '2028-01-01T00:00:00Z',
 };
 
 const baseSettings = {
@@ -681,6 +699,61 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     await user.click(await screen.findByRole('button', { name: 'Prepare rotation' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.');
+  });
+
+  it('shows the server certificate and current CA root on the Info tab, and the previous/pending roots only when present', async () => {
+    mockedGetCaStatus.mockResolvedValue({
+      ...baseCaStatus,
+      previousThumbprint: 'PREV1',
+      previousNotAfter: '2027-01-01T00:00:00Z',
+      previousNotBefore: '2025-01-01T00:00:00Z',
+      previousSubject: 'CN=UpdateWatch2 Internal CA (previous)',
+      previousIssuer: 'CN=UpdateWatch2 Internal CA (previous)',
+      previousSerialNumber: '00',
+      pendingThumbprint: 'PEND1',
+      pendingNotAfter: '2037-01-01T00:00:00Z',
+      pendingNotBefore: '2027-01-01T00:00:00Z',
+      pendingSubject: 'CN=UpdateWatch2 Internal CA (pending)',
+      pendingIssuer: 'CN=UpdateWatch2 Internal CA (pending)',
+      pendingSerialNumber: '03',
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Info' }));
+
+    expect(await screen.findByText('Server certificate (agent connections)')).toBeInTheDocument();
+    expect(screen.getByText('CN=updatewatch2.example.com')).toBeInTheDocument();
+    expect(screen.getByText('CCCC')).toBeInTheDocument();
+
+    expect(screen.getByText('CA root (current)')).toBeInTheDocument();
+    expect(screen.getByText('AAAA')).toBeInTheDocument();
+
+    expect(screen.getByText('CA root (previous, still trusted)')).toBeInTheDocument();
+    expect(screen.getByText('PREV1')).toBeInTheDocument();
+
+    expect(screen.getByText('CA root (prepared, not yet active)')).toBeInTheDocument();
+    expect(screen.getByText('PEND1')).toBeInTheDocument();
+  });
+
+  it('hides the previous/pending CA root cards on the Info tab when there is no rotation in progress', async () => {
+    mockedGetCaStatus.mockResolvedValue(baseCaStatus);
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Info' }));
+
+    await screen.findByText('CA root (current)');
+    expect(screen.queryByText('CA root (previous, still trusted)')).not.toBeInTheDocument();
+    expect(screen.queryByText('CA root (prepared, not yet active)')).not.toBeInTheDocument();
   });
 });
 

@@ -184,6 +184,37 @@ export function AdminPage() {
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm({ ...form, [key]: value });
 
+  // One shared card shape for every certificate shown on the Info tab (CA
+  // root — current/previous/pending — plus the server's own agent-facing
+  // leaf) rather than repeating the same <dl> four times.
+  const certCard = (
+    kicker: string,
+    subject: string,
+    issuer: string,
+    serialNumber: string,
+    thumbprint: string,
+    notBefore: string,
+    notAfter: string,
+  ) => (
+    <div className="card" key={kicker}>
+      <span className="card-kicker">{kicker}</span>
+      <dl>
+        <dt className="text-muted">{t('admin.info.certificates.subject')}</dt>
+        <dd>{subject}</dd>
+        <dt className="text-muted">{t('admin.info.certificates.issuer')}</dt>
+        <dd>{issuer}</dd>
+        <dt className="text-muted">{t('admin.info.certificates.serialNumber')}</dt>
+        <dd>{serialNumber}</dd>
+        <dt className="text-muted">{t('admin.info.certificates.thumbprint')}</dt>
+        <dd>{thumbprint}</dd>
+        <dt className="text-muted">{t('admin.info.certificates.issued')}</dt>
+        <dd>{new Date(notBefore).toLocaleString(i18n.language)}</dd>
+        <dt className="text-muted">{t('admin.info.certificates.expires')}</dt>
+        <dd>{new Date(notAfter).toLocaleString(i18n.language)}</dd>
+      </dl>
+    </div>
+  );
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -761,6 +792,49 @@ export function AdminPage() {
               </dl>
             )}
           </div>
+
+          {caStatus && (
+            <>
+              {certCard(
+                t('admin.info.certificates.serverCertificate'),
+                caStatus.serverLeafSubject,
+                caStatus.serverLeafIssuer,
+                caStatus.serverLeafSerialNumber,
+                caStatus.serverLeafThumbprint,
+                caStatus.serverLeafNotBefore,
+                caStatus.serverLeafNotAfter,
+              )}
+              {certCard(
+                t('admin.info.certificates.caRoot'),
+                caStatus.currentSubject,
+                caStatus.currentIssuer,
+                caStatus.currentSerialNumber,
+                caStatus.currentThumbprint,
+                caStatus.currentNotBefore,
+                caStatus.currentNotAfter,
+              )}
+              {caStatus.previousThumbprint &&
+                certCard(
+                  t('admin.info.certificates.caRootPrevious'),
+                  caStatus.previousSubject!,
+                  caStatus.previousIssuer!,
+                  caStatus.previousSerialNumber!,
+                  caStatus.previousThumbprint,
+                  caStatus.previousNotBefore!,
+                  caStatus.previousNotAfter!,
+                )}
+              {caStatus.pendingThumbprint &&
+                certCard(
+                  t('admin.info.certificates.caRootPending'),
+                  caStatus.pendingSubject!,
+                  caStatus.pendingIssuer!,
+                  caStatus.pendingSerialNumber!,
+                  caStatus.pendingThumbprint,
+                  caStatus.pendingNotBefore!,
+                  caStatus.pendingNotAfter!,
+                )}
+            </>
+          )}
         </div>
           </div>
         </div>

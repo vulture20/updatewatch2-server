@@ -94,13 +94,32 @@ export interface VersionInfo {
 export interface CaRotationStatus {
   currentThumbprint: string;
   currentNotAfter: string;
+  currentNotBefore: string;
+  currentSubject: string;
+  currentIssuer: string;
+  currentSerialNumber: string;
   previousThumbprint: string | null;
   previousNotAfter: string | null;
+  previousNotBefore: string | null;
+  previousSubject: string | null;
+  previousIssuer: string | null;
+  previousSerialNumber: string | null;
   pendingThumbprint: string | null;
   pendingNotAfter: string | null;
+  pendingNotBefore: string | null;
+  pendingSubject: string | null;
+  pendingIssuer: string | null;
+  pendingSerialNumber: string | null;
   stillOnPreviousRootCount: number;
   stillOnPreviousRootHostnames: string[];
   unknownRootAgentCount: number;
+  /** The server's own agent-facing mTLS leaf (Kestrel's port-8796 listener) — not part of CA rotation itself, just surfaced alongside it since both are "relevant certificates" (Info tab). */
+  serverLeafThumbprint: string;
+  serverLeafSubject: string;
+  serverLeafIssuer: string;
+  serverLeafSerialNumber: string;
+  serverLeafNotBefore: string;
+  serverLeafNotAfter: string;
 }
 
 export type SmtpEncryption = 'None' | 'SslTls' | 'StartTls';

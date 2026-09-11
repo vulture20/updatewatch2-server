@@ -103,17 +103,48 @@ public class CertificateAuthorityController(ICertificateAuthority ca, IAgentServ
     {
         var status = ca.GetRotationStatus();
         var impact = await agentService.GetCaRotationImpactAsync(status.PreviousThumbprint, ct);
+
+        // Subject/Issuer/SerialNumber/NotBefore are additive fields
+        // (server v0.30.4, at the user's request to show "all available
+        // info" for every relevant certificate on the new Info tab) — read
+        // straight from the live X509Certificate2 instances rather than
+        // added to ICertificateAuthority.GetRotationStatus/CaRotationStatus
+        // itself, so the CA's own core rotation-status shape (and every
+        // test/caller already built against it) stays untouched. The
+        // server's own agent-facing TLS leaf (ca.CurrentServerLeaf) had no
+        // admin-facing representation anywhere before this — not part of
+        // "rotation status" at all, but exactly the other "relevant
+        // certificate" the user asked to see alongside the CA roots.
+        var serverLeaf = ca.CurrentServerLeaf;
         return new
         {
             status.CurrentThumbprint,
             status.CurrentNotAfter,
+            CurrentNotBefore = ca.RootCertificate.NotBefore,
+            CurrentSubject = ca.RootCertificate.Subject,
+            CurrentIssuer = ca.RootCertificate.Issuer,
+            CurrentSerialNumber = ca.RootCertificate.SerialNumber,
             status.PreviousThumbprint,
             status.PreviousNotAfter,
+            PreviousNotBefore = ca.PreviousRootCertificate?.NotBefore,
+            PreviousSubject = ca.PreviousRootCertificate?.Subject,
+            PreviousIssuer = ca.PreviousRootCertificate?.Issuer,
+            PreviousSerialNumber = ca.PreviousRootCertificate?.SerialNumber,
             status.PendingThumbprint,
             status.PendingNotAfter,
+            PendingNotBefore = ca.PendingRootCertificate?.NotBefore,
+            PendingSubject = ca.PendingRootCertificate?.Subject,
+            PendingIssuer = ca.PendingRootCertificate?.Issuer,
+            PendingSerialNumber = ca.PendingRootCertificate?.SerialNumber,
             stillOnPreviousRootCount = impact.StillOnPreviousRootCount,
             stillOnPreviousRootHostnames = impact.StillOnPreviousRootHostnames,
             unknownRootAgentCount = impact.UnknownRootAgentCount,
+            ServerLeafThumbprint = serverLeaf.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256),
+            ServerLeafSubject = serverLeaf.Subject,
+            ServerLeafIssuer = serverLeaf.Issuer,
+            ServerLeafSerialNumber = serverLeaf.SerialNumber,
+            ServerLeafNotBefore = serverLeaf.NotBefore,
+            ServerLeafNotAfter = serverLeaf.NotAfter,
         };
     }
 }

@@ -102,6 +102,20 @@
     "serverVersion": "Server-Version",
     "protocolVersion": "Protokollversion",
     "databaseVersion": "Datenbankversion",
+    "info": {
+      "certificates": {
+        "serverCertificate": "Server-Zertifikat (Agent-Verbindungen)",
+        "caRoot": "CA-Wurzel (aktuell)",
+        "caRootPrevious": "CA-Wurzel (vorherige, noch vertraut)",
+        "caRootPending": "CA-Wurzel (vorbereitet, noch nicht aktiv)",
+        "subject": "Subject",
+        "issuer": "Aussteller",
+        "serialNumber": "Seriennummer",
+        "thumbprint": "Fingerabdruck (SHA-256)",
+        "issued": "Ausgestellt",
+        "expires": "Gültig bis"
+      }
+    },
     "tabs": {
       "general": "Allgemein",
       "notifications": "Benachrichtigungen",
