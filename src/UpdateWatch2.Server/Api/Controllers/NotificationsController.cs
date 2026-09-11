@@ -54,6 +54,6 @@ public class NotificationsController(IEmailNotificationService emailService, IAd
         }
 
         await auditLog.LogAsync(User.Identity!.Name!, "notifications.test-email.sent", request.ToAddress, ct);
-        return Ok();
+        return NoContent();
     }
 }

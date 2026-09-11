@@ -11,6 +11,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.3] - 2026-09-11
+
+### Fixed
+
+- **The "Send test email" button always showed an error, even though the email genuinely sent and arrived — reported by the user exactly that way: "the mail test runs into an error, but the actual sending works, the test mail arrives."** `NotificationsController.SendTestEmail` returned `Ok()` on success — HTTP 200 with an empty body — but `web/src/api/client.ts`'s `apiClient` only skips `response.json()` for a `204 No Content`; a 200 with no body made that call throw a JSON parse error, which the UI then displayed as a generic error, well after the real email had already been sent and delivered. Every other genuinely-bodyless success response in this codebase (`AuthController.Logout`/`ChangePassword`) already returns `NoContent()` — this was the one place that didn't. Fixed by returning `NoContent()` instead. Live-verified against a real Docker container and a real SMTP server (MailHog): the endpoint now returns `204 No Content`, and the test email still arrives. New test (`NotificationsControllerTests`, a fake `IEmailNotificationService` standing in for a real send since no mail server is available in CI) asserts the success response is genuinely `204` with an empty body, not just that a send was attempted.
+
 ## [0.30.2] - 2026-09-11
 
 ### Fixed
