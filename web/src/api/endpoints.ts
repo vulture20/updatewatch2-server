@@ -37,7 +37,11 @@ export const agentsApi = {
   approveMany: (hostnames: string[]) =>
     apiClient.post<BulkApproveResult>('/api/agents/approve', { hostnames }),
   updates: (hostname: string) => apiClient.get<UpdateItem[]>(`/api/agents/${encodeURIComponent(hostname)}/updates`),
-  triggerInstall: (hostname: string) => apiClient.post<void>(`/api/agents/${encodeURIComponent(hostname)}/install`),
+  // updateItemIds: an admin's way to install only some pending updates
+  // while sparing others (checkboxes in AgentDetailPage) — omitted
+  // installs everything currently pending, the original behavior.
+  triggerInstall: (hostname: string, updateItemIds?: number[]) =>
+    apiClient.post<void>(`/api/agents/${encodeURIComponent(hostname)}/install`, updateItemIds ? { updateItemIds } : undefined),
   reissueCertificate: (hostname: string) =>
     apiClient.post<ReissueCertificateResult>(`/api/agents/${encodeURIComponent(hostname)}/reissue-certificate`),
   delete: (hostname: string) => apiClient.delete<void>(`/api/agents/${encodeURIComponent(hostname)}`),

@@ -207,9 +207,9 @@ describe('AgentDetailPage install trigger', () => {
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
-    await user.click(screen.getByRole('button', { name: /install updates now/i }));
+    await user.click(screen.getByRole('button', { name: /install selected/i }));
 
-    await waitFor(() => expect(mockedTriggerInstall).toHaveBeenCalledWith('host-1'));
+    await waitFor(() => expect(mockedTriggerInstall).toHaveBeenCalledWith('host-1', [1]));
     await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
     expect(await screen.findByRole('button', { name: /install pending/i })).toBeDisabled();
   });
@@ -220,7 +220,7 @@ describe('AgentDetailPage install trigger', () => {
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
-    expect(screen.queryByRole('button', { name: /install updates now/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /install selected/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /install pending/i })).toBeDisabled();
   });
 
@@ -235,6 +235,88 @@ describe('AgentDetailPage install trigger', () => {
 
     await screen.findByRole('heading', { name: 'host-1' });
     expect(screen.getByText(/succeeded/i)).toBeInTheDocument();
+  });
+});
+
+// Schaffe eine Möglichkeit nur bestimmte Updates zu installieren und
+// manche auszusparen — an admin can uncheck specific updates before
+// triggering install, sparing them from this particular install run.
+describe('AgentDetailPage install selection', () => {
+  beforeEach(() => {
+    mockedGet.mockReset();
+    mockedUpdates.mockReset();
+    mockedTriggerInstall.mockReset();
+    mockedTriggerInstall.mockResolvedValue(undefined);
+    mockedGet.mockResolvedValue(approvedAgent);
+    mockedUpdates.mockResolvedValue([
+      { id: 1, title: 'Update A', packageId: 'KB1', description: null, detectedAt: '2026-01-01T00:00:00Z', installed: false },
+      { id: 2, title: 'Update B', packageId: 'KB2', description: null, detectedAt: '2026-01-01T00:00:00Z', installed: false },
+      // No PackageId — can't be individually named on the wire, so this
+      // one is always included and its checkbox can't be unchecked.
+      { id: 3, title: 'Update C', packageId: null, description: null, detectedAt: '2026-01-01T00:00:00Z', installed: false },
+    ]);
+  });
+
+  it('defaults every update to selected, matching the previous install-everything behavior', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('Update A');
+    await user.click(screen.getByRole('button', { name: /install selected \(3\)/i }));
+
+    await waitFor(() => expect(mockedTriggerInstall).toHaveBeenCalledWith('host-1', [1, 2, 3]));
+  });
+
+  it('omits an unchecked update from the install request', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('Update A');
+    await user.click(screen.getByRole('checkbox', { name: 'Select Update A' }));
+    await user.click(screen.getByRole('button', { name: /install selected \(2\)/i }));
+
+    await waitFor(() => expect(mockedTriggerInstall).toHaveBeenCalledWith('host-1', [2, 3]));
+  });
+
+  it('cannot deselect an update with no PackageId — it is always included', async () => {
+    renderPage();
+
+    await screen.findByText('Update C');
+    const checkbox = screen.getByRole('checkbox', { name: 'Select Update C' });
+
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toBeDisabled();
+  });
+
+  it('select-all deselects then reselects every deselectable update', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('Update A');
+    const selectAll = screen.getByRole('checkbox', { name: 'Select all updates' });
+
+    await user.click(selectAll);
+    expect(await screen.findByRole('button', { name: /install selected \(1\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Select Update A' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Select Update C' })).toBeChecked();
+
+    await user.click(selectAll);
+    expect(await screen.findByRole('button', { name: /install selected \(3\)/i })).toBeInTheDocument();
+  });
+
+  it('disables the install button when nothing is selected', async () => {
+    // No forced (null-PackageId) update here, unlike the shared beforeEach
+    // fixture — deselecting everything really can reach zero.
+    mockedUpdates.mockResolvedValue([
+      { id: 1, title: 'Update A', packageId: 'KB1', description: null, detectedAt: '2026-01-01T00:00:00Z', installed: false },
+    ]);
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('Update A');
+    await user.click(screen.getByRole('checkbox', { name: 'Select all updates' }));
+
+    expect(screen.getByRole('button', { name: /install selected \(0\)/i })).toBeDisabled();
   });
 });
 
@@ -269,7 +351,9 @@ describe('AgentDetailPage layout', () => {
     await screen.findByText('Bravo update');
     await user.click(screen.getByRole('button', { name: /^Title/ }));
 
-    const titles = screen.getAllByRole('row').slice(1).map((row) => row.querySelector('td')?.textContent);
+    // The first <td> in each row is now the selection checkbox, not the
+    // title — see AgentDetailPage's new install-selection column.
+    const titles = screen.getAllByRole('row').slice(1).map((row) => row.querySelectorAll('td')[1]?.textContent);
     expect(titles).toEqual(['Alpha update', 'Bravo update']);
   });
 });

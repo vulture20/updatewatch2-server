@@ -94,12 +94,28 @@ public class Agent
     /// cleared once the agent acknowledges having acted on it (see
     /// <see cref="Updates.IUpdateService.AcknowledgeInstallAsync"/>). Delivery
     /// is poll-based — surfaced to the agent as part of its regular alive
-    /// heartbeat response, not pushed — since a single pending request is
-    /// all "install everything currently pending for this agent" needs;
-    /// there's no per-update-item selection to make this a queue of
-    /// multiple distinguishable requests.
+    /// heartbeat response, not pushed.
     /// </summary>
     public DateTimeOffset? PendingInstallRequestedAt { get; set; }
+
+    /// <summary>
+    /// JSON-serialized array of the specific <see cref="UpdateItem.PackageId"/>
+    /// values an admin selected when triggering this pending install — an
+    /// admin's way to install only some pending updates while sparing
+    /// others (<see cref="Updates.IUpdateService.TriggerInstallAsync"/>).
+    /// Null means "install everything currently pending", the original
+    /// behavior this replaces the sole option of. Not exposed on any
+    /// admin-facing DTO — purely internal plumbing between
+    /// <c>TriggerInstallAsync</c> (which writes it from the admin-selected
+    /// <see cref="UpdateItem"/> ids) and
+    /// <c>AgentRegistrationService.RecordAliveAsync</c> (which hands it
+    /// back to the agent, whose own next search re-resolves these PackageIds
+    /// against whatever it currently finds — this server never tells an
+    /// agent to install something it can't independently re-verify is
+    /// still actually pending). Cleared alongside <see cref="PendingInstallRequestedAt"/>
+    /// once the agent acknowledges.
+    /// </summary>
+    public string? PendingInstallUpdateIds { get; set; }
 
     /// <summary>
     /// The <see cref="Updates.InstallOutcome"/> name (e.g. "Succeeded") from

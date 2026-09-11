@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.AgentUpdates;
@@ -157,7 +158,11 @@ public class AgentRegistrationService(
         var certificateRotationPending = agent.IssuingRootThumbprint is not null
             && !string.Equals(agent.IssuingRootThumbprint, ca.RootCertificate.GetCertHashString(HashAlgorithmName.SHA256), StringComparison.Ordinal);
 
-        return new AliveRecordResult(agent.PendingInstallRequestedAt is not null, updateOffer, certificateRotationPending);
+        var installUpdateIds = agent.PendingInstallUpdateIds is null
+            ? null
+            : JsonSerializer.Deserialize<List<string>>(agent.PendingInstallUpdateIds);
+
+        return new AliveRecordResult(agent.PendingInstallRequestedAt is not null, installUpdateIds, updateOffer, certificateRotationPending);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)

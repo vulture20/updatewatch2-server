@@ -23,6 +23,14 @@ export function AgentDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [reissuedToken, setReissuedToken] = useState<string | null>(null);
   const [updatesSort, setUpdatesSort] = useState<SortState<UpdateSortKey>>({ key: null, dir: 'asc' });
+  // Which updates an admin has explicitly unchecked, to install only some
+  // while sparing others — tracked as the deselected set, not the
+  // selected one, so a newly reported update defaults to selected/checked
+  // (matching the previous "install everything" behavior) without this
+  // page needing to notice it arrived. An update with no PackageId (rare;
+  // see WuaUpdateSession's own doc comment) can't be individually named
+  // on the wire, so it's always installed and never appears here.
+  const [deselectedUpdateIds, setDeselectedUpdateIds] = useState<Set<number>>(new Set());
   // Ref, not state — see AgentsListPage's identical use for why: a
   // background poll failure must not replace an already-rendered agent
   // with the not-found state, only the very first load failing should.
@@ -67,6 +75,38 @@ export function AgentDetailPage() {
       }),
     [updates, updatesSort],
   );
+
+  const isForcedUpdate = (update: UpdateItem) => update.packageId === null;
+  const isUpdateSelected = (update: UpdateItem) => isForcedUpdate(update) || !deselectedUpdateIds.has(update.id);
+  const selectedUpdateIds = updates.filter(isUpdateSelected).map((u) => u.id);
+  const deselectableUpdates = updates.filter((u) => !isForcedUpdate(u));
+  const allSelected = deselectableUpdates.every((u) => !deselectedUpdateIds.has(u.id));
+
+  const toggleUpdateSelected = (update: UpdateItem) => {
+    if (isForcedUpdate(update)) {
+      return;
+    }
+    setDeselectedUpdateIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(update.id)) {
+        next.delete(update.id);
+      } else {
+        next.add(update.id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setDeselectedUpdateIds(allSelected ? new Set(deselectableUpdates.map((u) => u.id)) : new Set());
+  };
+
+  const triggerInstall = () => {
+    if (!agent) {
+      return;
+    }
+    void agentsApi.triggerInstall(agent.hostname, selectedUpdateIds).then(reload);
+  };
 
   const sortArrow = (key: UpdateSortKey) => (updatesSort.key === key ? (updatesSort.dir === 'asc' ? '▲' : '▼') : '');
   const sortHeaderProps = (key: UpdateSortKey) => ({
@@ -136,10 +176,12 @@ export function AgentDetailPage() {
           )}
           <button
             type="button"
-            disabled={updates.length === 0 || Boolean(agent.pendingInstallRequestedAt)}
-            onClick={() => void agentsApi.triggerInstall(agent.hostname).then(reload)}
+            disabled={selectedUpdateIds.length === 0 || Boolean(agent.pendingInstallRequestedAt)}
+            onClick={triggerInstall}
           >
-            {agent.pendingInstallRequestedAt ? t('agentDetail.installPending') : t('agentDetail.triggerInstall')}
+            {agent.pendingInstallRequestedAt
+              ? t('agentDetail.installPending')
+              : t('agentDetail.triggerInstall', { count: selectedUpdateIds.length })}
           </button>
           <button type="button" onClick={deleteAgent}>
             {t('agentDetail.delete')}
@@ -233,6 +275,15 @@ export function AgentDetailPage() {
             <thead>
               <tr>
                 <th>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    disabled={deselectableUpdates.length === 0}
+                    onChange={toggleSelectAll}
+                    aria-label={t('agentDetail.selectAllUpdates')}
+                  />
+                </th>
+                <th>
                   <button type="button" {...sortHeaderProps('title')}>
                     {t('agentDetail.updateTitle')} <span className="sort-arrow">{sortArrow('title')}</span>
                   </button>
@@ -252,6 +303,16 @@ export function AgentDetailPage() {
             <tbody>
               {sortedUpdates.map((update) => (
                 <tr key={update.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={isUpdateSelected(update)}
+                      disabled={isForcedUpdate(update)}
+                      onChange={() => toggleUpdateSelected(update)}
+                      title={isForcedUpdate(update) ? t('agentDetail.forcedUpdateHint') : undefined}
+                      aria-label={t('agentDetail.selectUpdate', { title: update.title })}
+                    />
+                  </td>
                   <td>{update.title}</td>
                   <td className="text-muted">{update.packageId ?? '—'}</td>
                   <td className="text-muted">{new Date(update.detectedAt).toLocaleDateString()}</td>

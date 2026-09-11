@@ -217,6 +217,22 @@ public class AgentRegistrationServiceTests : IDisposable
 
         Assert.NotNull(result);
         Assert.True(result.InstallRequested);
+        Assert.Null(result.InstallUpdateIds);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_surfaces_the_selected_update_ids_when_a_selective_install_was_triggered()
+    {
+        await _service.RegisterAsync("selective-install-alive-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "selective-install-alive-host");
+        agent.PendingInstallRequestedAt = DateTimeOffset.UtcNow;
+        agent.PendingInstallUpdateIds = """["KB1","KB2"]""";
+        await _db.SaveChangesAsync();
+
+        var result = await _service.RecordAliveAsync("selective-install-alive-host", request: null);
+
+        Assert.NotNull(result);
+        Assert.Equal(["KB1", "KB2"], result.InstallUpdateIds);
     }
 
     [Fact]

@@ -57,7 +57,11 @@ public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string
 /// <see cref="InstallRequested"/> mirrors <c>Agent.PendingInstallRequestedAt</c>
 /// being set, so <see cref="Api.Controllers.AgentProtocolController.Alive"/>
 /// can hand it back to the agent in the same round-trip rather than needing
-/// a second poll endpoint. <see cref="UpdateAvailable"/> is the same idea
+/// a second poll endpoint. <see cref="InstallUpdateIds"/> mirrors
+/// <c>Agent.PendingInstallUpdateIds</c> — the specific PackageIds an admin
+/// selected, if any (null means "everything currently pending", installing
+/// only some updates while sparing others is otherwise the whole point of
+/// this field existing at all). <see cref="UpdateAvailable"/> is the same idea
 /// applied to a newer agent *software* release (updatewatch2-server#14) —
 /// null whenever there's nothing to offer (feature disabled, no known
 /// release, or this agent is already current).
@@ -70,7 +74,7 @@ public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string
 /// Self-correcting with no acknowledgement needed: once the agent renews,
 /// its next heartbeat computes this as false on its own.
 /// </summary>
-public record AliveRecordResult(bool InstallRequested, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending);
+public record AliveRecordResult(bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending);
 
 /// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)

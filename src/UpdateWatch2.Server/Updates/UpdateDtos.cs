@@ -10,6 +10,19 @@ public record ReportUpdatesRequest(IReadOnlyList<ReportedUpdate> Updates, bool R
 public record ReportedUpdate(string Title, string? PackageId, string? Description);
 
 /// <summary>
+/// Body of <c>POST /api/agents/{hostname}/install</c> — an admin's way to
+/// install only some of an agent's pending updates while sparing others,
+/// at the user's explicit request ("Schaffe eine Möglichkeit nur bestimmte
+/// Updates zu installieren und manche auszusparen"). <see cref="UpdateItemIds"/>
+/// are <see cref="Db.Entities.UpdateItem.Id"/> values from the admin UI's
+/// own selection checkboxes; a null/absent body (or a null field) installs
+/// everything currently pending, the original behavior — kept working
+/// unchanged for a caller with no specific selection to make, and how this
+/// endpoint's own existing bare-POST tests keep exercising it.
+/// </summary>
+public record TriggerInstallRequest(IReadOnlyList<int>? UpdateItemIds);
+
+/// <summary>
 /// How a remote-triggered install (updatewatch2-server#10) went, as
 /// self-reported by the agent once it has acted on the request — not to be
 /// confused with <c>ReportUpdatesRequest.RebootRequired</c>, which is an

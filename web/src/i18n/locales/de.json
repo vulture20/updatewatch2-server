@@ -56,7 +56,7 @@
     "lastAliveAt": "Letzte Alive-Meldung",
     "never": "Nie",
     "approve": "Bestätigen",
-    "triggerInstall": "Updates jetzt installieren",
+    "triggerInstall": "Ausgewählte installieren ({{count}})",
     "installPending": "Installation ausstehend…",
     "lastInstallOutcome": "Letztes Installationsergebnis",
     "installOutcome": {
@@ -68,6 +68,9 @@
     "updatePackageId": "Paket-ID",
     "updateDetectedAt": "Erkannt am",
     "noUpdates": "Keine ausstehenden Updates.",
+    "selectAllUpdates": "Alle Updates auswählen",
+    "selectUpdate": "{{title}} auswählen",
+    "forcedUpdateHint": "Dieses Update hat keine eindeutige Kennung und wird bei jeder Installation immer mit installiert.",
     "cards": {
       "identity": "Identität",
       "certificate": "Zertifikat",

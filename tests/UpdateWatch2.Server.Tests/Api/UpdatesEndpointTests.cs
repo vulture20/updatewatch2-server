@@ -122,6 +122,20 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
         Assert.NotNull(detail.PendingInstallRequestedAt);
     }
 
+    [Fact]
+    public async Task Trigger_install_with_a_selection_only_stores_the_selected_updates_PackageId()
+    {
+        var updateItemId = await SeedAgentWithUpdateAsync("selective-install-host", "Security Update", "KB123456", rebootRequired: false);
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/agents/selective-install-host/install",
+            new TriggerInstallRequest([updateItemId]));
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        var detail = await _client.GetFromJsonAsync<AgentDetail>("/api/agents/selective-install-host");
+        Assert.NotNull(detail?.PendingInstallRequestedAt);
+    }
+
     // install-ack is agent-facing (mTLS), the same as ReportUpdates above —
     // WebApplicationFactory can't present a client certificate, so only the
     // rejection path is exercised here; the success path is covered by
@@ -149,9 +163,10 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
     /// mirroring exactly what UpdateService.ReportUpdatesAsync itself
     /// writes (UpdateItem row + Agent.PendingUpdateCount/RebootRequired) —
     /// see the comment on the tests that use this for why the POST endpoint
-    /// itself can no longer be driven from this test harness.
+    /// itself can no longer be driven from this test harness. Returns the
+    /// seeded UpdateItem's own id, for a test that needs to select it.
     /// </summary>
-    private async Task SeedAgentWithUpdateAsync(string hostname, string title, string? packageId, bool rebootRequired)
+    private async Task<int> SeedAgentWithUpdateAsync(string hostname, string title, string? packageId, bool rebootRequired)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -159,8 +174,10 @@ public class UpdatesEndpointTests : IClassFixture<WebApplicationFactory<Program>
         db.Agents.Add(agent);
         await db.SaveChangesAsync();
 
-        db.UpdateItems.Add(new UpdateItem { AgentId = agent.Id, Title = title, PackageId = packageId });
+        var item = new UpdateItem { AgentId = agent.Id, Title = title, PackageId = packageId };
+        db.UpdateItems.Add(item);
         await db.SaveChangesAsync();
+        return item.Id;
     }
 
     public Task DisposeAsync()

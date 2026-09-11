@@ -56,7 +56,7 @@
     "lastAliveAt": "Last alive",
     "never": "Never",
     "approve": "Approve",
-    "triggerInstall": "Install updates now",
+    "triggerInstall": "Install selected ({{count}})",
     "installPending": "Install pending…",
     "lastInstallOutcome": "Last install result",
     "installOutcome": {
@@ -68,6 +68,9 @@
     "updatePackageId": "Package ID",
     "updateDetectedAt": "Detected",
     "noUpdates": "No pending updates.",
+    "selectAllUpdates": "Select all updates",
+    "selectUpdate": "Select {{title}}",
+    "forcedUpdateHint": "This update has no unique identifier and is always included when installing.",
     "cards": {
       "identity": "Identity",
       "certificate": "Certificate",

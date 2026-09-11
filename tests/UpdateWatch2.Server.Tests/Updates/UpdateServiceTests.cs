@@ -10,9 +10,10 @@ namespace UpdateWatch2.Server.Tests.Updates;
 /// Covers the remote-install delivery mechanism (updatewatch2-server#10):
 /// TriggerInstallAsync sets a pending marker rather than only audit-logging
 /// (as it used to before delivery existed), and AcknowledgeInstallAsync is
-/// how the agent's report of having acted on it clears that marker. The
-/// actual poll/response wiring an agent sees is covered by
-/// AgentRegistrationServiceTests (RecordAliveAsync) and
+/// how the agent's report of having acted on it clears that marker —
+/// including, now, an admin's optional selection of specific updates to
+/// install while sparing others. The actual poll/response wiring an agent
+/// sees is covered by AgentRegistrationServiceTests (RecordAliveAsync) and
 /// AgentProtocolControllerTests-equivalent endpoint tests, not here — this
 /// is the service layer in isolation.
 /// </summary>
@@ -42,19 +43,76 @@ public class UpdateServiceTests : IDisposable
         _db.Agents.Add(new Agent { Hostname = "install-host", Approved = true });
         await _db.SaveChangesAsync();
 
-        var found = await _service.TriggerInstallAsync("install-host", triggeredBy: "admin");
+        var found = await _service.TriggerInstallAsync("install-host", triggeredBy: "admin", updateItemIds: null);
 
         Assert.True(found);
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == "install-host");
         Assert.NotNull(agent.PendingInstallRequestedAt);
+        Assert.Null(agent.PendingInstallUpdateIds);
     }
 
     [Fact]
     public async Task TriggerInstallAsync_returns_false_for_an_unknown_agent()
     {
-        var found = await _service.TriggerInstallAsync("no-such-host", triggeredBy: "admin");
+        var found = await _service.TriggerInstallAsync("no-such-host", triggeredBy: "admin", updateItemIds: null);
 
         Assert.False(found);
+    }
+
+    [Fact]
+    public async Task TriggerInstallAsync_with_a_selection_stores_the_selected_updates_PackageIds()
+    {
+        var agent = new Agent { Hostname = "selective-install-host", Approved = true };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        var keep = new UpdateItem { AgentId = agent.Id, Title = "Keep this one", PackageId = "KB1" };
+        var spare = new UpdateItem { AgentId = agent.Id, Title = "Spare this one", PackageId = "KB2" };
+        _db.UpdateItems.AddRange(keep, spare);
+        await _db.SaveChangesAsync();
+
+        var found = await _service.TriggerInstallAsync("selective-install-host", triggeredBy: "admin", updateItemIds: [keep.Id]);
+
+        Assert.True(found);
+        var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "selective-install-host");
+        Assert.Equal("""["KB1"]""", reloaded.PendingInstallUpdateIds);
+    }
+
+    [Fact]
+    public async Task TriggerInstallAsync_selection_ignores_ids_belonging_to_a_different_agent_and_ones_with_no_PackageId()
+    {
+        var agent = new Agent { Hostname = "own-updates-host", Approved = true };
+        var otherAgent = new Agent { Hostname = "other-updates-host", Approved = true };
+        _db.Agents.AddRange(agent, otherAgent);
+        await _db.SaveChangesAsync();
+        var mine = new UpdateItem { AgentId = agent.Id, Title = "Mine", PackageId = "KB1" };
+        var noPackageId = new UpdateItem { AgentId = agent.Id, Title = "No KB article" };
+        var someoneElses = new UpdateItem { AgentId = otherAgent.Id, Title = "Not mine", PackageId = "KB9" };
+        _db.UpdateItems.AddRange(mine, noPackageId, someoneElses);
+        await _db.SaveChangesAsync();
+
+        await _service.TriggerInstallAsync("own-updates-host", triggeredBy: "admin", updateItemIds: [mine.Id, noPackageId.Id, someoneElses.Id]);
+
+        var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "own-updates-host");
+        Assert.Equal("""["KB1"]""", reloaded.PendingInstallUpdateIds);
+    }
+
+    [Fact]
+    public async Task AcknowledgeInstallAsync_clears_the_selected_update_ids_too()
+    {
+        var agent = new Agent
+        {
+            Hostname = "ack-selection-host",
+            Approved = true,
+            PendingInstallRequestedAt = DateTimeOffset.UtcNow,
+            PendingInstallUpdateIds = """["KB1"]""",
+        };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeInstallAsync("ack-selection-host", InstallOutcome.Succeeded);
+
+        var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "ack-selection-host");
+        Assert.Null(reloaded.PendingInstallUpdateIds);
     }
 
     [Fact]
@@ -97,6 +155,74 @@ public class UpdateServiceTests : IDisposable
         var found = await _service.AcknowledgeInstallAsync("no-such-host", InstallOutcome.Succeeded);
 
         Assert.False(found);
+    }
+
+    [Fact]
+    public async Task ReportUpdatesAsync_preserves_DetectedAt_for_a_still_pending_update()
+    {
+        // The bug this guards against: a user report that the "Detected
+        // at" column always showed today's date — ReportUpdatesAsync used
+        // to unconditionally delete and recreate every UpdateItem row on
+        // every single report, resetting DetectedAt every time even for
+        // an update that had been pending for weeks.
+        var agent = new Agent { Hostname = "detected-at-host", Approved = true };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        await _service.ReportUpdatesAsync("detected-at-host", new ReportUpdatesRequest(
+            [new ReportedUpdate("Security Update", "KB123", "first description")], RebootRequired: false));
+        var firstReportItem = await _db.UpdateItems.SingleAsync(u => u.AgentId == agent.Id);
+        var originalDetectedAt = DateTimeOffset.UtcNow.AddDays(-10);
+        firstReportItem.DetectedAt = originalDetectedAt;
+        await _db.SaveChangesAsync();
+
+        // Same PackageId, reported again — title/description could
+        // plausibly differ (e.g. a Linux package's target version moved),
+        // but this is still fundamentally the same pending update.
+        await _service.ReportUpdatesAsync("detected-at-host", new ReportUpdatesRequest(
+            [new ReportedUpdate("Security Update", "KB123", "second description")], RebootRequired: false));
+
+        var reloaded = await _db.UpdateItems.SingleAsync(u => u.AgentId == agent.Id);
+        Assert.Equal(originalDetectedAt, reloaded.DetectedAt);
+        Assert.Equal("second description", reloaded.Description);
+    }
+
+    [Fact]
+    public async Task ReportUpdatesAsync_matches_by_title_when_PackageId_is_null()
+    {
+        var agent = new Agent { Hostname = "no-packageid-host", Approved = true };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        await _service.ReportUpdatesAsync("no-packageid-host", new ReportUpdatesRequest(
+            [new ReportedUpdate("Feature Update", null, "d1")], RebootRequired: false));
+        var item = await _db.UpdateItems.SingleAsync(u => u.AgentId == agent.Id);
+        var originalDetectedAt = DateTimeOffset.UtcNow.AddDays(-5);
+        item.DetectedAt = originalDetectedAt;
+        await _db.SaveChangesAsync();
+
+        await _service.ReportUpdatesAsync("no-packageid-host", new ReportUpdatesRequest(
+            [new ReportedUpdate("Feature Update", null, "d2")], RebootRequired: false));
+
+        var reloaded = await _db.UpdateItems.SingleAsync(u => u.AgentId == agent.Id);
+        Assert.Equal(originalDetectedAt, reloaded.DetectedAt);
+    }
+
+    [Fact]
+    public async Task ReportUpdatesAsync_removes_updates_no_longer_reported_and_adds_a_fresh_DetectedAt_for_new_ones()
+    {
+        var agent = new Agent { Hostname = "diff-report-host", Approved = true };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        await _service.ReportUpdatesAsync("diff-report-host", new ReportUpdatesRequest(
+            [new ReportedUpdate("Old Update", "KB1", null)], RebootRequired: false));
+
+        var before = DateTimeOffset.UtcNow;
+        await _service.ReportUpdatesAsync("diff-report-host", new ReportUpdatesRequest(
+            [new ReportedUpdate("New Update", "KB2", null)], RebootRequired: false));
+
+        var items = await _db.UpdateItems.Where(u => u.AgentId == agent.Id).ToListAsync();
+        var item = Assert.Single(items);
+        Assert.Equal("KB2", item.PackageId);
+        Assert.True(item.DetectedAt >= before);
     }
 
     [Fact]

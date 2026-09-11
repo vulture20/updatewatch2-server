@@ -70,12 +70,17 @@ public class AgentProtocolController(
         // relying solely on the agent's own expiry-driven schedule) are the
         // same kind of additive change, hence the further protocol bumps —
         // an agent build that predates either simply ignores the extra
-        // field.
+        // field. installUpdateIds (an admin's way to install only some
+        // pending updates while sparing others) is the same story again —
+        // an agent build that predates it just keeps installing
+        // everything whenever installRequested is true, since null/absent
+        // is exactly what that older behavior already meant.
         return result is null
             ? NotFound()
             : Ok(new
             {
                 installRequested = result.InstallRequested,
+                installUpdateIds = result.InstallUpdateIds,
                 agentUpdateAvailable = result.UpdateAvailable,
                 certificateRotationPending = result.CertificateRotationPending,
             });

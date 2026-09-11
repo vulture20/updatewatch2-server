@@ -39,11 +39,14 @@ public class UpdatesController(IUpdateService updateService) : ControllerBase
         return found ? NoContent() : NotFound();
     }
 
+    // request is nullable, and its own UpdateItemIds field is nullable too
+    // — a bare POST with no body (the original behavior, before an admin
+    // could spare specific updates) still installs everything pending.
     [HttpPost("install")]
     [Authorize]
-    public async Task<IActionResult> TriggerInstall(string hostname, CancellationToken ct)
+    public async Task<IActionResult> TriggerInstall(string hostname, [FromBody] TriggerInstallRequest? request, CancellationToken ct)
     {
-        var found = await updateService.TriggerInstallAsync(hostname, triggeredBy: User.Identity!.Name!, ct);
+        var found = await updateService.TriggerInstallAsync(hostname, triggeredBy: User.Identity!.Name!, request?.UpdateItemIds, ct);
         return found ? Accepted() : NotFound();
     }
 

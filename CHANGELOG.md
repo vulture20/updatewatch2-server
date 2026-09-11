@@ -11,6 +11,16 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.8] - 2026-09-11
+
+### Added
+
+- **An admin can now install only some of an agent's pending updates while sparing others, at the user's explicit request ("Schaffe eine Möglichkeit nur bestimmte Updates zu installieren und manche auszusparen") — protocol `0.9.0`, DB schema `0.15.4`.** `POST /api/agents/{hostname}/install`'s body gained an optional `updateItemIds` field (`Updates.TriggerInstallRequest`) naming the specific `UpdateItem.Id` rows to install; a null/absent body still installs everything, unchanged, so every existing caller keeps working exactly as before. `TriggerInstallAsync` translates the selected ids into their `PackageId`s (the identifier an agent can actually re-match against what it independently finds pending — a KB number on Windows, a bare package name on Linux), stores them as a JSON array in a new `Agent.PendingInstallUpdateIds` column, and hands them back on the next `alive` heartbeat as an additive `installUpdateIds` field, mirroring exactly how `installRequested` already rides that same response. Live-verified end to end against a real running server, including a genuine mTLS handshake: registered/approved/certified a real agent, triggered a selective install for one of two seeded updates, and confirmed both the stored `PendingInstallUpdateIds` and the real `alive` response (over TLS, with the agent's own issued certificate) carried exactly the right value — followed by install-ack clearing both fields and a separate no-body trigger confirming the legacy "install everything" path still works unchanged.
+
+### Fixed
+
+- **The pending-updates list's "Detected at" column always showed today's date, no matter how long an update had actually been pending — reported by the user directly.** `UpdateService.ReportUpdatesAsync` used to unconditionally delete and recreate every `UpdateItem` row on every single agent report, resetting `DetectedAt` every time even for an update nothing had actually changed about. Fixed by merging the newly reported set against what's already known instead: matched by `PackageId` (falling back to `Title` when neither side has one), a still-pending update keeps its original `DetectedAt`; one no longer reported gets removed; a genuinely new one gets a fresh `DetectedAt` as before. This also happens to be exactly what makes `UpdateItem.Id` stable enough across reports for the selective-install feature above to rely on.
+
 ## [0.30.7] - 2026-09-11
 
 ### Added
