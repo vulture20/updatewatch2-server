@@ -29,7 +29,29 @@ public record AgentUpdateOffer(
     AgentUpdateAssetOffer? LinuxRpm);
 
 /// <summary>Read-only status shown on the admin Settings page.</summary>
-public record AgentUpdateStatusDto(bool Enabled, string? LatestVersion, DateTimeOffset? CheckedAt, string? LastError);
+public record AgentUpdateStatusDto(bool Enabled, string? LatestVersion, DateTimeOffset? CheckedAt, string? LastError, bool ManuallyUploaded);
+
+/// <summary>
+/// One file an admin is manually uploading via <c>POST /api/admin/agent-update-status/upload</c>
+/// (the offline/air-gapped alternative to <see cref="IAgentUpdateService.CheckForUpdatesAsync"/>'s
+/// GitHub download — see CLAUDE.md's "Agent auto-update" bullet).
+/// <see cref="FileName"/> is only ever used to classify which of the three
+/// known asset kinds (<see cref="AgentUpdateAssetClassifier"/>) this is and
+/// as the name it's saved/offered under — never trusted as a path (see
+/// <see cref="IAgentUpdateService.UploadAssetsAsync"/>'s own doc comment).
+/// <see cref="Content"/> is owned and disposed by the caller (the
+/// controller), not by whatever consumes this record.
+/// </summary>
+public record UploadedAgentAsset(string FileName, Stream Content);
+
+public enum AgentUpdateUploadOutcome
+{
+    /// <summary>Saved and recorded successfully — offered to agents from the very next heartbeat onward.</summary>
+    Uploaded,
+
+    /// <summary>Rejected — this feature's Enabled toggle (or UPDATEWATCH2_AUTOUPDATE=false) is currently off.</summary>
+    Disabled,
+}
 
 public enum AgentUpdateCheckOutcome
 {

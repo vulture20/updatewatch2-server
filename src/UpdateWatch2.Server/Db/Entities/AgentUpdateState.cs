@@ -50,4 +50,18 @@ public class AgentUpdateState
     /// rather than silently retried forever with no feedback.
     /// </summary>
     public string? LastError { get; set; }
+
+    /// <summary>
+    /// True iff <see cref="LatestVersion"/>'s assets were placed here by an
+    /// admin manually uploading them (<c>AgentUpdateService.UploadAssetsAsync</c>)
+    /// rather than downloaded from GitHub — the escape hatch for a server
+    /// that deliberately has no internet access (CLAUDE.md's "Agent
+    /// auto-update" bullet). Reset to false the moment a real GitHub
+    /// download succeeds (<c>DownloadAssetsAsync</c>), so this always
+    /// reflects where the currently-offered assets actually came from, not
+    /// just how they first arrived. Display-only — never affects which
+    /// asset is offered or how it's validated (the SHA-256 check is
+    /// identical either way).
+    /// </summary>
+    public bool ManuallyUploaded { get; set; }
 }

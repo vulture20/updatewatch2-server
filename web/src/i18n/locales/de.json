@@ -145,7 +145,19 @@
       "noneYet": "Noch keine",
       "checkNow": "Jetzt prüfen",
       "checking": "Wird geprüft…",
-      "checkNowDisabledHint": "Obige Einstellung aktivieren und speichern, um manuell zu prüfen."
+      "checkNowDisabledHint": "Obige Einstellung aktivieren und speichern, um manuell zu prüfen.",
+      "source": "Quelle",
+      "sourceGitHub": "GitHub",
+      "sourceManual": "Manuell hochgeladen",
+      "manualUpload": {
+        "title": "Manueller Upload",
+        "hint": "Für einen Server, der bewusst keine Internetverbindung haben soll: die .exe-/.deb-/.rpm-Dateien der Version direkt hochladen statt auf GitHub zu prüfen. Sie werden Agents in beiden Fällen identisch angeboten.",
+        "version": "Version",
+        "files": "Release-Dateien",
+        "filesHint": "Höchstens je eine: .exe (Windows), .deb (Debian/Ubuntu), .rpm (RPM-basiert).",
+        "upload": "Hochladen",
+        "uploading": "Wird hochgeladen…"
+      }
     },
     "notifications": "SMTP-Server",
     "notificationThresholds": "Schwellenwerte",

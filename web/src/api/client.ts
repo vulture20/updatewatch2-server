@@ -27,6 +27,28 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
 
+async function handleResponse<T>(
+  response: Response,
+  method: string,
+  path: string,
+  options?: { skipUnauthorizedHandler?: boolean },
+): Promise<T> {
+  if (!response.ok) {
+    if (response.status === 401 && !options?.skipUnauthorizedHandler) {
+      onUnauthorized?.();
+    }
+
+    const message = await readErrorMessage(response, method, path);
+    throw new ApiError(response.status, message);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return (await response.json()) as T;
+}
+
 async function request<T>(path: string, init?: RequestInit & { skipUnauthorizedHandler?: boolean }): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -37,20 +59,25 @@ async function request<T>(path: string, init?: RequestInit & { skipUnauthorizedH
     },
   });
 
-  if (!response.ok) {
-    if (response.status === 401 && !init?.skipUnauthorizedHandler) {
-      onUnauthorized?.();
-    }
+  return handleResponse<T>(response, init?.method ?? 'GET', path, init);
+}
 
-    const message = await readErrorMessage(response, init?.method ?? 'GET', path);
-    throw new ApiError(response.status, message);
-  }
+/**
+ * A multipart/form-data POST (agentUpdatesApi.upload's manual agent-binary
+ * upload) — deliberately not routed through request()'s JSON path: setting
+ * a Content-Type header by hand for a FormData body omits the multipart
+ * boundary the browser would otherwise add itself, which silently breaks
+ * the upload server-side. Shares request()'s own response handling
+ * (unauthorized/error/204 behavior) via handleResponse.
+ */
+async function requestForm<T>(path: string, formData: FormData): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return (await response.json()) as T;
+  return handleResponse<T>(response, 'POST', path);
 }
 
 async function readErrorMessage(response: Response, method: string, path: string): Promise<string> {
@@ -87,4 +114,5 @@ export const apiClient = {
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'PUT', body: body === undefined ? undefined : JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  postForm: <T>(path: string, formData: FormData) => requestForm<T>(path, formData),
 };

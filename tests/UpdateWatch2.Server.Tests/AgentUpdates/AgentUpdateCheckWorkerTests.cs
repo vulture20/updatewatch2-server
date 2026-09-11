@@ -136,5 +136,8 @@ public class AgentUpdateCheckWorkerTests
 
         public Task<string?> ResolveDownloadPathAsync(string fileName, CancellationToken ct = default) =>
             throw new NotSupportedException();
+
+        public Task<AgentUpdateUploadOutcome> UploadAssetsAsync(string version, IReadOnlyList<UploadedAgentAsset> files, CancellationToken ct = default) =>
+            throw new NotSupportedException();
     }
 }

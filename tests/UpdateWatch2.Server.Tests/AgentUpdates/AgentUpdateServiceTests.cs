@@ -250,4 +250,115 @@ public class AgentUpdateServiceTests : IDisposable
         Assert.NotNull(path);
         Assert.True(File.Exists(path));
     }
+
+    [Fact]
+    public async Task UploadAssetsAsync_is_a_no_op_when_disabled_via_the_admin_toggle()
+    {
+        _settingsStore.AgentAutoUpdate = new AgentAutoUpdateOptions { Enabled = false };
+
+        var outcome = await _service.UploadAssetsAsync("0.13.0", [MakeUpload("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")]);
+
+        Assert.Equal(AgentUpdateUploadOutcome.Disabled, outcome);
+        Assert.Empty(await _db.AgentUpdateStates.ToListAsync());
+    }
+
+    [Fact]
+    public async Task UploadAssetsAsync_saves_the_files_computes_their_sha256_and_marks_the_state_manually_uploaded()
+    {
+        var outcome = await _service.UploadAssetsAsync(
+            "0.13.0",
+            [
+                MakeUpload("UpdateWatch2Agent-Setup-0.13.0-x64.exe", "exe-bytes"),
+                MakeUpload("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes"),
+            ]);
+
+        Assert.Equal(AgentUpdateUploadOutcome.Uploaded, outcome);
+
+        var state = await _db.AgentUpdateStates.SingleAsync();
+        Assert.Equal("0.13.0", state.LatestVersion);
+        Assert.True(state.ManuallyUploaded);
+        Assert.Null(state.LastError);
+        Assert.Equal("UpdateWatch2Agent-Setup-0.13.0-x64.exe", state.WindowsInstallerFileName);
+        Assert.Equal("updatewatch2-agent_0.13.0_amd64.deb", state.LinuxDebFileName);
+        Assert.Null(state.LinuxRpmFileName);
+        Assert.Equal(Sha256Of("exe-bytes"), state.WindowsInstallerSha256);
+        Assert.True(File.Exists(Path.Combine(_storageDirectory, "UpdateWatch2Agent-Setup-0.13.0-x64.exe")));
+    }
+
+    [Fact]
+    public async Task UploadAssetsAsync_offers_the_uploaded_version_the_same_way_a_GitHub_download_would()
+    {
+        await _service.UploadAssetsAsync("0.13.0", [MakeUpload("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")]);
+
+        var offer = await _service.GetOfferForAsync("0.12.0");
+
+        Assert.NotNull(offer);
+        Assert.Equal("0.13.0", offer!.Version);
+        Assert.Equal("/api/agent/updates/updatewatch2-agent_0.13.0_amd64.deb", offer.LinuxDeb!.DownloadUrl);
+    }
+
+    [Fact]
+    public async Task UploadAssetsAsync_uploading_a_new_version_replaces_slots_not_present_in_this_upload()
+    {
+        await _service.UploadAssetsAsync(
+            "0.13.0",
+            [
+                MakeUpload("UpdateWatch2Agent-Setup-0.13.0-x64.exe", "exe-v1"),
+                MakeUpload("updatewatch2-agent_0.13.0_amd64.deb", "deb-v1"),
+            ]);
+
+        // A genuinely different version, uploading only the .deb this
+        // time — the stale .exe from 0.13.0 must not linger and be mixed
+        // into the 0.14.0 offer.
+        await _service.UploadAssetsAsync("0.14.0", [MakeUpload("updatewatch2-agent_0.14.0_amd64.deb", "deb-v2")]);
+
+        var state = await _db.AgentUpdateStates.SingleAsync();
+        Assert.Equal("0.14.0", state.LatestVersion);
+        Assert.Null(state.WindowsInstallerFileName);
+        Assert.Equal("updatewatch2-agent_0.14.0_amd64.deb", state.LinuxDebFileName);
+        Assert.False(File.Exists(Path.Combine(_storageDirectory, "UpdateWatch2Agent-Setup-0.13.0-x64.exe")));
+        Assert.False(File.Exists(Path.Combine(_storageDirectory, "updatewatch2-agent_0.13.0_amd64.deb")));
+    }
+
+    [Fact]
+    public async Task UploadAssetsAsync_uploading_the_same_version_again_only_replaces_the_slots_provided()
+    {
+        await _service.UploadAssetsAsync(
+            "0.13.0",
+            [
+                MakeUpload("UpdateWatch2Agent-Setup-0.13.0-x64.exe", "exe-v1"),
+                MakeUpload("updatewatch2-agent_0.13.0_amd64.deb", "deb-v1"),
+            ]);
+
+        // Same version, only re-uploading the .deb — the .exe from the
+        // earlier call in this same version must be left untouched.
+        await _service.UploadAssetsAsync("0.13.0", [MakeUpload("updatewatch2-agent_0.13.0_amd64.deb", "deb-v2")]);
+
+        var state = await _db.AgentUpdateStates.SingleAsync();
+        Assert.Equal("UpdateWatch2Agent-Setup-0.13.0-x64.exe", state.WindowsInstallerFileName);
+        Assert.Equal(Sha256Of("deb-v2"), state.LinuxDebSha256);
+        Assert.True(File.Exists(Path.Combine(_storageDirectory, "UpdateWatch2Agent-Setup-0.13.0-x64.exe")));
+    }
+
+    [Fact]
+    public async Task UploadAssetsAsync_replacing_a_slot_with_a_differently_named_file_deletes_the_superseded_one()
+    {
+        await _service.UploadAssetsAsync("0.13.0", [MakeUpload("updatewatch2-agent_0.13.0_amd64.deb", "deb-v1")]);
+        var firstPath = Path.Combine(_storageDirectory, "updatewatch2-agent_0.13.0_amd64.deb");
+        Assert.True(File.Exists(firstPath));
+
+        await _service.UploadAssetsAsync("0.13.0", [MakeUpload("updatewatch2-agent_0.13.0+fixed_amd64.deb", "deb-v2")]);
+
+        Assert.False(File.Exists(firstPath));
+        Assert.True(File.Exists(Path.Combine(_storageDirectory, "updatewatch2-agent_0.13.0+fixed_amd64.deb")));
+    }
+
+    private static UploadedAgentAsset MakeUpload(string fileName, string content) =>
+        new(fileName, new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)));
+
+    private static string Sha256Of(string content)
+    {
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        return Convert.ToHexStringLower(sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content)));
+    }
 }

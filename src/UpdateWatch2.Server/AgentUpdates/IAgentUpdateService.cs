@@ -49,4 +49,28 @@ public interface IAgentUpdateService
     /// or the file is missing.
     /// </summary>
     Task<string?> ResolveDownloadPathAsync(string fileName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Manually installs agent release assets an admin uploaded directly
+    /// through the admin UI, rather than downloaded from GitHub — the
+    /// escape hatch for a server that deliberately has no internet access
+    /// (CLAUDE.md's "Agent auto-update" bullet). Each file in
+    /// <paramref name="files"/> is classified purely by its extension
+    /// (<see cref="AgentUpdateAssetClassifier"/>) into one of the three
+    /// known asset slots; anything else is silently ignored (defense in
+    /// depth — <c>AgentUpdatesController</c> already rejects an
+    /// unrecognized extension with 400 before this is ever called).
+    /// <paramref name="version"/> matching the already-known
+    /// <see cref="Db.Entities.AgentUpdateState.LatestVersion"/> merges into
+    /// the existing asset set (only the slots actually present in
+    /// <paramref name="files"/> are replaced); any other value — including
+    /// the very first upload — replaces the whole known asset set outright,
+    /// the same full-reset behavior <c>CheckForUpdatesAsync</c> already
+    /// applies for a genuinely new GitHub release, so an agent is never
+    /// offered filenames mixed across two different versions. Requires
+    /// this feature's own <see cref="IsEnabled"/> gate, the same as every
+    /// other method here — uploading while disabled is rejected, not
+    /// silently discarded.
+    /// </summary>
+    Task<AgentUpdateUploadOutcome> UploadAssetsAsync(string version, IReadOnlyList<UploadedAgentAsset> files, CancellationToken ct = default);
 }

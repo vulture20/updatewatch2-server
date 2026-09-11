@@ -177,6 +177,8 @@ export interface AgentUpdateStatus {
   latestVersion: string | null;
   checkedAt: string | null;
   lastError: string | null;
+  /** True iff latestVersion's assets were manually uploaded (agentUpdatesApi.upload) rather than downloaded from GitHub. */
+  manuallyUploaded: boolean;
 }
 
 export type UpdateAdminSettings = Omit<

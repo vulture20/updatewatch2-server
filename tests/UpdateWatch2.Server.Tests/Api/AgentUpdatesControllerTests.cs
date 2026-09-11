@@ -7,8 +7,8 @@ using UpdateWatch2.Server.Tests.TestHelpers;
 namespace UpdateWatch2.Server.Tests.Api;
 
 /// <summary>
-/// Covers only the auth gate plus the read-only status shape here,
-/// deliberately not the "check" endpoint's success path — same reasoning
+/// Covers only the auth gate plus the read-only status shape for the
+/// "check" endpoint, deliberately not its success path — same reasoning
 /// as <c>CertificateAuthorityEndpointTests</c>' own doc comment: unlike
 /// every other endpoint under <c>tests/.../Api/</c>, actually calling it
 /// would exercise the real <c>AgentUpdateService</c> against the live
@@ -18,7 +18,10 @@ namespace UpdateWatch2.Server.Tests.Api;
 /// <c>WithoutBackgroundWorkers</c>'s own doc comment describes this
 /// project once shipping for real by accident. The actual check/download
 /// logic is covered by <c>AgentUpdateServiceTests</c> against a fake
-/// <c>IGitHubReleaseClient</c> instead.
+/// <c>IGitHubReleaseClient</c> instead. The "upload" endpoint has no such
+/// restriction — it never talks to GitHub at all — so its success path
+/// (and validation) is exercised for real here, over an actual HTTP
+/// multipart request against the real <c>AgentUpdateService</c>.
 /// </summary>
 public class AgentUpdatesControllerTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
 {
@@ -81,7 +84,72 @@ public class AgentUpdatesControllerTests : IClassFixture<WebApplicationFactory<P
         Assert.Null(status.latestVersion);
         Assert.Null(status.checkedAt);
         Assert.Null(status.lastError);
+        Assert.False(status.manuallyUploaded);
     }
 
-    private record StatusDto(bool enabled, string? latestVersion, DateTimeOffset? checkedAt, string? lastError);
+    [Fact]
+    public async Task Upload_requires_an_admin_session()
+    {
+        using var response = await _anonymousClient.PostAsync("/api/admin/agent-update-status/upload", MakeUploadForm("0.13.0", ("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_rejects_an_invalid_version()
+    {
+        using var response = await _client.PostAsync("/api/admin/agent-update-status/upload", MakeUploadForm("not-a-version", ("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_rejects_a_request_with_no_files()
+    {
+        using var form = new MultipartFormDataContent { { new StringContent("0.13.0"), "version" } };
+
+        using var response = await _client.PostAsync("/api/admin/agent-update-status/upload", form);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_rejects_an_unrecognized_file_extension()
+    {
+        using var response = await _client.PostAsync("/api/admin/agent-update-status/upload", MakeUploadForm("0.13.0", ("checksums.txt", "not a real package")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_saves_a_valid_release_and_it_becomes_the_new_status()
+    {
+        using var response = await _client.PostAsync(
+            "/api/admin/agent-update-status/upload",
+            MakeUploadForm("0.13.0", ("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")));
+
+        response.EnsureSuccessStatusCode();
+        var status = await response.Content.ReadFromJsonAsync<StatusDto>();
+        Assert.NotNull(status);
+        Assert.Equal("0.13.0", status!.latestVersion);
+        Assert.True(status.manuallyUploaded);
+
+        var statusResponse = await _client.GetAsync("/api/admin/agent-update-status");
+        var reread = await statusResponse.Content.ReadFromJsonAsync<StatusDto>();
+        Assert.Equal("0.13.0", reread!.latestVersion);
+    }
+
+    private static MultipartFormDataContent MakeUploadForm(string version, params (string FileName, string Content)[] files)
+    {
+        var form = new MultipartFormDataContent { { new StringContent(version), "version" } };
+        foreach (var (fileName, content) in files)
+        {
+            var fileContent = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content));
+            form.Add(fileContent, "files", fileName);
+        }
+
+        return form;
+    }
+
+    private record StatusDto(bool enabled, string? latestVersion, DateTimeOffset? checkedAt, string? lastError, bool manuallyUploaded);
 }

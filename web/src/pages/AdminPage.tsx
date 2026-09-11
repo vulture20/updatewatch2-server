@@ -65,6 +65,14 @@ export function AdminPage() {
   const [agentUpdateStatus, setAgentUpdateStatus] = useState<AgentUpdateStatus | null>(null);
   const [agentUpdateBusy, setAgentUpdateBusy] = useState(false);
   const [agentUpdateError, setAgentUpdateError] = useState<string | null>(null);
+  const [manualUploadVersion, setManualUploadVersion] = useState('');
+  const [manualUploadFiles, setManualUploadFiles] = useState<File[]>([]);
+  const [manualUploadBusy, setManualUploadBusy] = useState(false);
+  const [manualUploadError, setManualUploadError] = useState<string | null>(null);
+  // Remounts the (uncontrolled) file input on success so its own visible
+  // file-name list clears along with manualUploadFiles — a plain state
+  // reset alone doesn't touch what a <input type="file"> displays.
+  const [manualUploadInputKey, setManualUploadInputKey] = useState(0);
   const [updateFilters, setUpdateFilters] = useState<UpdateFilter[]>([]);
   const [updateFiltersError, setUpdateFiltersError] = useState<string | null>(null);
   const [newFilterName, setNewFilterName] = useState('');
@@ -156,6 +164,21 @@ export function AdminPage() {
       .then(setAgentUpdateStatus)
       .catch((err) => setAgentUpdateError(err instanceof ApiError ? err.message : t('login.genericError')))
       .finally(() => setAgentUpdateBusy(false));
+  };
+
+  const runManualUpload = () => {
+    setManualUploadError(null);
+    setManualUploadBusy(true);
+    agentUpdatesApi
+      .upload(manualUploadVersion, manualUploadFiles)
+      .then((status) => {
+        setAgentUpdateStatus(status);
+        setManualUploadVersion('');
+        setManualUploadFiles([]);
+        setManualUploadInputKey((key) => key + 1);
+      })
+      .catch((err) => setManualUploadError(err instanceof ApiError ? err.message : t('login.genericError')))
+      .finally(() => setManualUploadBusy(false));
   };
 
   const runCaAction = (
@@ -348,6 +371,16 @@ export function AdminPage() {
                 <dl>
                   <dt>{t('admin.agentAutoUpdate.latestVersion')}</dt>
                   <dd>{agentUpdateStatus.latestVersion ?? t('admin.agentAutoUpdate.noneYet')}</dd>
+                  {agentUpdateStatus.latestVersion && (
+                    <>
+                      <dt>{t('admin.agentAutoUpdate.source')}</dt>
+                      <dd>
+                        {agentUpdateStatus.manuallyUploaded
+                          ? t('admin.agentAutoUpdate.sourceManual')
+                          : t('admin.agentAutoUpdate.sourceGitHub')}
+                      </dd>
+                    </>
+                  )}
                   <dt>{t('admin.agentAutoUpdate.checkedAt')}</dt>
                   <dd>{agentUpdateStatus.checkedAt ? new Date(agentUpdateStatus.checkedAt).toLocaleString(i18n.language) : '—'}</dd>
                   {agentUpdateStatus.lastError && (
@@ -366,6 +399,37 @@ export function AdminPage() {
                   {agentUpdateBusy ? t('admin.agentAutoUpdate.checking') : t('admin.agentAutoUpdate.checkNow')}
                 </button>
                 {!agentUpdateStatus.enabled && <p className="field-hint">{t('admin.agentAutoUpdate.checkNowDisabledHint')}</p>}
+
+                <span className="card-kicker">{t('admin.agentAutoUpdate.manualUpload.title')}</span>
+                <p className="field-hint">{t('admin.agentAutoUpdate.manualUpload.hint')}</p>
+                <label>
+                  {t('admin.agentAutoUpdate.manualUpload.version')}
+                  <input
+                    type="text"
+                    placeholder="0.13.0"
+                    value={manualUploadVersion}
+                    onChange={(e) => setManualUploadVersion(e.target.value)}
+                  />
+                </label>
+                <label>
+                  {t('admin.agentAutoUpdate.manualUpload.files')}
+                  <input
+                    key={manualUploadInputKey}
+                    type="file"
+                    multiple
+                    accept=".exe,.deb,.rpm"
+                    onChange={(e) => setManualUploadFiles(e.target.files ? Array.from(e.target.files) : [])}
+                  />
+                </label>
+                <p className="field-hint">{t('admin.agentAutoUpdate.manualUpload.filesHint')}</p>
+                {manualUploadError && <div role="alert" className="login-error">{manualUploadError}</div>}
+                <button
+                  type="button"
+                  disabled={manualUploadBusy || !agentUpdateStatus.enabled || !manualUploadVersion || manualUploadFiles.length === 0}
+                  onClick={runManualUpload}
+                >
+                  {manualUploadBusy ? t('admin.agentAutoUpdate.manualUpload.uploading') : t('admin.agentAutoUpdate.manualUpload.upload')}
+                </button>
               </>
             )}
           </div>

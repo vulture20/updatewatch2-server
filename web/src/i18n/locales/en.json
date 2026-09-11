@@ -145,7 +145,19 @@
       "noneYet": "None yet",
       "checkNow": "Check now",
       "checking": "Checking…",
-      "checkNowDisabledHint": "Enable and save the setting above to check manually."
+      "checkNowDisabledHint": "Enable and save the setting above to check manually.",
+      "source": "Source",
+      "sourceGitHub": "GitHub",
+      "sourceManual": "Manually uploaded",
+      "manualUpload": {
+        "title": "Manual upload",
+        "hint": "For a server that deliberately has no internet access: upload the release's .exe/.deb/.rpm files directly instead of checking GitHub. They're offered to agents exactly the same way either way.",
+        "version": "Version",
+        "files": "Release files",
+        "filesHint": "Up to one of each: .exe (Windows), .deb (Debian/Ubuntu), .rpm (RPM-based).",
+        "upload": "Upload",
+        "uploading": "Uploading…"
+      }
     },
     "notifications": "SMTP server",
     "notificationThresholds": "Thresholds",

@@ -27,6 +27,7 @@ vi.mock('../api/endpoints', () => ({
   agentUpdatesApi: {
     getStatus: vi.fn(),
     checkNow: vi.fn(),
+    upload: vi.fn(),
   },
   updateFiltersApi: {
     list: vi.fn(),
@@ -49,6 +50,7 @@ const mockedActivateRotation = vi.mocked(certificateAuthorityApi.activateRotatio
 const mockedRetirePreviousRoot = vi.mocked(certificateAuthorityApi.retirePreviousRoot);
 const mockedGetAgentUpdateStatus = vi.mocked(agentUpdatesApi.getStatus);
 const mockedCheckNow = vi.mocked(agentUpdatesApi.checkNow);
+const mockedUpload = vi.mocked(agentUpdatesApi.upload);
 const mockedListUpdateFilters = vi.mocked(updateFiltersApi.list);
 const mockedCreateUpdateFilter = vi.mocked(updateFiltersApi.create);
 const mockedUpdateUpdateFilter = vi.mocked(updateFiltersApi.update);
@@ -134,6 +136,7 @@ describe('AdminPage', () => {
       latestVersion: null,
       checkedAt: null,
       lastError: null,
+      manuallyUploaded: false,
     });
     mockedCheckNow.mockReset();
     mockedListUpdateFilters.mockReset().mockResolvedValue([]);
@@ -280,6 +283,7 @@ describe('AdminPage', () => {
       latestVersion: '0.11.0',
       checkedAt: '2026-01-01T00:00:00Z',
       lastError: null,
+      manuallyUploaded: false,
     });
     mockedUpdateSettings.mockResolvedValue({ ...baseSettings, agentAutoUpdateEnabled: false });
     const user = userEvent.setup();
@@ -306,12 +310,14 @@ describe('AdminPage', () => {
       latestVersion: '0.11.0',
       checkedAt: '2026-01-01T00:00:00Z',
       lastError: null,
+      manuallyUploaded: false,
     });
     mockedCheckNow.mockResolvedValue({
       enabled: true,
       latestVersion: '0.12.2',
       checkedAt: '2026-02-01T00:00:00Z',
       lastError: null,
+      manuallyUploaded: false,
     });
     const user = userEvent.setup();
 
@@ -343,8 +349,61 @@ describe('AdminPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('GitHub is unreachable.');
   });
 
+  it('uploads manually selected release files and shows the refreshed status', async () => {
+    mockedGetAgentUpdateStatus.mockResolvedValue({
+      enabled: true,
+      latestVersion: null,
+      checkedAt: null,
+      lastError: null,
+      manuallyUploaded: false,
+    });
+    mockedUpload.mockResolvedValue({
+      enabled: true,
+      latestVersion: '0.13.0',
+      checkedAt: '2026-03-01T00:00:00Z',
+      lastError: null,
+      manuallyUploaded: true,
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.type(screen.getByLabelText('Version'), '0.13.0');
+    const file = new File(['deb-bytes'], 'updatewatch2-agent_0.13.0_amd64.deb');
+    await user.upload(screen.getByLabelText('Release files'), file);
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+
+    expect(mockedUpload).toHaveBeenCalledWith('0.13.0', [file]);
+    expect(await screen.findByText('0.13.0')).toBeInTheDocument();
+    expect(await screen.findByText('Manually uploaded')).toBeInTheDocument();
+  });
+
+  it('shows an error message when a manual upload fails', async () => {
+    mockedUpload.mockRejectedValue(new ApiError(400, 'Version must be a valid version number, e.g. 0.13.0.'));
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.type(screen.getByLabelText('Version'), 'not-a-version');
+    const file = new File(['deb-bytes'], 'updatewatch2-agent_0.13.0_amd64.deb');
+    await user.upload(screen.getByLabelText('Release files'), file);
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Version must be a valid version number, e.g. 0.13.0.');
+  });
+
   it('disables Check now while the feature itself is off', async () => {
-    mockedGetAgentUpdateStatus.mockResolvedValue({ enabled: false, latestVersion: null, checkedAt: null, lastError: null });
+    mockedGetAgentUpdateStatus.mockResolvedValue({ enabled: false, latestVersion: null, checkedAt: null, lastError: null, manuallyUploaded: false });
 
     render(
       <MemoryRouter>
@@ -566,6 +625,7 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
       latestVersion: null,
       checkedAt: null,
       lastError: null,
+      manuallyUploaded: false,
     });
     mockedCheckNow.mockReset();
     mockedListUpdateFilters.mockReset().mockResolvedValue([]);
@@ -768,6 +828,7 @@ describe('AdminPage update filters', () => {
       latestVersion: null,
       checkedAt: null,
       lastError: null,
+      manuallyUploaded: false,
     });
     mockedListUpdateFilters.mockReset().mockResolvedValue([]);
     mockedGetAuditLogPage.mockReset().mockResolvedValue({ entries: [], totalCount: 0, page: 1, pageSize: 50 });

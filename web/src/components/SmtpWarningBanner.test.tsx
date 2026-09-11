@@ -117,6 +117,7 @@ describe('SmtpWarningBanner', () => {
       latestVersion: null,
       checkedAt: null,
       lastError: null,
+      manuallyUploaded: false,
     });
     vi.mocked(updateFiltersApi.list).mockReset().mockResolvedValue([]);
     vi.mocked(auditLogApi.getPage).mockReset().mockResolvedValue({ entries: [], totalCount: 0, page: 1, pageSize: 50 });
