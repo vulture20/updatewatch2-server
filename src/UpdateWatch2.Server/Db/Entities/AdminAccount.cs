@@ -17,4 +17,17 @@ public class AdminAccount
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset? PasswordChangedAt { get; set; }
+
+    /// <summary>
+    /// SHA-256 hex digest of the raw <c>UPDATEWATCH2_RESET_ADMIN_PASSWORD</c>
+    /// value this account's password was last reset from — see
+    /// <see cref="Auth.AdminAccountService.ResetPasswordFromEnvironmentIfConfiguredAsync"/>.
+    /// A content fingerprint only (never the password itself, and never
+    /// used for authentication), purely so a stale, forgotten-and-left-set
+    /// env var doesn't silently re-apply the SAME reset on every future
+    /// restart and clobber a password the admin has since changed through
+    /// the UI — only an actually-*different* env var value ever resets
+    /// again. Null until the first time this mechanism has ever fired.
+    /// </summary>
+    public string? PasswordResetEnvValueHash { get; set; }
 }

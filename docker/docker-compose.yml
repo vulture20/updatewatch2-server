@@ -36,6 +36,13 @@ services:
       # Seeds a handful of dummy agents/updates for demos — idempotent,
       # env-var-only, never set this on a real production instance.
       # UPDATEWATCH2_DEMOMODE: "true"
+      # Emergency recovery for a locked-out local admin account — resets
+      # its password to this value on the next startup regardless of the
+      # current password (must satisfy PasswordPolicy: >=16 chars,
+      # upper/lower/digit/symbol). Safe to leave set across restarts, the
+      # same value is only ever applied once; remove or change it once
+      # you've logged in.
+      # UPDATEWATCH2_RESET_ADMIN_PASSWORD: change-me-please-1A!
       Cors__AllowedOrigins__0: http://localhost:8795
 
 volumes:

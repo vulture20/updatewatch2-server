@@ -387,6 +387,11 @@ using (var scope = app.Services.CreateScope())
 
     var accounts = scope.ServiceProvider.GetRequiredService<IAdminAccountService>();
     await accounts.EnsureSeededAsync();
+    // Emergency recovery for a locked-out admin (UPDATEWATCH2_RESET_ADMIN_PASSWORD)
+    // — see IAdminAccountService.ResetPasswordFromEnvironmentIfConfiguredAsync's
+    // own doc comment. Must run after EnsureSeededAsync so the account it
+    // resets already exists.
+    await accounts.ResetPasswordFromEnvironmentIfConfiguredAsync();
 
     var settingsStore = scope.ServiceProvider.GetRequiredService<IAdminSettingsStore>();
     await settingsStore.InitializeAsync();

@@ -11,6 +11,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.5] - 2026-09-11
+
+### Added
+
+- **A way to reset the local admin account's password via an environment variable, at the user's explicit request ("Schaffe eine Möglichkeit das Admin-Passwort zurückzusetzen (überschreiben durch Umgebungsvariable?)").** Previously a locked-out admin (forgotten password, no AD configured, no other login path) had no recovery option short of resetting the entire `/app/data` volume — which also invalidates every session and wipes the whole database. Setting `UPDATEWATCH2_RESET_ADMIN_PASSWORD` to a `PasswordPolicy`-valid value (≥16 chars, upper/lower/digit/symbol) now overwrites the admin account's password with it on the next startup, unconditionally — unlike the existing change-password flow, it doesn't need the current password. Deliberately safe to leave set indefinitely rather than needing to be unset the moment it's used: a SHA-256 fingerprint of the applied value (`AdminAccount.PasswordResetEnvValueHash`, DB schema `0.15.2`) is stored, and the reset only ever re-applies when the variable's *value* actually changes — so a forgotten, stale env var doesn't silently clobber a password the admin has since changed through the UI on every future restart, and a genuinely new value still resets again on demand. An invalid value is logged as an error and never applied; a valid one is logged as a warning (without echoing the password itself) and recorded in the audit log (`admin.password.reset-via-environment`). Live-verified end to end against a real Docker container: a fresh reset let a login with the new password succeed; restarting with the identical value produced no second reset (same password still required); changing the password via the API and restarting with the now-stale env var still set left the UI-set password in effect, with the old reset-env value rejected.
+
 ## [0.30.4] - 2026-09-11
 
 ### Added
