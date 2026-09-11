@@ -85,6 +85,7 @@ Then open **http://localhost:8795** and log in as `admin` — the randomly gener
 | `UPDATEWATCH2_TRUSTEDIP` | | — | IP or CIDR range exempt from the login brute-force lockout. |
 | `UPDATEWATCH2_AUTOUPDATE` | | (admin-UI toggle, on by default) | Set to `false` to force-disable checking GitHub for new agent releases entirely, overriding the admin-UI toggle. |
 | `UPDATEWATCH2_DEMOMODE` | | — | Set to `true` to seed dummy agents/updates for a demo. Never set this in production. |
+| `UPDATEWATCH2_RESET_ADMIN_PASSWORD` | | — | Emergency recovery for a locked-out `admin` account: set to a password meeting the policy (≥16 chars, upper/lower/digit/symbol) to overwrite the admin password on the next start, regardless of the current one. Safe to leave set across restarts — the same value only ever applies once; a genuinely different value resets again. Remove or change it once you've logged in. |
 
 See [`.env.example`](.env.example) for a ready-to-copy file, and [`docker/docker-compose.yml`](docker/docker-compose.yml) for a ready-made local setup (`cd docker && docker compose up --build`).
 

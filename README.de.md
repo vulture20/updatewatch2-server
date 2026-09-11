@@ -85,6 +85,7 @@ Danach **http://localhost:8795** öffnen und als `admin` einloggen — das zufä
 | `UPDATEWATCH2_TRUSTEDIP` | | — | IP oder CIDR-Bereich, der vom Brute-Force-Schutz beim Login ausgenommen ist. |
 | `UPDATEWATCH2_AUTOUPDATE` | | (Admin-UI-Schalter, standardmäßig an) | Auf `false` setzen, um die Prüfung auf neue Agent-Releases auf GitHub komplett zu deaktivieren — überschreibt dabei den Admin-UI-Schalter. |
 | `UPDATEWATCH2_DEMOMODE` | | — | Auf `true` setzen, um Demo-Agents/-Updates anzulegen. Niemals im Produktivbetrieb setzen. |
+| `UPDATEWATCH2_RESET_ADMIN_PASSWORD` | | — | Notfall-Wiederherstellung bei einem ausgesperrten `admin`-Konto: auf ein Passwort setzen, das die Passwortrichtlinie erfüllt (≥16 Zeichen, Groß-/Kleinschreibung, Ziffer, Symbol), um das Admin-Passwort beim nächsten Start zu überschreiben — unabhängig vom aktuellen Passwort. Kann dauerhaft gesetzt bleiben: derselbe Wert wird nur einmal angewendet, ein tatsächlich geänderter Wert setzt erneut zurück. Nach dem Login entfernen oder ändern. |
 
 Siehe [`.env.example`](.env.example) für eine fertige Vorlage zum Kopieren und [`docker/docker-compose.yml`](docker/docker-compose.yml) für ein fertiges lokales Setup (`cd docker && docker compose up --build`).
 
