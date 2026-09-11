@@ -60,7 +60,11 @@ public interface IAgentUpdateService
     /// known asset slots; anything else is silently ignored (defense in
     /// depth — <c>AgentUpdatesController</c> already rejects an
     /// unrecognized extension with 400 before this is ever called).
-    /// <paramref name="version"/> matching the already-known
+    /// <paramref name="version"/> itself is likewise already validated by
+    /// the controller — extracted from the uploaded filenames
+    /// (<see cref="AgentUpdateVersionExtractor"/>) rather than admin-typed,
+    /// and confirmed consistent across every file in the batch — so this
+    /// method trusts it as-is. Matching the already-known
     /// <see cref="Db.Entities.AgentUpdateState.LatestVersion"/> merges into
     /// the existing asset set (only the slots actually present in
     /// <paramref name="files"/> are replaced); any other value — including

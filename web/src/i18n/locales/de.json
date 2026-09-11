@@ -152,9 +152,8 @@
       "manualUpload": {
         "title": "Manueller Upload",
         "hint": "Für einen Server, der bewusst keine Internetverbindung haben soll: die .exe-/.deb-/.rpm-Dateien der Version direkt hochladen statt auf GitHub zu prüfen. Sie werden Agents in beiden Fällen identisch angeboten.",
-        "version": "Version",
         "files": "Release-Dateien",
-        "filesHint": "Höchstens je eine: .exe (Windows), .deb (Debian/Ubuntu), .rpm (RPM-basiert).",
+        "filesHint": "Höchstens je eine: .exe (Windows), .deb (Debian/Ubuntu), .rpm (RPM-basiert). Die Version wird automatisch aus den Dateinamen ermittelt — sie müssen alle vom selben Release stammen.",
         "upload": "Hochladen",
         "uploading": "Wird hochgeladen…"
       }
@@ -247,6 +246,10 @@
   "certificateRejections": {
     "banner": "{{count}} abgelehnte(s) Agent-Zertifikat(e) (ungültig oder abgelaufen) in den letzten 24 Stunden. Details siehe Server-Log oder Audit-Log.",
     "acknowledge": "Bestätigen"
+  },
+  "agentUpdateError": {
+    "banner": "Agent-Auto-Update konnte beim letzten Versuch keine Verbindung zum Update-Server herstellen oder das Release nicht herunterladen: {{error}}",
+    "link": "Agent-Auto-Update-Einstellungen prüfen"
   },
   "auditLog": {
     "title": "Audit-Log",

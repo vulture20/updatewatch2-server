@@ -60,6 +60,13 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
     /// <see cref="AgentUpdateCheckWorker"/>'s GitHub downloads do, so the
     /// result is offered to agents identically either way.
     ///
+    /// The release version is extracted from the uploaded filenames
+    /// (<see cref="AgentUpdateVersionExtractor"/>) rather than taken as a
+    /// separate form field — the original design had an admin type it in
+    /// by hand alongside the file picker, which a typo or a mismatched
+    /// file could silently get wrong; every filename must agree on the
+    /// same version or the whole request is rejected.
+    ///
     /// <see cref="MaxUploadBytes"/> raises both Kestrel's default
     /// <c>MaxRequestBodySize</c> (30 MB) and ASP.NET Core's default
     /// <c>MultipartBodyLengthLimit</c> (128 MB) — this project's own real
@@ -74,13 +81,10 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
     [HttpPost("upload")]
     [RequestSizeLimit(MaxUploadBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
-    public async Task<IActionResult> Upload([FromForm] string version, IFormFileCollection files, CancellationToken ct)
+    public async Task<IActionResult> Upload(IFormFileCollection files, CancellationToken ct)
     {
         var errors = new List<string>();
-        if (!Version.TryParse(version, out _))
-        {
-            errors.Add("Version must be a valid version number, e.g. 0.13.0.");
-        }
+        string? version = null;
 
         if (files.Count == 0)
         {
@@ -95,10 +99,27 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
                 if (kind is null)
                 {
                     errors.Add($"'{file.FileName}' is not a recognized agent release asset (.exe, .deb, or .rpm).");
+                    continue;
                 }
-                else if (!seenKinds.Add(kind.Value))
+
+                if (!seenKinds.Add(kind.Value))
                 {
                     errors.Add($"More than one {kind} file was uploaded in the same request.");
+                    continue;
+                }
+
+                var extractedVersion = AgentUpdateVersionExtractor.Extract(file.FileName);
+                if (extractedVersion is null)
+                {
+                    errors.Add($"Could not determine the release version from '{file.FileName}' — expected a filename containing the version, e.g. 'updatewatch2-agent_0.13.0_amd64.deb'.");
+                }
+                else if (version is null)
+                {
+                    version = extractedVersion;
+                }
+                else if (!string.Equals(version, extractedVersion, StringComparison.Ordinal))
+                {
+                    errors.Add($"All uploaded files must be from the same release version (found {version} and {extractedVersion}).");
                 }
             }
         }
@@ -108,10 +129,14 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
             return BadRequest(new { errors });
         }
 
+        // version is guaranteed non-null here: files.Count > 0 (else the
+        // "at least one file" error above), and every file in the loop
+        // either added an error (short-circuiting to the 400 above) or
+        // set/confirmed a single consistent version.
         var uploaded = files.Select(f => new UploadedAgentAsset(f.FileName, f.OpenReadStream())).ToList();
         try
         {
-            var outcome = await agentUpdateService.UploadAssetsAsync(version, uploaded, ct);
+            var outcome = await agentUpdateService.UploadAssetsAsync(version!, uploaded, ct);
             if (outcome == AgentUpdateUploadOutcome.Disabled)
             {
                 return BadRequest(new { errors = new[] { "Agent auto-update must be enabled to accept a manual upload." } });

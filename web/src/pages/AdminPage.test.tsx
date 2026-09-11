@@ -373,18 +373,17 @@ describe('AdminPage', () => {
     );
     await screen.findByLabelText('SMTP host');
 
-    await user.type(screen.getByLabelText('Version'), '0.13.0');
     const file = new File(['deb-bytes'], 'updatewatch2-agent_0.13.0_amd64.deb');
     await user.upload(screen.getByLabelText('Release files'), file);
     await user.click(screen.getByRole('button', { name: 'Upload' }));
 
-    expect(mockedUpload).toHaveBeenCalledWith('0.13.0', [file]);
+    expect(mockedUpload).toHaveBeenCalledWith([file]);
     expect(await screen.findByText('0.13.0')).toBeInTheDocument();
     expect(await screen.findByText('Manually uploaded')).toBeInTheDocument();
   });
 
   it('shows an error message when a manual upload fails', async () => {
-    mockedUpload.mockRejectedValue(new ApiError(400, 'Version must be a valid version number, e.g. 0.13.0.'));
+    mockedUpload.mockRejectedValue(new ApiError(400, "Could not determine the release version from 'updatewatch2-agent_amd64.deb'."));
     const user = userEvent.setup();
 
     render(
@@ -394,12 +393,11 @@ describe('AdminPage', () => {
     );
     await screen.findByLabelText('SMTP host');
 
-    await user.type(screen.getByLabelText('Version'), 'not-a-version');
-    const file = new File(['deb-bytes'], 'updatewatch2-agent_0.13.0_amd64.deb');
+    const file = new File(['deb-bytes'], 'updatewatch2-agent_amd64.deb');
     await user.upload(screen.getByLabelText('Release files'), file);
     await user.click(screen.getByRole('button', { name: 'Upload' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Version must be a valid version number, e.g. 0.13.0.');
+    expect(await screen.findByRole('alert')).toHaveTextContent("Could not determine the release version from 'updatewatch2-agent_amd64.deb'.");
   });
 
   it('disables Check now while the feature itself is off', async () => {

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import logo from './assets/logo.svg';
+import { AgentUpdateErrorBanner } from './components/AgentUpdateErrorBanner';
 import { CertificateRejectionBanner } from './components/CertificateRejectionBanner';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { SmtpWarningBanner } from './components/SmtpWarningBanner';
@@ -48,6 +49,7 @@ export default function App() {
               </header>
               <SmtpWarningBanner />
               <CertificateRejectionBanner />
+              <AgentUpdateErrorBanner />
               <Routes>
                 <Route path="/" element={<Navigate to="/agents" replace />} />
                 <Route path="/agents" element={<AgentsListPage />} />

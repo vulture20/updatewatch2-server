@@ -90,15 +90,27 @@ public class AgentUpdatesControllerTests : IClassFixture<WebApplicationFactory<P
     [Fact]
     public async Task Upload_requires_an_admin_session()
     {
-        using var response = await _anonymousClient.PostAsync("/api/admin/agent-update-status/upload", MakeUploadForm("0.13.0", ("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")));
+        using var response = await _anonymousClient.PostAsync("/api/admin/agent-update-status/upload", MakeUploadForm(("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task Upload_rejects_an_invalid_version()
+    public async Task Upload_rejects_a_file_whose_version_cant_be_determined_from_its_name()
     {
-        using var response = await _client.PostAsync("/api/admin/agent-update-status/upload", MakeUploadForm("not-a-version", ("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")));
+        using var response = await _client.PostAsync("/api/admin/agent-update-status/upload", MakeUploadForm(("updatewatch2-agent_amd64.deb", "deb-bytes")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_rejects_files_from_different_versions()
+    {
+        using var response = await _client.PostAsync(
+            "/api/admin/agent-update-status/upload",
+            MakeUploadForm(
+                ("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes"),
+                ("UpdateWatch2Agent-Setup-0.14.0-x64.exe", "exe-bytes")));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -106,7 +118,7 @@ public class AgentUpdatesControllerTests : IClassFixture<WebApplicationFactory<P
     [Fact]
     public async Task Upload_rejects_a_request_with_no_files()
     {
-        using var form = new MultipartFormDataContent { { new StringContent("0.13.0"), "version" } };
+        using var form = new MultipartFormDataContent();
 
         using var response = await _client.PostAsync("/api/admin/agent-update-status/upload", form);
 
@@ -116,17 +128,17 @@ public class AgentUpdatesControllerTests : IClassFixture<WebApplicationFactory<P
     [Fact]
     public async Task Upload_rejects_an_unrecognized_file_extension()
     {
-        using var response = await _client.PostAsync("/api/admin/agent-update-status/upload", MakeUploadForm("0.13.0", ("checksums.txt", "not a real package")));
+        using var response = await _client.PostAsync("/api/admin/agent-update-status/upload", MakeUploadForm(("checksums.txt", "not a real package")));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task Upload_saves_a_valid_release_and_it_becomes_the_new_status()
+    public async Task Upload_extracts_the_version_from_the_filename_and_it_becomes_the_new_status()
     {
         using var response = await _client.PostAsync(
             "/api/admin/agent-update-status/upload",
-            MakeUploadForm("0.13.0", ("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")));
+            MakeUploadForm(("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes")));
 
         response.EnsureSuccessStatusCode();
         var status = await response.Content.ReadFromJsonAsync<StatusDto>();
@@ -139,9 +151,9 @@ public class AgentUpdatesControllerTests : IClassFixture<WebApplicationFactory<P
         Assert.Equal("0.13.0", reread!.latestVersion);
     }
 
-    private static MultipartFormDataContent MakeUploadForm(string version, params (string FileName, string Content)[] files)
+    private static MultipartFormDataContent MakeUploadForm(params (string FileName, string Content)[] files)
     {
-        var form = new MultipartFormDataContent { { new StringContent(version), "version" } };
+        var form = new MultipartFormDataContent();
         foreach (var (fileName, content) in files)
         {
             var fileContent = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content));

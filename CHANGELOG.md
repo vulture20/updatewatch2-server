@@ -11,6 +11,16 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.7] - 2026-09-11
+
+### Added
+
+- **A site-wide error banner when agent auto-update can't reach the update server or download a release, at the user's explicit request ("Fehlermeldung in Banner, falls keine Verbindung zum Updateserver hergestellt oder kein Update heruntergeladen werden konnte. Das soll nur passieren, wenn die automatischen Updates eingeschaltet sind.").** A new `AgentUpdateErrorBanner` (web), polled every 15s like `CertificateRejectionBanner`, shows `AgentUpdateStatusDto.LastError` on every page once logged in. Deliberately gated on `Enabled`, not just a nonzero `LastError` alone: the periodic check keeps running and keeps recording a failure even while the admin-UI toggle is off, so an ungated banner would show permanent, misleading noise on exactly the deployments (offline, relying only on the manual-upload escape hatch below) where that's expected and not a problem. Confirmed live: seeded a simulated GitHub-unreachable error directly in the DB, then disabled the feature via `PUT /api/admin/settings` and confirmed `GET /api/admin/agent-update-status` still returns that same `lastError` with `enabled: false` — exactly the case the client-side gate exists for.
+
+### Changed
+
+- **The manual-upload escape hatch (added in `0.30.6`) no longer asks the admin to type the release version — it's extracted from the uploaded filenames instead, at the user's explicit request ("Die Version der manuell hochgeladenen Agent-Binaries sollte besser aus dem Dateinamen extrahiert werden. Das ist weniger fehleranfällig.").** A new `AgentUpdateVersionExtractor` pulls the version from a plain `x.y.z` digit run in the filename — one generic pattern covers all three of this project's real release-asset naming conventions rather than three separate exact-format regexes. Uploading multiple files in one request now also requires them to agree on the same extracted version — a real validation the old free-text field could never provide — with a clear 400 (and no files written) on a mismatch or an unextractable filename. `IAgentUpdateService.UploadAssetsAsync`'s own signature is unchanged; the extraction and cross-file validation live in the controller. Live-verified against a real running server: a single-file upload worked with no version field sent at all, a filename with no embedded version and a two-file request with mismatched versions were both rejected with specific messages, and a same-version two-file upload spanning all three real naming conventions (`.exe`/`.deb`/`.rpm`) succeeded.
+
 ## [0.30.6] - 2026-09-11
 
 ### Added

@@ -82,10 +82,12 @@ export const agentUpdatesApi = {
   // The offline/air-gapped escape hatch: an admin uploads the release
   // assets (any of .exe/.deb/.rpm, one of each at most) directly instead
   // of this server ever needing to reach GitHub. Also returns the freshly
-  // updated status, same reasoning as checkNow above.
-  upload: (version: string, files: File[]) => {
+  // updated status, same reasoning as checkNow above. No version is passed
+  // — the server extracts it from the uploaded filenames itself
+  // (AgentUpdateVersionExtractor) rather than trusting a separately typed
+  // value that could mismatch what's actually in the files.
+  upload: (files: File[]) => {
     const formData = new FormData();
-    formData.append('version', version);
     files.forEach((file) => formData.append('files', file));
     return apiClient.postForm<AgentUpdateStatus>('/api/admin/agent-update-status/upload', formData);
   },
