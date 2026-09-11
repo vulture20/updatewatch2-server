@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Db;
+using UpdateWatch2.Server.Db.Entities;
 using UpdateWatch2.Server.UpdateFilters;
 
 namespace UpdateWatch2.Server.Tests.UpdateFilters;
@@ -42,7 +43,7 @@ public class UpdateFilterServiceTests : IDisposable
         // Simulates an admin who deleted the seeded default — it must never
         // come back, so "any row at all" is the seeded check, not "does the
         // specific default filter exist".
-        _db.UpdateFilters.Add(new Db.Entities.UpdateFilter { Name = "Custom only", Pattern = "foo" });
+        _db.UpdateFilters.Add(new UpdateFilter { Name = "Custom only", Pattern = "foo" });
         await _db.SaveChangesAsync();
 
         await _service.EnsureSeededAsync();

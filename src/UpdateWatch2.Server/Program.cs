@@ -110,6 +110,7 @@ builder.Services.AddScoped<IActiveDirectoryAuthService, ActiveDirectoryAuthServi
 builder.Services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
 builder.Services.AddScoped<IDemoDataSeeder, DemoDataSeeder>();
 builder.Services.AddScoped<IUpdateFilterService, UpdateFilterService>();
+builder.Services.AddScoped<IDatabaseMaintenanceService, DatabaseMaintenanceService>();
 
 // Where downloaded agent release assets are cached (updatewatch2-server#14)
 // — resolved the same way Certs:Path/Database:Path already are (a
@@ -134,6 +135,7 @@ builder.Services.AddScoped<IAgentUpdateService, AgentUpdateService>();
 builder.Services.AddHostedService<AgentUpdateCheckWorker>();
 builder.Services.AddHostedService<AuditLogRetentionWorker>();
 builder.Services.AddHostedService<CertificateExpiryWorker>();
+builder.Services.AddHostedService<DatabaseVacuumWorker>();
 
 // The frontend (server/web) is a separate origin in development (its own
 // Vite dev server port) and, even in a same-origin production deployment
@@ -384,6 +386,12 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    // One-time, idempotent (see IDatabaseMaintenanceService's own doc
+    // comment) — the periodic reclaiming itself is DatabaseVacuumWorker's
+    // job, registered below.
+    var maintenance = scope.ServiceProvider.GetRequiredService<IDatabaseMaintenanceService>();
+    await maintenance.EnsureIncrementalAutoVacuumEnabledAsync();
 
     var accounts = scope.ServiceProvider.GetRequiredService<IAdminAccountService>();
     await accounts.EnsureSeededAsync();

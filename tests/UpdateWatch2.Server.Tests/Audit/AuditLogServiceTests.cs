@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Db;
+using UpdateWatch2.Server.Db.Entities;
 
 namespace UpdateWatch2.Server.Tests.Audit;
 
@@ -179,7 +180,7 @@ public class AuditLogServiceTests : IDisposable
     /// </summary>
     private async Task AddBackdatedAsync(string action, TimeSpan age)
     {
-        _db.AuditLogEntries.Add(new Db.Entities.AuditLogEntry
+        _db.AuditLogEntries.Add(new AuditLogEntry
         {
             Actor = "test",
             Action = action,

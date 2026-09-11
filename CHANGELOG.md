@@ -11,6 +11,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.9] - 2026-09-11
+
+### Added
+
+- **The SQLite database now reclaims disk space on its own, at the user's explicit request ("Wird eventuell ein Aufräumprozess für die Datenbank benötigt? (VACUUM oder ähnlich)").** SQLite never returns freed pages (from audit log retention purges, an agent's update-item churn on every report, deleted agents, etc.) back to the OS on its own — the `.sqlite` file only ever grows. A new `IDatabaseMaintenanceService` switches the database to `auto_vacuum = INCREMENTAL` once, idempotently, at startup (a one-time `VACUUM` is unavoidable to convert an already-non-empty database's file layout the first time; every startup after that is a no-op), and a new `DatabaseVacuumWorker` — this project's fourth server-side `BackgroundService` — reclaims freed pages every 24 hours, same cadence/reasoning as `AuditLogRetentionWorker`. Both operations also explicitly checkpoint the WAL afterward (`PRAGMA wal_checkpoint(TRUNCATE)`) — this database runs in WAL journal mode by default (confirmed by hand, not something this project explicitly configures), so without an explicit checkpoint the reclaimed space would just sit in the `-wal` sidecar file until SQLite's own automatic checkpoint threshold eventually triggers, which for this project's realistically low write volume could take a very long time and would defeat the point of the feature. Real unit test coverage against an actual SQLite file (not mocked) confirms the mode switch, the idempotency, and that the combined on-disk footprint (main file + WAL) genuinely shrinks after deleting a bulk of rows and reclaiming. Live-verified against a real running server, not just `dotnet test`: the one-time conversion logged and ran on first startup (`PRAGMA auto_vacuum` confirmed `2`/INCREMENTAL on the real file afterward, with the seeded admin account still intact and login still working), and a restart confirmed no second conversion runs.
+
 ## [0.30.8] - 2026-09-11
 
 ### Added
