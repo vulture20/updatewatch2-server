@@ -95,6 +95,15 @@ public class LegacyAdminSettingsMigrationTests : IDisposable
         // as real a bug for anyone upgrading from before this column
         // existed.
         Assert.Equal(730, store.Certificate.AgentCertificateValidityDays);
+
+        // Same regression class again, for AddNotificationThresholdEnabledFlags
+        // (updatewatch2-server#18): both AddColumn defaults must be `true`
+        // to match NotificationThresholdOptions.UpdatesPerMachineEnabled/
+        // AffectedMachinesEnabled's real defaults, or an upgrading
+        // deployment would silently have both notification checkboxes
+        // backfilled to off.
+        Assert.True(store.NotificationThresholds.UpdatesPerMachineEnabled);
+        Assert.True(store.NotificationThresholds.AffectedMachinesEnabled);
     }
 
     private class FakeScopeFactory(DbContextOptions<AppDbContext> options) : IServiceScopeFactory

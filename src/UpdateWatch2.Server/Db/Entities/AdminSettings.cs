@@ -38,7 +38,13 @@ public class AdminSettings
 
     public int NotificationUpdatesPerMachineThreshold { get; set; }
 
+    /// <summary>Independent on/off checkbox for the updates-per-machine half of the threshold notification (see <see cref="Notifications.NotificationThresholdOptions.UpdatesPerMachineEnabled"/>'s doc comment). Default true.</summary>
+    public bool NotificationUpdatesPerMachineEnabled { get; set; } = true;
+
     public int NotificationAffectedMachinesThreshold { get; set; }
+
+    /// <summary>Independent on/off checkbox for the affected-machines half of the threshold notification (see <see cref="Notifications.NotificationThresholdOptions.AffectedMachinesEnabled"/>'s doc comment). Default true.</summary>
+    public bool NotificationAffectedMachinesEnabled { get; set; } = true;
 
     public bool AdEnabled { get; set; }
 

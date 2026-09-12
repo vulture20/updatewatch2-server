@@ -52,7 +52,13 @@ public class SmtpOptions
 /// <summary>
 /// Independent (OR-combined) thresholds that trigger an update notification
 /// email: either crossing updates-per-machine or affected-machine count
-/// fires the notification.
+/// fires the notification. Each half also has its own independent on/off
+/// checkbox (<see cref="UpdatesPerMachineEnabled"/>/<see cref="AffectedMachinesEnabled"/>,
+/// both default true) — an admin can rely on just one of the two
+/// conditions without the other one ever firing, rather than only being
+/// able to turn the whole mechanism on or off at once. See
+/// <see cref="UpdateThresholdNotificationWorker"/> for what actually
+/// evaluates these.
 /// </summary>
 public class NotificationThresholdOptions
 {
@@ -60,5 +66,9 @@ public class NotificationThresholdOptions
 
     public int UpdatesPerMachine { get; set; } = 5;
 
+    public bool UpdatesPerMachineEnabled { get; set; } = true;
+
     public int AffectedMachines { get; set; } = 10;
+
+    public bool AffectedMachinesEnabled { get; set; } = true;
 }

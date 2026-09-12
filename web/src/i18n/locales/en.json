@@ -209,6 +209,7 @@
     },
     "notificationUpdatesPerMachine": "Updates-per-machine threshold",
     "notificationAffectedMachines": "Affected-machines threshold",
+    "notificationThresholdsHint": "Either condition on its own can be turned off — an admin can rely on just one of the two without the other ever firing. Each fires at most once per crossing; it clears once the count drops back below its threshold and can fire again the next time it's crossed.",
     "adEnabled": "Enable Active Directory login",
     "adHost": "LDAP host",
     "adPort": "LDAP port",

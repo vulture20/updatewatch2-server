@@ -6,10 +6,10 @@ namespace UpdateWatch2.Server.Admin;
 /// <see cref="GitHubToken"/> are the exception to "replace everything":
 /// null/omitted means "leave the stored value unchanged" — GET never
 /// echoes any of them back, so there'd be nothing for the UI to resubmit
-/// otherwise. Send an empty string to clear one. The trailing two
+/// otherwise. Send an empty string to clear one. Most of the trailing
 /// parameters default rather than being required, purely so existing
-/// call sites (tests included) that predate updatewatch2-server#14 don't
-/// all need updating just to keep compiling.
+/// call sites (tests included) that predate the feature each one was
+/// added for don't all need updating just to keep compiling.
 /// </summary>
 public record UpdateAdminSettingsRequest(
     string LogLevel,
@@ -41,4 +41,6 @@ public record UpdateAdminSettingsRequest(
     int AgentAutoUpdateCheckIntervalHours = 6,
     int AuditLogRetentionDays = 90,
     int CertificateExpiryWarningLeadDays = 60,
-    bool CertificateExpiryNotificationsEnabled = true);
+    bool CertificateExpiryNotificationsEnabled = true,
+    bool NotificationUpdatesPerMachineEnabled = true,
+    bool NotificationAffectedMachinesEnabled = true);

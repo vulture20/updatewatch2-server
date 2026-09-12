@@ -525,23 +525,36 @@ export function AdminPage() {
           <div className="card">
           <span className="card-kicker">{t('admin.notificationThresholds')}</span>
           <label>
+            <input
+              type="checkbox"
+              checked={form.notificationUpdatesPerMachineEnabled}
+              onChange={(e) => update('notificationUpdatesPerMachineEnabled', e.target.checked)}
+            />
             {t('admin.notificationUpdatesPerMachine')}
-            <input
-              type="number"
-              min={1}
-              value={form.notificationUpdatesPerMachineThreshold}
-              onChange={(e) => update('notificationUpdatesPerMachineThreshold', Number(e.target.value))}
-            />
           </label>
+          <input
+            type="number"
+            min={1}
+            disabled={!form.notificationUpdatesPerMachineEnabled}
+            value={form.notificationUpdatesPerMachineThreshold}
+            onChange={(e) => update('notificationUpdatesPerMachineThreshold', Number(e.target.value))}
+          />
           <label>
-            {t('admin.notificationAffectedMachines')}
             <input
-              type="number"
-              min={1}
-              value={form.notificationAffectedMachinesThreshold}
-              onChange={(e) => update('notificationAffectedMachinesThreshold', Number(e.target.value))}
+              type="checkbox"
+              checked={form.notificationAffectedMachinesEnabled}
+              onChange={(e) => update('notificationAffectedMachinesEnabled', e.target.checked)}
             />
+            {t('admin.notificationAffectedMachines')}
           </label>
+          <input
+            type="number"
+            min={1}
+            disabled={!form.notificationAffectedMachinesEnabled}
+            value={form.notificationAffectedMachinesThreshold}
+            onChange={(e) => update('notificationAffectedMachinesThreshold', Number(e.target.value))}
+          />
+          <p className="field-hint">{t('admin.notificationThresholdsHint')}</p>
           </div>
 
           <div className="tab-save-row">

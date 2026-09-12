@@ -117,7 +117,9 @@ public class AdminSettingsStore(
         row.SmtpFromName = request.SmtpFromName;
         row.NotificationRecipientAddress = string.IsNullOrWhiteSpace(request.NotificationRecipientAddress) ? null : request.NotificationRecipientAddress;
         row.NotificationUpdatesPerMachineThreshold = request.NotificationUpdatesPerMachineThreshold;
+        row.NotificationUpdatesPerMachineEnabled = request.NotificationUpdatesPerMachineEnabled;
         row.NotificationAffectedMachinesThreshold = request.NotificationAffectedMachinesThreshold;
+        row.NotificationAffectedMachinesEnabled = request.NotificationAffectedMachinesEnabled;
         row.AdEnabled = request.AdEnabled;
         row.AdHost = request.AdHost;
         row.AdPort = request.AdPort;
@@ -167,7 +169,9 @@ public class AdminSettingsStore(
                 _smtp.NotificationRecipientAddress,
                 _smtp.IsConfigured,
                 _notificationThresholds.UpdatesPerMachine,
+                _notificationThresholds.UpdatesPerMachineEnabled,
                 _notificationThresholds.AffectedMachines,
+                _notificationThresholds.AffectedMachinesEnabled,
                 _ad.Enabled,
                 _ad.Host,
                 _ad.Port,
@@ -207,7 +211,9 @@ public class AdminSettingsStore(
         SmtpFromName = defaultSmtp.Value.FromName,
         NotificationRecipientAddress = defaultSmtp.Value.NotificationRecipientAddress,
         NotificationUpdatesPerMachineThreshold = defaultNotificationThresholds.Value.UpdatesPerMachine,
+        NotificationUpdatesPerMachineEnabled = defaultNotificationThresholds.Value.UpdatesPerMachineEnabled,
         NotificationAffectedMachinesThreshold = defaultNotificationThresholds.Value.AffectedMachines,
+        NotificationAffectedMachinesEnabled = defaultNotificationThresholds.Value.AffectedMachinesEnabled,
         AdEnabled = defaultAd.Value.Enabled,
         AdHost = defaultAd.Value.Host,
         AdPort = defaultAd.Value.Port,
@@ -248,7 +254,9 @@ public class AdminSettingsStore(
         var thresholds = new NotificationThresholdOptions
         {
             UpdatesPerMachine = row.NotificationUpdatesPerMachineThreshold,
+            UpdatesPerMachineEnabled = row.NotificationUpdatesPerMachineEnabled,
             AffectedMachines = row.NotificationAffectedMachinesThreshold,
+            AffectedMachinesEnabled = row.NotificationAffectedMachinesEnabled,
         };
         var ad = new AdOptions
         {

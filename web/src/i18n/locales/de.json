@@ -209,6 +209,7 @@
     },
     "notificationUpdatesPerMachine": "Schwelle Updates pro Maschine",
     "notificationAffectedMachines": "Schwelle betroffene Maschinen",
+    "notificationThresholdsHint": "Jede der beiden Bedingungen kann einzeln ausgeschaltet werden — so kann sich ein Admin auf nur eine der beiden verlassen, ohne dass die andere jemals auslöst. Jede Bedingung löst pro Überschreitung höchstens einmal aus; sie setzt sich zurück, sobald der Wert wieder unter den Schwellenwert fällt, und kann beim nächsten Überschreiten erneut auslösen.",
     "adEnabled": "Active-Directory-Anmeldung aktivieren",
     "adHost": "LDAP-Host",
     "adPort": "LDAP-Port",

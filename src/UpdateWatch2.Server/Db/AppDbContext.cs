@@ -23,6 +23,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<CertificateNotificationState> CertificateNotificationStates => Set<CertificateNotificationState>();
 
+    public DbSet<UpdateThresholdNotificationState> UpdateThresholdNotificationStates => Set<UpdateThresholdNotificationState>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agent>()

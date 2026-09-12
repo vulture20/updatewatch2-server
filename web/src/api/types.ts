@@ -152,7 +152,11 @@ export interface AdminSettings {
   notificationRecipientAddress: string | null;
   smtpConfigured: boolean;
   notificationUpdatesPerMachineThreshold: number;
+  /** Independent on/off checkbox for the updates-per-machine half of the threshold notification — see UpdateThresholdNotificationWorker. Default true. */
+  notificationUpdatesPerMachineEnabled: boolean;
   notificationAffectedMachinesThreshold: number;
+  /** Independent on/off checkbox for the affected-machines half of the threshold notification — see UpdateThresholdNotificationWorker. Default true. */
+  notificationAffectedMachinesEnabled: boolean;
   adEnabled: boolean;
   adHost: string;
   adPort: number;

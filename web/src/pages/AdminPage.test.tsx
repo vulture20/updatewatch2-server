@@ -102,7 +102,9 @@ const baseSettings = {
   notificationRecipientAddress: null,
   smtpConfigured: true,
   notificationUpdatesPerMachineThreshold: 5,
+  notificationUpdatesPerMachineEnabled: true,
   notificationAffectedMachinesThreshold: 10,
+  notificationAffectedMachinesEnabled: true,
   adEnabled: false,
   adHost: '',
   adPort: 389,
@@ -510,6 +512,34 @@ describe('AdminPage', () => {
 
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ certificateExpiryNotificationsEnabled: false }));
+  });
+
+  it('turns the updates-per-machine threshold checkbox off independently of the affected-machines one and submits the change', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, notificationUpdatesPerMachineEnabled: false });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Notifications' }));
+
+    const updatesPerMachineToggle = screen.getByLabelText('Updates-per-machine threshold', { selector: 'input[type="checkbox"]' });
+    const affectedMachinesToggle = screen.getByLabelText('Affected-machines threshold', { selector: 'input[type="checkbox"]' });
+    expect(updatesPerMachineToggle).toBeChecked();
+    expect(affectedMachinesToggle).toBeChecked();
+
+    await user.click(updatesPerMachineToggle);
+    expect(updatesPerMachineToggle).not.toBeChecked();
+    expect(affectedMachinesToggle).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ notificationUpdatesPerMachineEnabled: false, notificationAffectedMachinesEnabled: true }),
+    );
   });
 
   it('sends a test email and shows a confirmation', async () => {

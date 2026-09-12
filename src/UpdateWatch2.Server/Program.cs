@@ -137,6 +137,7 @@ builder.Services.AddHostedService<AgentUpdateCheckWorker>();
 builder.Services.AddHostedService<AuditLogRetentionWorker>();
 builder.Services.AddHostedService<CertificateExpiryWorker>();
 builder.Services.AddHostedService<DatabaseVacuumWorker>();
+builder.Services.AddHostedService<UpdateThresholdNotificationWorker>();
 
 // The frontend (server/web) is a separate origin in development (its own
 // Vite dev server port) and, even in a same-origin production deployment
