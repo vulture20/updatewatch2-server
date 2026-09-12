@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UpdateWatch2.Server.Api;
 using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Certificates;
@@ -14,6 +15,7 @@ namespace UpdateWatch2.Server.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/agents/{hostname}")]
+[AllowedOnAgentPort]
 public class AgentProtocolController(
     IAgentRegistrationService registrationService,
     ICertificateAuthority ca,

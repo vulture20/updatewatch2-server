@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using UpdateWatch2.Server.Api;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Updates;
 
@@ -26,6 +27,7 @@ public class UpdatesController(IUpdateService updateService) : ControllerBase
     // mutual-TLS client certificate instead (updatewatch2-server#1).
     [HttpPost("updates")]
     [Authorize(Policy = CertificateAuthenticationSetup.AgentCertificatePolicy)]
+    [AllowedOnAgentPort]
     public async Task<IActionResult> ReportUpdates(string hostname, [FromBody] ReportUpdatesRequest request, CancellationToken ct)
     {
         // Defense in depth: a validly-approved agent for host A must not be
@@ -57,6 +59,7 @@ public class UpdatesController(IUpdateService updateService) : ControllerBase
     // and IUpdateService.AcknowledgeInstallAsync for what this clears.
     [HttpPost("install-ack")]
     [Authorize(Policy = CertificateAuthenticationSetup.AgentCertificatePolicy)]
+    [AllowedOnAgentPort]
     public async Task<IActionResult> AcknowledgeInstall(string hostname, [FromBody] InstallAckRequest request, CancellationToken ct)
     {
         if (!string.Equals(User.Identity?.Name, hostname, StringComparison.Ordinal))

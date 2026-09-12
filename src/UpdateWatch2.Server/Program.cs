@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.Api;
 using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Audit;
@@ -441,6 +442,37 @@ app.UseForwardedHeaders();
 // plain HTTP directly (TLS is the reverse proxy's job, per
 // CookieSecurePolicy.SameAsRequest above) — this middleware was never
 // doing real work for that path even before 8796 existed.
+
+// Rejects (404) any request on the agent-facing port whose resolved
+// endpoint isn't explicitly marked [AllowedOnAgentPort] — see that
+// attribute's own doc comment for the real gap this closes: nothing else
+// in this pipeline (UseStaticFiles, MapFallbackToFile, every controller
+// route) is otherwise aware of which of the two Kestrel listeners a
+// request arrived on, so a browser connecting directly to 8796 used to
+// get served the full admin SPA, and — since a session cookie isn't
+// port-scoped — an already-authenticated admin's browser could reach the
+// entire cookie-gated admin API there too. Safe to add this early,
+// regardless of source-order relative to UseStaticFiles/MapControllers/
+// MapFallbackToFile below: WebApplication's minimal-hosting model runs
+// endpoint routing before ANY app.Use(...) middleware (confirmed by
+// hand — this is what lets context.GetEndpoint() already reflect the
+// final matched endpoint here, even though this line runs textually
+// before the Map calls that register those endpoints), so this always
+// sees the real destination before deciding whether to let it through.
+app.Use(async (context, next) =>
+{
+    if (context.Connection.LocalPort == agentPort)
+    {
+        var allowed = context.GetEndpoint()?.Metadata.GetMetadata<AllowedOnAgentPortAttribute>() is not null;
+        if (!allowed)
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+    }
+
+    await next(context);
+});
 
 // Serves the built web/ SPA from wwwroot when present (the Docker image
 // copies it in — see docker/Dockerfile) so the API and admin UI ship as
