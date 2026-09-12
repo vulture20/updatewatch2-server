@@ -2,7 +2,8 @@
   "nav": {
     "agents": "Agents",
     "admin": "Einstellungen",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "language": "Sprache"
   },
   "login": {
     "title": "Anmelden",
@@ -24,6 +25,8 @@
     "approveSelected": "Auswahl bestätigen",
     "empty": "Noch keine Agents registriert.",
     "loading": "Agents werden geladen…",
+    "loadError": "Laden der Agents fehlgeschlagen.",
+    "selectColumn": "Auswählen",
     "yes": "Ja",
     "no": "Nein",
     "status": "Status",
@@ -49,6 +52,7 @@
     }
   },
   "agentDetail": {
+    "notFound": "Agent nicht gefunden.",
     "dnsName": "DNS-Name",
     "operatingSystem": "Betriebssystem",
     "ipAddress": "IP-Adresse",

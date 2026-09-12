@@ -2,7 +2,8 @@
   "nav": {
     "agents": "Agents",
     "admin": "Settings",
-    "logout": "Log out"
+    "logout": "Log out",
+    "language": "Language"
   },
   "login": {
     "title": "Sign in",
@@ -24,6 +25,8 @@
     "approveSelected": "Approve selected",
     "empty": "No agents registered yet.",
     "loading": "Loading agents…",
+    "loadError": "Failed to load agents.",
+    "selectColumn": "Select",
     "yes": "Yes",
     "no": "No",
     "status": "Status",
@@ -49,6 +52,7 @@
     }
   },
   "agentDetail": {
+    "notFound": "Agent not found.",
     "dnsName": "DNS name",
     "operatingSystem": "Operating system",
     "ipAddress": "IP address",

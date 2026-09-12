@@ -157,7 +157,7 @@ export function AgentDetailPage() {
   };
 
   if (notFound) {
-    return <p role="alert">Agent not found.</p>;
+    return <p role="alert">{t('agentDetail.notFound')}</p>;
   }
 
   if (!agent) {

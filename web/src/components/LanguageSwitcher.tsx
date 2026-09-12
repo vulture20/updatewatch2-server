@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 const LANGUAGES = ['de', 'en'] as const;
 
 export function LanguageSwitcher() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
-    <div className="seg" role="radiogroup" aria-label="Language">
+    <div className="seg" role="radiogroup" aria-label={t('nav.language')}>
       {LANGUAGES.map((lng) => (
         <label key={lng} className="seg-opt">
           <input

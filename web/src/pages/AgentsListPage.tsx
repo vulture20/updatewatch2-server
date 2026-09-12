@@ -141,7 +141,7 @@ export function AgentsListPage() {
   });
 
   if (error) {
-    return <p role="alert">Failed to load agents.</p>;
+    return <p role="alert">{t('agents.loadError')}</p>;
   }
 
   if (agents === null) {
@@ -263,7 +263,7 @@ export function AgentsListPage() {
             <table>
               <thead>
                 <tr>
-                  <th aria-label="select" />
+                  <th aria-label={t('agents.selectColumn')} />
                   <th>
                     <button type="button" {...sortHeaderProps('hostname')}>
                       {t('agents.hostname')} <span className="sort-arrow">{sortArrow('hostname')}</span>

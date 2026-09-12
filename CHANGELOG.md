@@ -11,6 +11,14 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.15] - 2026-09-12
+
+### Fixed
+
+- **Four hardcoded English strings in `server/web` bypassed the i18n system entirely — found by an explicit audit at the user's request ("Ziehe alle Texte bis auf die Logmeldungen aus dem Quellcode, übersetze sie und bring sie in den entsprechenden Sprach-Templates unter").** All four now route through `useTranslation()`'s `t()` like every other UI string in this app, with German translations added alongside: `AgentDetailPage`'s "Agent not found." (`agentDetail.notFound` / "Agent nicht gefunden."), `AgentsListPage`'s "Failed to load agents." (`agents.loadError` / "Laden der Agents fehlgeschlagen."), the selection-checkbox column header's `aria-label="select"` (`agents.selectColumn` / "Auswählen"), and `LanguageSwitcher`'s `aria-label="Language"` (`nav.language` / "Sprache") — the last two were screen-reader-only text, easy to miss since nothing renders them visibly. `"Windows"`/`"Linux"` (the OS-filter dropdown's two fixed options) and `"UpdateWatch2"` (the product name, header/login) were deliberately left as plain strings — not translation gaps, since both read identically in either language.
+- **A separate, related finding, not acted on**: `server/src/UpdateWatch2.Server/Resources/I18n/{en,de}.json` — mentioned in this repo's own CLAUDE.md as "DE/EN strings... placeholders" — are dead scaffold files nothing in the C# codebase ever loads (confirmed: zero references anywhere in `src/`), and are already stale relative to the real, live translations (e.g. still say "Administration" where the actual UI has said "Settings"/"Einstellungen" since server v0.29.0). The real, working bilingual system is entirely client-side in `server/web/src/i18n/locales/*.json`, which is what this fix updates. Left the dead files alone rather than updating text nothing reads — worth deleting outright in a future pass, or wiring up for real if server-side i18n is ever actually needed.
+- **A larger, out-of-scope gap surfaced by the same audit**: many admin-facing error messages (`Conflict(new { message = result.FailureReason })`, `BadRequest(new { errors = [...] })` across `Api/Controllers/`) are free-text English strings generated server-side with no translation mechanism at all — the frontend's `apiClient` just displays them verbatim (see `readErrorMessage` in `web/src/api/client.ts`). Genuinely bilingual error messages would need an error-code-based redesign (server returns a code, client maps it through `t()`), not just new JSON entries — a real architectural decision, so it wasn't attempted here without being asked.
+
 ## [0.30.14] - 2026-09-12
 
 ### Fixed
