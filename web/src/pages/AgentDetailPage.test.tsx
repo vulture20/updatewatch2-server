@@ -12,6 +12,7 @@ vi.mock('../api/endpoints', () => ({
     updates: vi.fn(),
     approve: vi.fn(),
     triggerInstall: vi.fn(),
+    triggerRestart: vi.fn(),
     reissueCertificate: vi.fn(),
     delete: vi.fn(),
   },
@@ -21,6 +22,7 @@ const mockedGet = vi.mocked(agentsApi.get);
 const mockedUpdates = vi.mocked(agentsApi.updates);
 const mockedReissueCertificate = vi.mocked(agentsApi.reissueCertificate);
 const mockedTriggerInstall = vi.mocked(agentsApi.triggerInstall);
+const mockedTriggerRestart = vi.mocked(agentsApi.triggerRestart);
 const mockedDelete = vi.mocked(agentsApi.delete);
 
 const pendingUpdate: UpdateItem = {
@@ -50,6 +52,10 @@ const approvedAgent: AgentDetail = {
   lastInstallOutcome: null,
   lastInstallErrorDetail: null,
   lastInstallCompletedAt: null,
+  pendingRestartRequestedAt: null,
+  lastRestartOutcome: null,
+  lastRestartErrorDetail: null,
+  lastRestartCompletedAt: null,
   issuingRootThumbprint: 'root-thumb-1',
   lastCertificateRejectionReason: null,
   lastCertificateRejectionAt: null,
@@ -268,6 +274,88 @@ describe('AgentDetailPage install trigger', () => {
 
     await screen.findByRole('heading', { name: 'host-1' });
     expect(screen.queryByText(/error detail/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('AgentDetailPage restart trigger', () => {
+  beforeEach(() => {
+    mockedGet.mockReset();
+    mockedUpdates.mockReset();
+    mockedTriggerRestart.mockReset();
+    mockedUpdates.mockResolvedValue([]);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('triggers a restart and reloads the agent afterward', async () => {
+    mockedGet.mockResolvedValueOnce(approvedAgent).mockResolvedValueOnce({
+      ...approvedAgent,
+      pendingRestartRequestedAt: '2026-01-02T00:00:00Z',
+    });
+    mockedTriggerRestart.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^restart agent$/i }));
+
+    expect(window.confirm).toHaveBeenCalled();
+    await waitFor(() => expect(mockedTriggerRestart).toHaveBeenCalledWith('host-1'));
+    await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('button', { name: /restart pending/i })).toBeDisabled();
+  });
+
+  it('does not call the API when the restart confirmation is declined', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^restart agent$/i }));
+
+    expect(mockedTriggerRestart).not.toHaveBeenCalled();
+  });
+
+  it('hides the restart button for an unapproved agent', async () => {
+    mockedGet.mockResolvedValue({ ...approvedAgent, approved: false });
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    expect(screen.queryByRole('button', { name: /^restart agent$/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the last restart outcome once acknowledged', async () => {
+    mockedGet.mockResolvedValue({
+      ...approvedAgent,
+      lastRestartOutcome: 'Succeeded',
+      lastRestartCompletedAt: '2026-01-02T00:00:00Z',
+    });
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    expect(screen.getByText(/succeeded/i)).toBeInTheDocument();
+  });
+
+  it('shows the error detail for a failed restart', async () => {
+    mockedGet.mockResolvedValue({
+      ...approvedAgent,
+      lastRestartOutcome: 'Failed',
+      lastRestartErrorDetail: 'sc.exe exited with code 5',
+      lastRestartCompletedAt: '2026-01-02T00:00:00Z',
+    });
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    expect(screen.getByText(/sc\.exe exited with code 5/)).toBeInTheDocument();
   });
 });
 

@@ -58,6 +58,17 @@ public class AgentsController(IAgentService agentService) : ControllerBase
             : Conflict(new { message = result.FailureReason });
     }
 
+    // Fire-and-forget, like ApproveAsync — actual delivery happens on the
+    // agent's own next alive heartbeat (see IAgentService.TriggerRestartAsync).
+    // Restarts the agent's own service process only, never the underlying
+    // machine and never the OS-update install pipeline.
+    [HttpPost("{hostname}/restart")]
+    public async Task<IActionResult> Restart(string hostname, CancellationToken ct)
+    {
+        var found = await agentService.TriggerRestartAsync(hostname, triggeredBy: User.Identity!.Name!, ct);
+        return found ? Accepted() : NotFound();
+    }
+
     // Permanent — see IAgentService.DeleteAsync's doc comment for why this
     // is effective immediately (no separate certificate-revocation step
     // needed) and what happens if the same hostname registers again later.

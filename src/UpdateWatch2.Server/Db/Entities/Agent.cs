@@ -143,6 +143,41 @@ public class Agent
 
     public DateTimeOffset? LastInstallCompletedAt { get; set; }
 
+    /// <summary>
+    /// Set when an admin triggers a remote agent-service restart; cleared
+    /// once the agent acknowledges having acted on it (see
+    /// <see cref="Agents.IAgentService.AcknowledgeRestartAsync"/>). Delivery
+    /// is poll-based, exactly like <see cref="PendingInstallRequestedAt"/> —
+    /// surfaced to the agent as part of its regular alive heartbeat
+    /// response, not pushed. Distinct from that field/from
+    /// <see cref="RebootRequired"/>: this restarts the agent's own service
+    /// process, never the OS-update install pipeline and never the
+    /// underlying machine (CLAUDE.md's "update installation never triggers
+    /// a reboot itself" rule is unrelated to this — a service restart is
+    /// not a machine reboot).
+    /// </summary>
+    public DateTimeOffset? PendingRestartRequestedAt { get; set; }
+
+    /// <summary>
+    /// The <see cref="Agents.RestartOutcome"/> name (e.g. "Succeeded") from
+    /// the agent's most recent restart acknowledgement — a plain string,
+    /// not the enum type itself, matching <see cref="LastInstallOutcome"/>'s
+    /// own convention.
+    /// </summary>
+    public string? LastRestartOutcome { get; set; }
+
+    /// <summary>
+    /// Human-readable reason for the most recent restart acknowledgement,
+    /// only ever meaningful (and only ever set) alongside a
+    /// <see cref="LastRestartOutcome"/> of "Failed" — mirrors
+    /// <see cref="LastInstallErrorDetail"/>'s own reasoning. Reset to null
+    /// on a Succeeded ack so a stale error never lingers next to a
+    /// since-successful restart.
+    /// </summary>
+    public string? LastRestartErrorDetail { get; set; }
+
+    public DateTimeOffset? LastRestartCompletedAt { get; set; }
+
     public DateTimeOffset? LastAliveAt { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

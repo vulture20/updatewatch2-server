@@ -73,8 +73,12 @@ public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string
 /// <c>AgentRegistrationService.RecordAliveAsync</c> for how it's computed.
 /// Self-correcting with no acknowledgement needed: once the agent renews,
 /// its next heartbeat computes this as false on its own.
+/// <see cref="RestartRequested"/> is the same delivery mechanism again,
+/// mirroring <see cref="InstallRequested"/> exactly — true whenever
+/// <c>Agent.PendingRestartRequestedAt</c> is set, cleared once the agent
+/// acknowledges via <c>POST .../restart-ack</c>.
 /// </summary>
-public record AliveRecordResult(bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending);
+public record AliveRecordResult(bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending, bool RestartRequested);
 
 /// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)

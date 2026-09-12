@@ -64,6 +64,15 @@
       "Failed": "Failed"
     },
     "lastInstallErrorDetail": "Error detail",
+    "triggerRestart": "Restart agent",
+    "restartPending": "Restart pending…",
+    "restartConfirm": "This restarts the agent's background service on the target machine. Management connectivity may briefly drop while it comes back up. Continue?",
+    "lastRestartOutcome": "Last restart result",
+    "restartOutcome": {
+      "Succeeded": "Succeeded",
+      "Failed": "Failed"
+    },
+    "lastRestartErrorDetail": "Error detail",
     "updates": "Pending updates",
     "updateTitle": "Title",
     "updatePackageId": "Package ID",
@@ -76,7 +85,9 @@
       "identity": "Identity",
       "certificate": "Certificate",
       "install": "Install status",
-      "installCompletedAt": "Completed"
+      "installCompletedAt": "Completed",
+      "restart": "Restart status",
+      "restartCompletedAt": "Completed"
     },
     "certificateThumbprintSha256": "Certificate thumbprint (SHA-256)",
     "certificateThumbprintSha1": "Certificate thumbprint (SHA-1)",

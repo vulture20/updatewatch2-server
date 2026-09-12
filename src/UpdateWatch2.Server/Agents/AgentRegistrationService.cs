@@ -162,7 +162,9 @@ public class AgentRegistrationService(
             ? null
             : JsonSerializer.Deserialize<List<string>>(agent.PendingInstallUpdateIds);
 
-        return new AliveRecordResult(agent.PendingInstallRequestedAt is not null, installUpdateIds, updateOffer, certificateRotationPending);
+        return new AliveRecordResult(
+            agent.PendingInstallRequestedAt is not null, installUpdateIds, updateOffer, certificateRotationPending,
+            agent.PendingRestartRequestedAt is not null);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)

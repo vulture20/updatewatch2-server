@@ -64,6 +64,15 @@
       "Failed": "Fehlgeschlagen"
     },
     "lastInstallErrorDetail": "Fehlerdetail",
+    "triggerRestart": "Agent neu starten",
+    "restartPending": "Neustart ausstehend…",
+    "restartConfirm": "Dies startet den Hintergrunddienst des Agents auf dem Zielrechner neu. Die Verbindung kann kurzzeitig unterbrochen sein, bis er wieder erreichbar ist. Fortfahren?",
+    "lastRestartOutcome": "Letztes Neustartergebnis",
+    "restartOutcome": {
+      "Succeeded": "Erfolgreich",
+      "Failed": "Fehlgeschlagen"
+    },
+    "lastRestartErrorDetail": "Fehlerdetail",
     "updates": "Ausstehende Updates",
     "updateTitle": "Titel",
     "updatePackageId": "Paket-ID",
@@ -76,7 +85,9 @@
       "identity": "Identität",
       "certificate": "Zertifikat",
       "install": "Installationsstatus",
-      "installCompletedAt": "Abgeschlossen"
+      "installCompletedAt": "Abgeschlossen",
+      "restart": "Neustartstatus",
+      "restartCompletedAt": "Abgeschlossen"
     },
     "certificateThumbprintSha256": "Zertifikats-Fingerabdruck (SHA-256)",
     "certificateThumbprintSha1": "Zertifikats-Fingerabdruck (SHA-1)",

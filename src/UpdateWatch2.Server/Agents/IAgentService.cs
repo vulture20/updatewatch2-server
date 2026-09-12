@@ -52,6 +52,27 @@ public interface IAgentService
     Task<bool> DeleteAsync(string hostname, string initiatedBy, CancellationToken ct = default);
 
     /// <summary>
+    /// Remote-triggers a restart of the agent's own service process (not
+    /// an OS reboot, not an update install — see <see cref="Db.Entities.Agent.PendingRestartRequestedAt"/>'s
+    /// doc comment). Sets that field, which the agent picks up on its next
+    /// alive heartbeat, mirroring <c>Updates.IUpdateService.TriggerInstallAsync</c>'s
+    /// exact delivery mechanism. Fire-and-forget from the admin's
+    /// perspective, like that sibling call. Returns false if no agent with
+    /// that hostname exists.
+    /// </summary>
+    Task<bool> TriggerRestartAsync(string hostname, string triggeredBy, CancellationToken ct = default);
+
+    /// <summary>
+    /// The agent's acknowledgement that it acted on a pending restart
+    /// request — clears <see cref="Db.Entities.Agent.PendingRestartRequestedAt"/>
+    /// regardless of <paramref name="outcome"/> and records the
+    /// outcome/timestamp/<paramref name="errorDetail"/> for the admin UI,
+    /// mirroring <c>Updates.IUpdateService.AcknowledgeInstallAsync</c>
+    /// exactly. Returns false if no agent with that hostname exists.
+    /// </summary>
+    Task<bool> AcknowledgeRestartAsync(string hostname, RestartOutcome outcome, string? errorDetail, CancellationToken ct = default);
+
+    /// <summary>
     /// How many/which approved agents' <see cref="Db.Entities.Agent.IssuingRootThumbprint"/>
     /// still matches <paramref name="previousRootThumbprintSha256"/> — i.e.
     /// would stop authenticating if that root were retired right now.

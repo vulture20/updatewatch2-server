@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace UpdateWatch2.Server.Agents;
 
 /// <summary>Row shape for the main agent overview list.</summary>
@@ -49,6 +51,11 @@ public record AgentDetailDto(
     /// </summary>
     string? LastInstallErrorDetail,
     DateTimeOffset? LastInstallCompletedAt,
+    DateTimeOffset? PendingRestartRequestedAt,
+    string? LastRestartOutcome,
+    /// <summary>Only ever non-null alongside a <see cref="LastRestartOutcome"/> of "Failed" — mirrors <see cref="LastInstallErrorDetail"/>.</summary>
+    string? LastRestartErrorDetail,
+    DateTimeOffset? LastRestartCompletedAt,
     /// <summary>
     /// SHA-256 thumbprint of the internal CA root that actually signed this
     /// agent's current client certificate (<see cref="Db.Entities.Agent.IssuingRootThumbprint"/>)
@@ -99,3 +106,34 @@ public record ReissueCertificateResult(bool Success, string? RegistrationToken, 
 
     public static ReissueCertificateResult Succeeded(string registrationToken) => new(true, registrationToken, null);
 }
+
+/// <summary>
+/// How a remote-triggered agent-service restart went, as self-reported by
+/// the agent once it has acted on the request. Mirrors
+/// <c>Updates.InstallOutcome</c> field-for-field, including the same
+/// <see cref="JsonStringEnumConverter"/> requirement — this project has no
+/// global one configured, so without this attribute a wire body like
+/// <c>{"outcome":"Succeeded"}</c> 400s against the default numeric
+/// model-binding <c>Updates.InstallOutcome</c>'s own doc comment already
+/// confirmed live for that sibling enum. Kept as its own separate type
+/// rather than reusing <c>Updates.InstallOutcome</c> even though the shape
+/// is identical — a restart is a distinct agent-lifecycle action, not an
+/// OS-update install, and the two are deliberately never conflated
+/// (CLAUDE.md's "agent self-update is a separate mechanism... not to be
+/// conflated with" rule applies by the same reasoning here).
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum RestartOutcome
+{
+    Succeeded,
+    Failed,
+}
+
+/// <summary>
+/// Body of <c>POST /api/agents/{hostname}/restart-ack</c> — the agent's
+/// acknowledgement that it acted on a pending restart request.
+/// <see cref="ErrorDetail"/> is only ever meaningful alongside
+/// <see cref="RestartOutcome.Failed"/> (e.g. the platform-specific restart
+/// mechanism itself failed to launch) — mirrors <c>Updates.InstallAckRequest</c>.
+/// </summary>
+public record RestartAckRequest(RestartOutcome Outcome, string? ErrorDetail = null);

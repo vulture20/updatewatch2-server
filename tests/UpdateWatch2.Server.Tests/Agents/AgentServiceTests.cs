@@ -123,6 +123,101 @@ public class AgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task TriggerRestartAsync_sets_the_pending_restart_timestamp()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("restart-host");
+
+        var result = await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+
+        Assert.True(result);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        Assert.NotNull(agent.PendingRestartRequestedAt);
+    }
+
+    [Fact]
+    public async Task TriggerRestartAsync_returns_false_for_an_unknown_hostname()
+    {
+        var result = await _service.TriggerRestartAsync("does-not-exist", triggeredBy: "admin");
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task TriggerRestartAsync_writes_an_audit_log_entry_with_the_triggering_admin_as_actor()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("audited-restart-host");
+
+        await _service.TriggerRestartAsync(hostname, triggeredBy: "alice");
+
+        var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "agent.restart.trigger" && e.Details == hostname);
+        Assert.Equal("alice", entry.Actor);
+    }
+
+    [Fact]
+    public async Task AcknowledgeRestartAsync_clears_the_pending_flag_and_records_a_succeeded_outcome()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("ack-restart-host");
+        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+
+        var result = await _service.AcknowledgeRestartAsync(hostname, RestartOutcome.Succeeded, errorDetail: null);
+
+        Assert.True(result);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        Assert.Null(agent.PendingRestartRequestedAt);
+        Assert.Equal("Succeeded", agent.LastRestartOutcome);
+        Assert.Null(agent.LastRestartErrorDetail);
+        Assert.NotNull(agent.LastRestartCompletedAt);
+    }
+
+    [Fact]
+    public async Task AcknowledgeRestartAsync_records_the_error_detail_only_for_a_failed_outcome()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("failed-restart-host");
+        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+
+        await _service.AcknowledgeRestartAsync(hostname, RestartOutcome.Failed, errorDetail: "sc.exe exited with code 5");
+
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        Assert.Equal("Failed", agent.LastRestartOutcome);
+        Assert.Equal("sc.exe exited with code 5", agent.LastRestartErrorDetail);
+    }
+
+    [Fact]
+    public async Task AcknowledgeRestartAsync_clears_a_stale_error_detail_on_a_subsequent_success()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("recovered-restart-host");
+        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+        await _service.AcknowledgeRestartAsync(hostname, RestartOutcome.Failed, errorDetail: "sc.exe exited with code 5");
+
+        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+        await _service.AcknowledgeRestartAsync(hostname, RestartOutcome.Succeeded, errorDetail: null);
+
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        Assert.Equal("Succeeded", agent.LastRestartOutcome);
+        Assert.Null(agent.LastRestartErrorDetail);
+    }
+
+    [Fact]
+    public async Task AcknowledgeRestartAsync_returns_false_for_an_unknown_hostname()
+    {
+        var result = await _service.AcknowledgeRestartAsync("does-not-exist", RestartOutcome.Succeeded, errorDetail: null);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_surfaces_a_pending_restart_request()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("alive-restart-host");
+        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+
+        var result = await _registrationService.RecordAliveAsync(hostname, request: null);
+
+        Assert.NotNull(result);
+        Assert.True(result!.RestartRequested);
+    }
+
+    [Fact]
     public async Task DeleteAsync_removes_the_agent_and_cascades_its_update_items()
     {
         var hostname = await RegisterApproveAndCertifyAsync("delete-host");

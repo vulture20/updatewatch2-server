@@ -42,6 +42,11 @@ export const agentsApi = {
   // installs everything currently pending, the original behavior.
   triggerInstall: (hostname: string, updateItemIds?: number[]) =>
     apiClient.post<void>(`/api/agents/${encodeURIComponent(hostname)}/install`, updateItemIds ? { updateItemIds } : undefined),
+  // Restarts the agent's own service process — not the underlying machine,
+  // and not the OS-update install pipeline. Fire-and-forget, delivered on
+  // the agent's next alive heartbeat, mirroring triggerInstall exactly.
+  triggerRestart: (hostname: string) =>
+    apiClient.post<void>(`/api/agents/${encodeURIComponent(hostname)}/restart`),
   reissueCertificate: (hostname: string) =>
     apiClient.post<ReissueCertificateResult>(`/api/agents/${encodeURIComponent(hostname)}/reissue-certificate`),
   delete: (hostname: string) => apiClient.delete<void>(`/api/agents/${encodeURIComponent(hostname)}`),

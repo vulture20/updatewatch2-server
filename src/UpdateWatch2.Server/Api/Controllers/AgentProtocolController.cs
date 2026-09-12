@@ -17,7 +17,8 @@ namespace UpdateWatch2.Server.Api.Controllers;
 public class AgentProtocolController(
     IAgentRegistrationService registrationService,
     ICertificateAuthority ca,
-    IAgentUpdateService agentUpdateService) : ControllerBase
+    IAgentUpdateService agentUpdateService,
+    IAgentService agentService) : ControllerBase
 {
     // Deliberately anonymous: an agent's first contact has no client
     // certificate to authenticate with yet. Bootstrap trust (the token
@@ -83,6 +84,7 @@ public class AgentProtocolController(
                 installUpdateIds = result.InstallUpdateIds,
                 agentUpdateAvailable = result.UpdateAvailable,
                 certificateRotationPending = result.CertificateRotationPending,
+                restartRequested = result.RestartRequested,
             });
     }
 
@@ -103,6 +105,28 @@ public class AgentProtocolController(
         return result.Success
             ? Ok(new { certificate = result.CertificatePfxBase64 })
             : Conflict(new { message = result.FailureReason });
+    }
+
+    // Agent-facing, not admin-facing (mTLS, like ReportUpdates/AcknowledgeInstall
+    // over on UpdatesController) — the agent's acknowledgement that it acted
+    // on a pending restart request delivered via its alive heartbeat. See
+    // Alive above for delivery and IAgentService.AcknowledgeRestartAsync for
+    // what this clears. Lives here rather than on the admin-only
+    // AgentsController (which triggers the restart) because that
+    // controller's class-level [Authorize] is the cookie-session scheme —
+    // an agent's mTLS client certificate could never also satisfy that on
+    // the same request.
+    [HttpPost("restart-ack")]
+    [Authorize(Policy = CertificateAuthenticationSetup.AgentCertificatePolicy)]
+    public async Task<IActionResult> AcknowledgeRestart(string hostname, [FromBody] RestartAckRequest request, CancellationToken ct)
+    {
+        if (!string.Equals(User.Identity?.Name, hostname, StringComparison.Ordinal))
+        {
+            return Forbid();
+        }
+
+        var found = await agentService.AcknowledgeRestartAsync(hostname, request.Outcome, request.ErrorDetail, ct);
+        return found ? NoContent() : NotFound();
     }
 
     // Not per-agent — overrides the controller's route prefix. Anonymous by

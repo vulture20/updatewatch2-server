@@ -43,6 +43,12 @@ export interface AgentDetail {
   /** Only ever non-null alongside lastInstallOutcome === 'Failed' — the agent's own OS-level tool output (apt-get/dnf stderr, a Windows Update result code) or a caught exception's message. */
   lastInstallErrorDetail: string | null;
   lastInstallCompletedAt: string | null;
+  /** Set while a remote restart (triggerRestart) has been requested but not yet acknowledged by the agent. Restarts the agent's own service process only — never the machine, never the OS-update install pipeline. */
+  pendingRestartRequestedAt: string | null;
+  lastRestartOutcome: 'Succeeded' | 'Failed' | null;
+  /** Only ever non-null alongside lastRestartOutcome === 'Failed' — mirrors lastInstallErrorDetail. */
+  lastRestartErrorDetail: string | null;
+  lastRestartCompletedAt: string | null;
   /**
    * SHA-256 thumbprint of the internal CA root that signed this agent's
    * current client certificate — compare against the Administration →
