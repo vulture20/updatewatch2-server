@@ -130,6 +130,10 @@ public class UpdateThresholdNotificationWorker(
             body: $"At least one managed machine currently has {worstMachineCount} pending update(s), "
                 + $"meeting or exceeding the configured threshold of {thresholds.UpdatesPerMachine}.\n\n"
                 + "Check the UpdateWatch2 admin UI for details.",
+            subjectDe: "UpdateWatch2: Schwellenwert „Updates pro Maschine“ überschritten",
+            bodyDe: $"Mindestens eine verwaltete Maschine hat aktuell {worstMachineCount} ausstehende Updates "
+                + $"und erreicht oder überschreitet damit den konfigurierten Schwellenwert von {thresholds.UpdatesPerMachine}.\n\n"
+                + "Details findest du in der UpdateWatch2-Verwaltungsoberfläche.",
             details: $"worst-affected machine has {worstMachineCount} pending update(s), threshold {thresholds.UpdatesPerMachine}",
             canEmail, recipient, ct);
 
@@ -146,6 +150,10 @@ public class UpdateThresholdNotificationWorker(
             body: $"{affectedMachineCount} managed machine(s) currently have at least one pending update, "
                 + $"meeting or exceeding the configured threshold of {thresholds.AffectedMachines}.\n\n"
                 + "Check the UpdateWatch2 admin UI for details.",
+            subjectDe: "UpdateWatch2: Schwellenwert „Betroffene Maschinen“ überschritten",
+            bodyDe: $"{affectedMachineCount} verwaltete Maschine(n) haben aktuell mindestens ein ausstehendes Update "
+                + $"und erreichen oder überschreiten damit den konfigurierten Schwellenwert von {thresholds.AffectedMachines}.\n\n"
+                + "Details findest du in der UpdateWatch2-Verwaltungsoberfläche.",
             details: $"{affectedMachineCount} affected machine(s), threshold {thresholds.AffectedMachines}",
             canEmail, recipient, ct);
 
@@ -173,6 +181,8 @@ public class UpdateThresholdNotificationWorker(
         string auditAction,
         string subject,
         string body,
+        string subjectDe,
+        string bodyDe,
         string details,
         bool canEmail,
         string? recipient,
@@ -212,7 +222,7 @@ public class UpdateThresholdNotificationWorker(
         try
         {
             var email = scope.ServiceProvider.GetRequiredService<IEmailNotificationService>();
-            await email.SendNotificationAsync(recipient!, subject, body, ct);
+            await email.SendNotificationAsync(recipient!, subject, body, subjectDe, bodyDe, ct);
             await auditLog.LogAsync("system", auditAction, details, ct);
             setNotifiedAt(DateTimeOffset.UtcNow);
             return true;

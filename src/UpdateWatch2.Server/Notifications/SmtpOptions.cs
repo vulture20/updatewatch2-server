@@ -46,6 +46,26 @@ public class SmtpOptions
     /// </summary>
     public string? NotificationRecipientAddress { get; set; }
 
+    /// <summary>
+    /// The externally-reachable base URL of this UpdateWatch2 instance
+    /// (e.g. <c>https://updatewatch2.example.com</c> or
+    /// <c>http://172.16.12.3:8795</c>), at the user's explicit request
+    /// ("Füge in jede Mail bitte noch einen Link zu der Instanz hinzu.").
+    /// Used to add a "open UpdateWatch2" link/button to every automated
+    /// notification email (<see cref="EmailTemplate"/>) — deliberately a
+    /// separate, admin-entered setting rather than guessed from
+    /// <c>UPDATEWATCH2_SERVER_HOSTNAME</c>/<c>Kestrel:HttpPort</c>, since
+    /// this codebase already documents that it cannot know whether a
+    /// reverse proxy in front terminates TLS (the browser-facing port
+    /// itself is always plain HTTP — see the auth-cookie <c>SecurePolicy</c>
+    /// note in CLAUDE.md) or under what public hostname the instance is
+    /// actually reachable. Null/empty means no link is added — every
+    /// email still sends normally either way, exactly like an unset
+    /// <see cref="NotificationRecipientAddress"/> doesn't block the checks
+    /// themselves.
+    /// </summary>
+    public string? InstanceUrl { get; set; }
+
     public bool IsConfigured => !string.IsNullOrWhiteSpace(Host) && !string.IsNullOrWhiteSpace(FromAddress);
 }
 

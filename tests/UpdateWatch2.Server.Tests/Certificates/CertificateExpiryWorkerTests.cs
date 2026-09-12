@@ -94,7 +94,21 @@ public class CertificateExpiryWorkerTests : IDisposable
         var worker = CreateWorker(TimeSpan.FromHours(999));
 
         await worker.StartAsync(CancellationToken.None);
-        await WaitUntilAsync(() => _certificateAuthority.RenewCallCount >= 1);
+        // Wait for the actual audit entries, not just RenewCallCount — that
+        // counter increments synchronously inside RenewServerLeafIfNearExpiry,
+        // well before the async audit-log writes for either condition have
+        // necessarily completed, so polling on it alone and then
+        // immediately calling StopAsync could race the still-in-flight
+        // writes against StopAsync's own cancellation of the shared token
+        // their SaveChangesAsync calls observe (found while touching a
+        // different worker's tests this same session — see
+        // UpdateThresholdNotificationWorkerTests for the identical fix).
+        await WaitUntilAsync(async () =>
+        {
+            var entries = (await GetAuditPageAsync()).Entries;
+            return entries.Any(e => e.Action == "certificate.server-leaf.renewed")
+                && entries.Any(e => e.Action == "certificate.ca-root.expiry-warning");
+        });
         await worker.StopAsync(CancellationToken.None);
 
         // The renewal itself and the CA-root-within-window condition both
@@ -205,6 +219,15 @@ public class CertificateExpiryWorkerTests : IDisposable
         }
     }
 
+    private static async Task WaitUntilAsync(Func<Task<bool>> condition)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+        while (!await condition() && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(5);
+        }
+    }
+
     private class FakeCertificateAuthority : ICertificateAuthority
     {
         public X509Certificate2 RootCertificate { get; set; } = null!;
@@ -257,7 +280,7 @@ public class CertificateExpiryWorkerTests : IDisposable
 
         public Task<bool> IsHealthyAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
-        public Task SendNotificationAsync(string toAddress, string subject, string body, CancellationToken ct = default)
+        public Task SendNotificationAsync(string toAddress, string subjectEn, string bodyEn, string subjectDe, string bodyDe, CancellationToken ct = default)
         {
             SendAttemptCount++;
             if (ThrowOnSend)
@@ -265,7 +288,7 @@ public class CertificateExpiryWorkerTests : IDisposable
                 throw new InvalidOperationException("simulated SMTP failure");
             }
 
-            SentNotifications.Add((toAddress, subject, body));
+            SentNotifications.Add((toAddress, subjectEn, bodyEn));
             return Task.CompletedTask;
         }
     }

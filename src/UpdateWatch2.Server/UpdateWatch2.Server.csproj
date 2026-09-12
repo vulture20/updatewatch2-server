@@ -31,6 +31,13 @@
 
   <ItemGroup>
     <Content Update="Resources\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Baked into the assembly itself (loaded via
+         Assembly.GetManifestResourceStream in EmailNotificationService)
+         rather than copied as a loose file — guarantees it's present
+         regardless of the container's working directory/content root,
+         the same class of gap Certs:Path/AgentUpdates:Path already
+         document elsewhere for path-relative config. -->
+    <EmbeddedResource Include="Resources\Email\logo.png" />
   </ItemGroup>
 
 </Project>

@@ -18,6 +18,7 @@ public record AdminSettingsDto(
     string SmtpFromAddress,
     string SmtpFromName,
     string? NotificationRecipientAddress,
+    string? InstanceUrl,
     bool SmtpConfigured,
     int NotificationUpdatesPerMachineThreshold,
     bool NotificationUpdatesPerMachineEnabled,

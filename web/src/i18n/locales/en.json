@@ -198,6 +198,8 @@
     "smtpFromName": "From name",
     "notificationRecipientAddress": "Notification recipient",
     "notificationRecipientAddressHint": "Where automated alert emails go — the certificate-expiry warning below, and the update-threshold notification. Leave empty to receive none of them (the checks themselves still run either way).",
+    "instanceUrl": "Instance URL",
+    "instanceUrlHint": "The externally-reachable address of this UpdateWatch2 instance, added as a link in every notification email. Leave empty to omit the link.",
     "testEmailAddress": "Send a test email to",
     "testEmailSend": "Send test email",
     "testEmailSending": "Sending…",

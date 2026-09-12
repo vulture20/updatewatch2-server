@@ -497,6 +497,16 @@ export function AdminPage() {
           </label>
           <p className="field-hint">{t('admin.notificationRecipientAddressHint')}</p>
           <label>
+            {t('admin.instanceUrl')}
+            <input
+              type="url"
+              placeholder="https://updatewatch2.example.com"
+              value={form.instanceUrl ?? ''}
+              onChange={(e) => update('instanceUrl', e.target.value || null)}
+            />
+          </label>
+          <p className="field-hint">{t('admin.instanceUrlHint')}</p>
+          <label>
             {t('admin.testEmailAddress')}
             <input type="email" value={testEmailAddress} onChange={(e) => setTestEmailAddress(e.target.value)} />
           </label>

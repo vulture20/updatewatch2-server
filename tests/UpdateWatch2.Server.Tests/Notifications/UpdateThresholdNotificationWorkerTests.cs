@@ -255,7 +255,7 @@ public class UpdateThresholdNotificationWorkerTests : IDisposable
 
         public Task<bool> IsHealthyAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
-        public Task SendNotificationAsync(string toAddress, string subject, string body, CancellationToken ct = default)
+        public Task SendNotificationAsync(string toAddress, string subjectEn, string bodyEn, string subjectDe, string bodyDe, CancellationToken ct = default)
         {
             SendAttemptCount++;
             if (ThrowOnSend)
@@ -263,7 +263,7 @@ public class UpdateThresholdNotificationWorkerTests : IDisposable
                 throw new InvalidOperationException("simulated SMTP failure");
             }
 
-            SentNotifications.Add((toAddress, subject, body));
+            SentNotifications.Add((toAddress, subjectEn, bodyEn));
             return Task.CompletedTask;
         }
     }

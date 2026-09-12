@@ -182,6 +182,10 @@ public class CertificateExpiryWorker(
                         "The UpdateWatch2 server's own TLS certificate (presented to agents for mutual TLS) "
                             + $"was renewed automatically as it approached expiry.\n\nNew expiry: {state.LastServerLeafRenewalNotAfter:yyyy-MM-dd}\n\n"
                             + "No action is required — this is an informational notice.",
+                        "UpdateWatch2: Serverzertifikat automatisch erneuert",
+                        "Das eigene TLS-Zertifikat des UpdateWatch2-Servers (das den Agents für mTLS präsentiert wird) "
+                            + $"wurde automatisch erneuert, da es sich dem Ablaufdatum näherte.\n\nNeues Ablaufdatum: {state.LastServerLeafRenewalNotAfter:yyyy-MM-dd}\n\n"
+                            + "Es ist keine Aktion erforderlich — dies ist eine reine Information.",
                         ct);
                     state.LastServerLeafRenewalNotifiedAt = DateTimeOffset.UtcNow;
                     changed = true;
@@ -233,6 +237,10 @@ public class CertificateExpiryWorker(
                 $"The UpdateWatch2 internal CA root certificate will expire on {root.NotAfter:yyyy-MM-dd}.\n\n"
                     + "This certificate does not renew itself — plan a root rotation well ahead of that date "
                     + "(Administration → Certificates → CA root rotation).",
+                "UpdateWatch2: CA-Wurzelzertifikat läuft bald ab",
+                $"Das interne CA-Wurzelzertifikat von UpdateWatch2 läuft am {root.NotAfter:yyyy-MM-dd} ab.\n\n"
+                    + "Dieses Zertifikat erneuert sich nicht von selbst — plane eine Root-Rotation rechtzeitig vor diesem Datum "
+                    + "(Einstellungen → Zertifikate → CA-Root-Rotation).",
                 ct);
             await auditLog.LogAsync("system", "certificate.ca-root.expiry-warning", $"Thumbprint {rootThumbprint}, expires {root.NotAfter:O}", ct);
             state.LastCaWarningThumbprint = rootThumbprint;

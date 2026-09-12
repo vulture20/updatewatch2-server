@@ -137,6 +137,6 @@ public class NotificationsControllerTests : IClassFixture<WebApplicationFactory<
 
         public Task<bool> IsHealthyAsync(CancellationToken ct = default) => Task.FromResult(true);
 
-        public Task SendNotificationAsync(string toAddress, string subject, string body, CancellationToken ct = default) => Task.CompletedTask;
+        public Task SendNotificationAsync(string toAddress, string subjectEn, string bodyEn, string subjectDe, string bodyDe, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

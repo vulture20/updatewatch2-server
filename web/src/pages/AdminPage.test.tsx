@@ -100,6 +100,7 @@ const baseSettings = {
   smtpFromAddress: 'updatewatch2@example.com',
   smtpFromName: 'UpdateWatch2',
   notificationRecipientAddress: null,
+  instanceUrl: null,
   smtpConfigured: true,
   notificationUpdatesPerMachineThreshold: 5,
   notificationUpdatesPerMachineEnabled: true,
@@ -489,6 +490,26 @@ describe('AdminPage', () => {
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(
       expect.objectContaining({ notificationRecipientAddress: 'alerts@example.com', certificateExpiryWarningLeadDays: 30 }),
+    );
+  });
+
+  it('submits an edited instance URL', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, instanceUrl: 'https://updatewatch2.example.com' });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.type(screen.getByLabelText('Instance URL'), 'https://updatewatch2.example.com');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ instanceUrl: 'https://updatewatch2.example.com' }),
     );
   });
 

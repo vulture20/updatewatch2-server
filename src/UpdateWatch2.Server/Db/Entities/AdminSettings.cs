@@ -36,6 +36,9 @@ public class AdminSettings
     /// <summary>Where automated alert emails go — see <see cref="Notifications.SmtpOptions.NotificationRecipientAddress"/>'s doc comment.</summary>
     public string? NotificationRecipientAddress { get; set; }
 
+    /// <summary>The instance link added to every notification email — see <see cref="Notifications.SmtpOptions.InstanceUrl"/>'s doc comment.</summary>
+    public string? InstanceUrl { get; set; }
+
     public int NotificationUpdatesPerMachineThreshold { get; set; }
 
     /// <summary>Independent on/off checkbox for the updates-per-machine half of the threshold notification (see <see cref="Notifications.NotificationThresholdOptions.UpdatesPerMachineEnabled"/>'s doc comment). Default true.</summary>

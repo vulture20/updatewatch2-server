@@ -158,6 +158,12 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
             errors.Add("NotificationRecipientAddress must be a valid email address.");
         }
 
+        if (!string.IsNullOrWhiteSpace(request.InstanceUrl)
+            && (!Uri.TryCreate(request.InstanceUrl, UriKind.Absolute, out var instanceUri) || instanceUri.Scheme is not ("http" or "https")))
+        {
+            errors.Add("InstanceUrl must be an absolute http:// or https:// URL.");
+        }
+
         return errors;
     }
 }

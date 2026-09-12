@@ -43,4 +43,5 @@ public record UpdateAdminSettingsRequest(
     int CertificateExpiryWarningLeadDays = 60,
     bool CertificateExpiryNotificationsEnabled = true,
     bool NotificationUpdatesPerMachineEnabled = true,
-    bool NotificationAffectedMachinesEnabled = true);
+    bool NotificationAffectedMachinesEnabled = true,
+    string? InstanceUrl = null);

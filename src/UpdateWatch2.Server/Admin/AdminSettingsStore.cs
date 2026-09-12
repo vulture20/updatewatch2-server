@@ -116,6 +116,7 @@ public class AdminSettingsStore(
         row.SmtpFromAddress = request.SmtpFromAddress;
         row.SmtpFromName = request.SmtpFromName;
         row.NotificationRecipientAddress = string.IsNullOrWhiteSpace(request.NotificationRecipientAddress) ? null : request.NotificationRecipientAddress;
+        row.InstanceUrl = string.IsNullOrWhiteSpace(request.InstanceUrl) ? null : request.InstanceUrl;
         row.NotificationUpdatesPerMachineThreshold = request.NotificationUpdatesPerMachineThreshold;
         row.NotificationUpdatesPerMachineEnabled = request.NotificationUpdatesPerMachineEnabled;
         row.NotificationAffectedMachinesThreshold = request.NotificationAffectedMachinesThreshold;
@@ -167,6 +168,7 @@ public class AdminSettingsStore(
                 _smtp.FromAddress,
                 _smtp.FromName,
                 _smtp.NotificationRecipientAddress,
+                _smtp.InstanceUrl,
                 _smtp.IsConfigured,
                 _notificationThresholds.UpdatesPerMachine,
                 _notificationThresholds.UpdatesPerMachineEnabled,
@@ -210,6 +212,7 @@ public class AdminSettingsStore(
         SmtpFromAddress = defaultSmtp.Value.FromAddress,
         SmtpFromName = defaultSmtp.Value.FromName,
         NotificationRecipientAddress = defaultSmtp.Value.NotificationRecipientAddress,
+        InstanceUrl = defaultSmtp.Value.InstanceUrl,
         NotificationUpdatesPerMachineThreshold = defaultNotificationThresholds.Value.UpdatesPerMachine,
         NotificationUpdatesPerMachineEnabled = defaultNotificationThresholds.Value.UpdatesPerMachineEnabled,
         NotificationAffectedMachinesThreshold = defaultNotificationThresholds.Value.AffectedMachines,
@@ -250,6 +253,7 @@ public class AdminSettingsStore(
             FromAddress = row.SmtpFromAddress,
             FromName = row.SmtpFromName,
             NotificationRecipientAddress = row.NotificationRecipientAddress,
+            InstanceUrl = row.InstanceUrl,
         };
         var thresholds = new NotificationThresholdOptions
         {

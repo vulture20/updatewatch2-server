@@ -44,6 +44,7 @@ const baseSettings = {
   smtpFromAddress: '',
   smtpFromName: '',
   notificationRecipientAddress: null,
+  instanceUrl: null,
   smtpConfigured: false,
   notificationUpdatesPerMachineThreshold: 5,
   notificationUpdatesPerMachineEnabled: true,

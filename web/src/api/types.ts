@@ -150,6 +150,8 @@ export interface AdminSettings {
   smtpFromName: string;
   /** Where automated alert emails go (certificate-expiry warnings today) — null/empty means nothing is configured to receive them. */
   notificationRecipientAddress: string | null;
+  /** The externally-reachable base URL of this instance, added as a link/button to every notification email — null/empty means no link is added. */
+  instanceUrl: string | null;
   smtpConfigured: boolean;
   notificationUpdatesPerMachineThreshold: number;
   /** Independent on/off checkbox for the updates-per-machine half of the threshold notification — see UpdateThresholdNotificationWorker. Default true. */
