@@ -11,6 +11,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.11] - 2026-09-12
+
+### Fixed
+
+- **Agent self-update for v0.15.5 never offered any asset on either platform ("Agent release 0.15.5 has no asset for this platform (WindowsInstaller)" / "(LinuxDeb)") — a real production incident, root-caused against the live `AgentUpdateStates` row and a real GitHub API check, not just reasoned about.** GitHub's `/releases/latest` can report a release's tag before every job of this project's own multi-job release pipeline has actually finished attaching its asset to that release — confirmed live: the affected instance's periodic check ran at `05:59:30 UTC`, when the `v0.15.5` release object already existed but carried zero assets, while the real `.exe`/`.deb`/`.rpm` files didn't finish uploading until `06:30:56`/`06:30:57`, about half an hour later. `CheckForUpdatesAsync` committed `state.LatestVersion = "0.15.5"` anyway, with every asset slot left `null` — and because `AssetsPresentOnDisk` treats a `null` filename as "not expected, nothing to check" (the correct behavior for a release that genuinely never ships one of the three platforms), every subsequent check saw `0.15.5` as both already-known and fully present on disk, permanently reporting `UpToDate` and never retrying, even once the real assets existed on GitHub minutes later. Fixed with a new guard: if downloading a release's assets classifies zero of them into any of the three known slots, `CheckForUpdatesAsync` no longer advances `LatestVersion` at all — it's recorded as a retryable failure instead, so the next periodic or manual check re-fetches the release from scratch rather than treating an assets-still-publishing snapshot as the final word. A production instance already stuck in the old broken state (a `null`-everywhere row pinned to the newest tag) needs one manual intervention to recover on this fixed build — either a manual asset upload for that version via the admin UI, or an admin editing the stuck row so a fresh check no longer looks "already known" — since the fix only prevents the bad state from being written going forward, it doesn't retroactively repair a row already saved before this release.
+
 ## [0.30.10] - 2026-09-11
 
 ### Added

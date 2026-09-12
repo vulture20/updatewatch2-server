@@ -160,6 +160,32 @@ public class AgentUpdateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CheckForUpdatesAsync_does_not_latch_onto_a_release_whose_assets_have_not_finished_publishing_yet()
+    {
+        // GitHub's release object can report the new tag before every
+        // asset-upload job in the release pipeline has actually attached
+        // a file to it — this must not be treated the same as "this
+        // release genuinely has no platform assets".
+        _gitHub.Release = new GitHubRelease("v0.15.5", []);
+
+        var outcome = await _service.CheckForUpdatesAsync();
+
+        Assert.Equal(AgentUpdateCheckOutcome.Failed, outcome);
+        var state = await _db.AgentUpdateStates.SingleAsync();
+        Assert.Null(state.LatestVersion);
+        Assert.Contains("0.15.5", state.LastError);
+
+        // The very next check, once GitHub has finished publishing the
+        // real assets, must still pick the release up rather than having
+        // been permanently marked "already known".
+        _gitHub.Release = SampleRelease with { TagName = "v0.15.5" };
+        var secondOutcome = await _service.CheckForUpdatesAsync();
+
+        Assert.Equal(AgentUpdateCheckOutcome.Downloaded, secondOutcome);
+        Assert.Equal("0.15.5", (await _db.AgentUpdateStates.SingleAsync()).LatestVersion);
+    }
+
+    [Fact]
     public async Task CheckForUpdatesAsync_records_the_error_and_reports_Failed_when_the_GitHub_call_throws()
     {
         _gitHub.ThrowOnGetLatestRelease = new HttpRequestException("simulated network failure");

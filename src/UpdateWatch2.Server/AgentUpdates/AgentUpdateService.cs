@@ -90,6 +90,28 @@ public class AgentUpdateService(
             return await RecordFailureAsync(state, ex.Message, ct);
         }
 
+        if (!HasAnyAsset(state))
+        {
+            // GitHub's release object can exist — and report the new tag
+            // via /releases/latest — before every job's asset-upload step
+            // in this project's own multi-job release pipeline has
+            // actually finished attaching files to it. Committing this
+            // version now with every slot null would be indistinguishable,
+            // on every future tick, from "this release genuinely ships no
+            // recognized platform asset at all" — AssetsPresentOnDisk
+            // treats a null filename as trivially present — permanently
+            // latching the state onto a version with nothing to offer,
+            // even once GitHub finishes publishing the real files minutes
+            // later. Leave state.LatestVersion untouched (whatever it was
+            // before this call) so the next periodic/manual check treats
+            // this version as still-undetected and tries again from
+            // scratch, instead of only ever seeing it as already-known.
+            logger.LogWarning(
+                "Found agent release {Version} but it has no recognized platform assets yet (it may still be publishing) — will retry on the next check.",
+                version);
+            return await RecordFailureAsync(state, $"Release {version} has no recognized platform assets yet.", ct);
+        }
+
         state.LatestVersion = version;
         state.LastError = null;
         state.ManuallyUploaded = false;
@@ -115,6 +137,9 @@ public class AgentUpdateService(
     /// storage directory can be lost independently of the DB row that
     /// describes it (a separate Docker volume — see CLAUDE.md).
     /// </summary>
+    private static bool HasAnyAsset(AgentUpdateState state) =>
+        state.WindowsInstallerFileName is not null || state.LinuxDebFileName is not null || state.LinuxRpmFileName is not null;
+
     private bool AssetsPresentOnDisk(AgentUpdateState state) =>
         IsPresentOrNotExpected(state.WindowsInstallerFileName)
         && IsPresentOrNotExpected(state.LinuxDebFileName)
