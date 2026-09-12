@@ -380,7 +380,7 @@ describe('AgentDetailPage uptime', () => {
     expect(screen.getByText('Uptime').nextElementSibling).toHaveTextContent('—');
   });
 
-  it('shows a relative time since the last reported boot — the way an admin confirms a triggered reboot actually took effect', async () => {
+  it('shows the elapsed time since the last reported boot as a bare duration, not "X ago" phrasing — the way an admin confirms a triggered reboot actually took effect', async () => {
     // shouldAdvanceTime: true — needed so React Testing Library's own
     // internal polling (findByText's retry loop) still works alongside a
     // faked system clock, the same reasoning already established
@@ -391,7 +391,10 @@ describe('AgentDetailPage uptime', () => {
     renderPage();
 
     await screen.findByText('Uptime');
-    expect(screen.getByText('Uptime').nextElementSibling).toHaveTextContent(/2 hours ago/i);
+    // Not "2 hours ago" — a user report that "ago"/"vor" reads wrong for a
+    // duration-since-boot field, unlike "last seen" elsewhere in this app.
+    expect(screen.getByText('Uptime').nextElementSibling).toHaveTextContent('2 hours');
+    expect(screen.getByText('Uptime').nextElementSibling).not.toHaveTextContent(/ago/i);
 
     vi.useRealTimers();
   });

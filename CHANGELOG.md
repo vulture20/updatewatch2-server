@@ -11,6 +11,15 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.14] - 2026-09-12
+
+### Fixed
+
+- **`AgentDetailPage`'s four status cards (Identity, Certificate, Install status, Reboot status) had no room to stay readable once a fourth card joined the previous three-card layout — reported directly by the user ("Für 4 Tables nebeneinander ist nicht genug Platz, weswegen jetzt kaum noch etwas lesbar ist.").** Install status and Reboot status are now grouped into a `.card-stack` (a vertical pair) that itself counts as a single, fixed-width (320px) flex item alongside Identity and Certificate, which continue to flex-grow and share the remaining row width — `.detail-cards` switched from a 4-column CSS grid to flex-wrap for this. Reboot status sitting directly under Install status is also the layout the user specifically asked for, not just a side effect of the width fix.
+- **Uptime showed "vor 2 Stunden"/"2 hours ago" — wrong framing for a duration-since-boot field, reported directly by the user ("Bei Laufzeit ... steht 'vor'. Korrekterweise müsste es 'seit' lauten.") — and asked whether English had the same problem, which it does.** `formatRelativeTime`'s `Intl.RelativeTimeFormat`-based "X ago" phrasing is right for a past-event field like "last seen", but wrong for a duration a machine has been continuously running for. `web/src/utils/relativeTime.ts` gained a new `elapsedSince` export (the same magnitude/unit computation `formatRelativeTime` already did internally, without baking in "ago"/"in" wording), and the Identity card's Uptime row now renders it through new `agentDetail.uptimeSince.*` translation keys — "seit {{count}} Stunden" in German (the word the user asked for), a bare "{{count}} hours" in English (no "since"/"ago" — "since 2 hours" isn't idiomatic English for a duration, unlike German's "seit").
+- **The agent detail page never showed the OS-update-pending reboot signal anywhere except a header badge — the user asked for it under Install status too ("Auf der Agent-Detailseite fehlt die Angabe, dass ein Neustart benötigt wird. Das könnte unter Installationsstatus vermerkt werden.").** The Install status card now leads with a "Reboot required" Yes/No row reading `Agent.RebootRequired` (the existing self-reported OS-update-needs-a-reboot flag, CLAUDE.md's "update installation never triggers a reboot itself" signal) — reusing the exact same `agents.rebootRequired`/`agents.yes`/`agents.no` translation keys the header badge already uses, rather than introducing new wording for the identical fact. Deliberately distinct from the Reboot status card right below it, which is about an admin-*triggered* machine reboot, not this self-reported "an installed update wants one" signal.
+- Test coverage updated: `AgentDetailPage.test.tsx`'s uptime test now asserts the bare-duration wording (and explicitly asserts the absence of "ago").
+
 ## [0.30.13] - 2026-09-12
 
 ### Fixed

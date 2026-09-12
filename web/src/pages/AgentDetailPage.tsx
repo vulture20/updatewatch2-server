@@ -6,7 +6,7 @@ import { WarningTriangleIcon } from '../components/WarningTriangleIcon';
 import { agentsApi } from '../api/endpoints';
 import type { AgentDetail, UpdateItem } from '../api/types';
 import { sortBy, toggleSort, type SortState } from '../utils/sorting';
-import { formatRelativeTime } from '../utils/relativeTime';
+import { elapsedSince } from '../utils/relativeTime';
 
 // Same reasoning as AgentsListPage's own constant — approving an agent,
 // then watching its certificate/updates actually arrive, shouldn't need a
@@ -16,7 +16,7 @@ const POLL_INTERVAL_MS = 5000;
 type UpdateSortKey = 'title' | 'pkg' | 'detected';
 
 export function AgentDetailPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { hostname } = useParams<{ hostname: string }>();
   const navigate = useNavigate();
   const [agent, setAgent] = useState<AgentDetail | null>(null);
@@ -114,6 +114,23 @@ export function AgentDetailPage() {
     className: 'sortable-header',
     onClick: () => setUpdatesSort((prev) => toggleSort(prev, key)),
   });
+
+  // Deliberately not formatRelativeTime's "X ago"/"vor X" phrasing — an
+  // admin reported that "vor 2 Stunden" reads wrong for an uptime field
+  // (it's a duration this machine has been running, not a past event),
+  // and asked for "seit" instead. English has the same mismatch ("ago"
+  // implies a past event too), fixed the same way: a bare duration with
+  // no "ago"/"in" framing baked in, only "seit" prefixed in German.
+  const formatUptime = (bootTimeUtc: string | null) => {
+    if (!bootTimeUtc) {
+      return '—';
+    }
+    const elapsed = elapsedSince(bootTimeUtc);
+    if (!elapsed) {
+      return '—';
+    }
+    return t(`agentDetail.uptimeSince.${elapsed.unit}`, { count: elapsed.value });
+  };
 
   const triggerReboot = () => {
     if (!agent || !window.confirm(t('agentDetail.rebootConfirm'))) {
@@ -228,7 +245,7 @@ export function AgentDetailPage() {
             <dt className="text-muted">{t('agentDetail.lastAliveAt')}</dt>
             <dd>{agent.lastAliveAt ? new Date(agent.lastAliveAt).toLocaleString() : t('agentDetail.never')}</dd>
             <dt className="text-muted">{t('agentDetail.uptime')}</dt>
-            <dd>{agent.bootTimeUtc ? formatRelativeTime(agent.bootTimeUtc, i18n.language) : '—'}</dd>
+            <dd>{formatUptime(agent.bootTimeUtc)}</dd>
           </dl>
         </div>
 
@@ -248,56 +265,70 @@ export function AgentDetailPage() {
           </dl>
         </div>
 
-        <div className="card">
-          <span className="card-kicker">{t('agentDetail.cards.install')}</span>
-          <dl>
-            <dt className="text-muted">{t('agentDetail.lastInstallOutcome')}</dt>
-            <dd>
-              {agent.pendingInstallRequestedAt
-                ? t('agentDetail.installPending')
-                : agent.lastInstallOutcome
-                  ? t(`agentDetail.installOutcome.${agent.lastInstallOutcome}`)
-                  : '—'}
-            </dd>
-            <dt className="text-muted">{t('agentDetail.cards.installCompletedAt')}</dt>
-            <dd>
-              {agent.pendingInstallRequestedAt || !agent.lastInstallCompletedAt
-                ? '—'
-                : new Date(agent.lastInstallCompletedAt).toLocaleString()}
-            </dd>
-            {!agent.pendingInstallRequestedAt && agent.lastInstallOutcome === 'Failed' && agent.lastInstallErrorDetail && (
-              <>
-                <dt className="text-muted">{t('agentDetail.lastInstallErrorDetail')}</dt>
-                <dd className="text-monospace">{agent.lastInstallErrorDetail}</dd>
-              </>
-            )}
-          </dl>
-        </div>
+        {/* Install status and reboot status stacked together, as one fixed-width
+            grid item — with four cards, letting each stretch equally left
+            barely enough room for any of them to stay readable. Reported
+            directly by the user ("Für 4 Tables nebeneinander ist nicht
+            genug Platz, weswegen jetzt kaum noch etwas lesbar ist."). */}
+        <div className="card-stack">
+          <div className="card">
+            <span className="card-kicker">{t('agentDetail.cards.install')}</span>
+            <dl>
+              {/* The OS-update-pending reboot signal (Agent.RebootRequired,
+                  self-reported on every update check) — distinct from the
+                  admin-triggered reboot below, and previously only shown as
+                  a header badge with nothing under Install status itself,
+                  which the user asked to fix. */}
+              <dt className="text-muted">{t('agents.rebootRequired')}</dt>
+              <dd>{agent.rebootRequired ? t('agents.yes') : t('agents.no')}</dd>
+              <dt className="text-muted">{t('agentDetail.lastInstallOutcome')}</dt>
+              <dd>
+                {agent.pendingInstallRequestedAt
+                  ? t('agentDetail.installPending')
+                  : agent.lastInstallOutcome
+                    ? t(`agentDetail.installOutcome.${agent.lastInstallOutcome}`)
+                    : '—'}
+              </dd>
+              <dt className="text-muted">{t('agentDetail.cards.installCompletedAt')}</dt>
+              <dd>
+                {agent.pendingInstallRequestedAt || !agent.lastInstallCompletedAt
+                  ? '—'
+                  : new Date(agent.lastInstallCompletedAt).toLocaleString()}
+              </dd>
+              {!agent.pendingInstallRequestedAt && agent.lastInstallOutcome === 'Failed' && agent.lastInstallErrorDetail && (
+                <>
+                  <dt className="text-muted">{t('agentDetail.lastInstallErrorDetail')}</dt>
+                  <dd className="text-monospace">{agent.lastInstallErrorDetail}</dd>
+                </>
+              )}
+            </dl>
+          </div>
 
-        <div className="card">
-          <span className="card-kicker">{t('agentDetail.cards.reboot')}</span>
-          <dl>
-            <dt className="text-muted">{t('agentDetail.lastRebootOutcome')}</dt>
-            <dd>
-              {agent.pendingRebootRequestedAt
-                ? t('agentDetail.rebootPending')
-                : agent.lastRebootOutcome
-                  ? t(`agentDetail.rebootOutcome.${agent.lastRebootOutcome}`)
-                  : '—'}
-            </dd>
-            <dt className="text-muted">{t('agentDetail.cards.rebootCompletedAt')}</dt>
-            <dd>
-              {agent.pendingRebootRequestedAt || !agent.lastRebootCompletedAt
-                ? '—'
-                : new Date(agent.lastRebootCompletedAt).toLocaleString()}
-            </dd>
-            {!agent.pendingRebootRequestedAt && agent.lastRebootOutcome === 'Failed' && agent.lastRebootErrorDetail && (
-              <>
-                <dt className="text-muted">{t('agentDetail.lastRebootErrorDetail')}</dt>
-                <dd className="text-monospace">{agent.lastRebootErrorDetail}</dd>
-              </>
-            )}
-          </dl>
+          <div className="card">
+            <span className="card-kicker">{t('agentDetail.cards.reboot')}</span>
+            <dl>
+              <dt className="text-muted">{t('agentDetail.lastRebootOutcome')}</dt>
+              <dd>
+                {agent.pendingRebootRequestedAt
+                  ? t('agentDetail.rebootPending')
+                  : agent.lastRebootOutcome
+                    ? t(`agentDetail.rebootOutcome.${agent.lastRebootOutcome}`)
+                    : '—'}
+              </dd>
+              <dt className="text-muted">{t('agentDetail.cards.rebootCompletedAt')}</dt>
+              <dd>
+                {agent.pendingRebootRequestedAt || !agent.lastRebootCompletedAt
+                  ? '—'
+                  : new Date(agent.lastRebootCompletedAt).toLocaleString()}
+              </dd>
+              {!agent.pendingRebootRequestedAt && agent.lastRebootOutcome === 'Failed' && agent.lastRebootErrorDetail && (
+                <>
+                  <dt className="text-muted">{t('agentDetail.lastRebootErrorDetail')}</dt>
+                  <dd className="text-monospace">{agent.lastRebootErrorDetail}</dd>
+                </>
+              )}
+            </dl>
+          </div>
         </div>
       </div>
 

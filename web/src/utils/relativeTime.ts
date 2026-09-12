@@ -6,6 +6,22 @@ const UNITS: { unit: Intl.RelativeTimeFormatUnit; seconds: number }[] = [
   { unit: 'minute', seconds: 60 },
 ];
 
+/** How long ago `iso` was, expressed as a whole count in the largest unit that fits (never zero units, floors to 'minute'). Shared by formatRelativeTime and anything else that needs the raw magnitude without Intl.RelativeTimeFormat's "ago"/"in" phrasing baked in. */
+export function elapsedSince(iso: string): { value: number; unit: Intl.RelativeTimeFormatUnit } | null {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) {
+    return null;
+  }
+  const seconds = Math.max(0, (Date.now() - then) / 1000);
+
+  for (const { unit, seconds: unitSeconds } of UNITS) {
+    if (seconds >= unitSeconds) {
+      return { value: Math.floor(seconds / unitSeconds), unit };
+    }
+  }
+  return { value: 0, unit: 'minute' };
+}
+
 /**
  * "3 minutes ago" / "vor 3 Minuten", locale-aware via Intl.RelativeTimeFormat
  * — used for the agents overview's "last seen" column. Falls back to
@@ -17,17 +33,10 @@ export function formatRelativeTime(iso: string | null, locale: string): string |
   if (!iso) {
     return null;
   }
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) {
+  const elapsed = elapsedSince(iso);
+  if (!elapsed) {
     return null;
   }
-  const seconds = Math.max(0, (Date.now() - then) / 1000);
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-
-  for (const { unit, seconds: unitSeconds } of UNITS) {
-    if (seconds >= unitSeconds) {
-      return rtf.format(-Math.floor(seconds / unitSeconds), unit);
-    }
-  }
-  return rtf.format(0, 'minute');
+  return rtf.format(-elapsed.value, elapsed.unit);
 }

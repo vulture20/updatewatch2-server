@@ -55,6 +55,13 @@
     "agentVersion": "Agent version",
     "lastAliveAt": "Last alive",
     "uptime": "Uptime",
+    "uptimeSince": {
+      "minute": "{{count}} minutes",
+      "hour": "{{count}} hours",
+      "day": "{{count}} days",
+      "month": "{{count}} months",
+      "year": "{{count}} years"
+    },
     "never": "Never",
     "approve": "Approve",
     "triggerInstall": "Install selected ({{count}})",

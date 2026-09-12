@@ -435,11 +435,35 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+/* flex, not grid — Identity/Certificate flex-grow to share the remaining
+   width, while .card-stack (Install status + Reboot status) gets a fixed
+   width and never stretches. With all four as equal grid columns there
+   wasn't enough room for any of them to stay readable once a fourth card
+   (reboot status) joined the row — reported directly by a user. */
 .detail-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-4);
   margin-bottom: var(--space-4);
+}
+
+.detail-cards > .card {
+  flex: 1 1 280px;
+}
+
+.card-stack {
+  /* grow: 0 — never stretches to fill leftover row space; shrink: 1 — still
+     allowed to shrink below 320px on a narrow/mobile viewport rather than
+     overflowing it. */
+  flex: 0 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card-stack > .card {
+  flex: 1 1 auto;
 }
 
 dl {
