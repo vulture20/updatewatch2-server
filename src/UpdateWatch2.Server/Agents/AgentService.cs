@@ -43,7 +43,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
             agent.Approved, agent.RebootRequired, countsByAgent.GetValueOrDefault(agent.Id), agent.LastAliveAt,
             agent.ClientCertificateThumbprint, agent.ClientCertificateThumbprintSha1, agent.ClientCertificateIssuedAt, agent.ClientCertificateExpiresAt,
             agent.PendingInstallRequestedAt, agent.LastInstallOutcome, agent.LastInstallErrorDetail, agent.LastInstallCompletedAt,
-            agent.PendingRestartRequestedAt, agent.LastRestartOutcome, agent.LastRestartErrorDetail, agent.LastRestartCompletedAt,
+            agent.PendingRebootRequestedAt, agent.LastRebootOutcome, agent.LastRebootErrorDetail, agent.LastRebootCompletedAt, agent.BootTimeUtc,
             agent.IssuingRootThumbprint, rejection?.Reason, rejection?.Timestamp);
     }
 
@@ -169,7 +169,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
         return true;
     }
 
-    public async Task<bool> TriggerRestartAsync(string hostname, string triggeredBy, CancellationToken ct = default)
+    public async Task<bool> TriggerRebootAsync(string hostname, string triggeredBy, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
         if (agent is null)
@@ -181,13 +181,13 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
         // exactly like PendingInstallRequestedAt — see
         // AgentRegistrationService.RecordAliveAsync and
         // AgentProtocolController.Alive.
-        agent.PendingRestartRequestedAt = DateTimeOffset.UtcNow;
+        agent.PendingRebootRequestedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
-        await auditLog.LogAsync(triggeredBy, "agent.restart.trigger", hostname, ct);
+        await auditLog.LogAsync(triggeredBy, "agent.reboot.trigger", hostname, ct);
         return true;
     }
 
-    public async Task<bool> AcknowledgeRestartAsync(string hostname, RestartOutcome outcome, string? errorDetail, CancellationToken ct = default)
+    public async Task<bool> AcknowledgeRebootAsync(string hostname, RebootOutcome outcome, string? errorDetail, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
         if (agent is null)
@@ -195,14 +195,14 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
             return false;
         }
 
-        agent.PendingRestartRequestedAt = null;
-        agent.LastRestartOutcome = outcome.ToString();
+        agent.PendingRebootRequestedAt = null;
+        agent.LastRebootOutcome = outcome.ToString();
         // Only ever meaningful for a Failed outcome — mirrors
         // AcknowledgeInstallAsync's identical reasoning for LastInstallErrorDetail.
-        agent.LastRestartErrorDetail = outcome == RestartOutcome.Failed ? errorDetail : null;
-        agent.LastRestartCompletedAt = DateTimeOffset.UtcNow;
+        agent.LastRebootErrorDetail = outcome == RebootOutcome.Failed ? errorDetail : null;
+        agent.LastRebootCompletedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
-        await auditLog.LogAsync("agent", $"agent.restart.{outcome.ToString().ToLowerInvariant()}", hostname, ct);
+        await auditLog.LogAsync("agent", $"agent.reboot.{outcome.ToString().ToLowerInvariant()}", hostname, ct);
         return true;
     }
 

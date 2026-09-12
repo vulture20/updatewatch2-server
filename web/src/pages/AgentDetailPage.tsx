@@ -6,6 +6,7 @@ import { WarningTriangleIcon } from '../components/WarningTriangleIcon';
 import { agentsApi } from '../api/endpoints';
 import type { AgentDetail, UpdateItem } from '../api/types';
 import { sortBy, toggleSort, type SortState } from '../utils/sorting';
+import { formatRelativeTime } from '../utils/relativeTime';
 
 // Same reasoning as AgentsListPage's own constant — approving an agent,
 // then watching its certificate/updates actually arrive, shouldn't need a
@@ -15,7 +16,7 @@ const POLL_INTERVAL_MS = 5000;
 type UpdateSortKey = 'title' | 'pkg' | 'detected';
 
 export function AgentDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { hostname } = useParams<{ hostname: string }>();
   const navigate = useNavigate();
   const [agent, setAgent] = useState<AgentDetail | null>(null);
@@ -114,11 +115,11 @@ export function AgentDetailPage() {
     onClick: () => setUpdatesSort((prev) => toggleSort(prev, key)),
   });
 
-  const triggerRestart = () => {
-    if (!agent || !window.confirm(t('agentDetail.restartConfirm'))) {
+  const triggerReboot = () => {
+    if (!agent || !window.confirm(t('agentDetail.rebootConfirm'))) {
       return;
     }
-    void agentsApi.triggerRestart(agent.hostname).then(reload);
+    void agentsApi.triggerReboot(agent.hostname).then(reload);
   };
 
   const reissueCertificate = () => {
@@ -182,8 +183,8 @@ export function AgentDetailPage() {
             </button>
           )}
           {agent.approved && (
-            <button type="button" disabled={Boolean(agent.pendingRestartRequestedAt)} onClick={triggerRestart}>
-              {agent.pendingRestartRequestedAt ? t('agentDetail.restartPending') : t('agentDetail.triggerRestart')}
+            <button type="button" disabled={Boolean(agent.pendingRebootRequestedAt)} onClick={triggerReboot}>
+              {agent.pendingRebootRequestedAt ? t('agentDetail.rebootPending') : t('agentDetail.triggerReboot')}
             </button>
           )}
           <button
@@ -226,6 +227,8 @@ export function AgentDetailPage() {
             <dd>{agent.agentVersion ?? '—'}</dd>
             <dt className="text-muted">{t('agentDetail.lastAliveAt')}</dt>
             <dd>{agent.lastAliveAt ? new Date(agent.lastAliveAt).toLocaleString() : t('agentDetail.never')}</dd>
+            <dt className="text-muted">{t('agentDetail.uptime')}</dt>
+            <dd>{agent.bootTimeUtc ? formatRelativeTime(agent.bootTimeUtc, i18n.language) : '—'}</dd>
           </dl>
         </div>
 
@@ -272,26 +275,26 @@ export function AgentDetailPage() {
         </div>
 
         <div className="card">
-          <span className="card-kicker">{t('agentDetail.cards.restart')}</span>
+          <span className="card-kicker">{t('agentDetail.cards.reboot')}</span>
           <dl>
-            <dt className="text-muted">{t('agentDetail.lastRestartOutcome')}</dt>
+            <dt className="text-muted">{t('agentDetail.lastRebootOutcome')}</dt>
             <dd>
-              {agent.pendingRestartRequestedAt
-                ? t('agentDetail.restartPending')
-                : agent.lastRestartOutcome
-                  ? t(`agentDetail.restartOutcome.${agent.lastRestartOutcome}`)
+              {agent.pendingRebootRequestedAt
+                ? t('agentDetail.rebootPending')
+                : agent.lastRebootOutcome
+                  ? t(`agentDetail.rebootOutcome.${agent.lastRebootOutcome}`)
                   : '—'}
             </dd>
-            <dt className="text-muted">{t('agentDetail.cards.restartCompletedAt')}</dt>
+            <dt className="text-muted">{t('agentDetail.cards.rebootCompletedAt')}</dt>
             <dd>
-              {agent.pendingRestartRequestedAt || !agent.lastRestartCompletedAt
+              {agent.pendingRebootRequestedAt || !agent.lastRebootCompletedAt
                 ? '—'
-                : new Date(agent.lastRestartCompletedAt).toLocaleString()}
+                : new Date(agent.lastRebootCompletedAt).toLocaleString()}
             </dd>
-            {!agent.pendingRestartRequestedAt && agent.lastRestartOutcome === 'Failed' && agent.lastRestartErrorDetail && (
+            {!agent.pendingRebootRequestedAt && agent.lastRebootOutcome === 'Failed' && agent.lastRebootErrorDetail && (
               <>
-                <dt className="text-muted">{t('agentDetail.lastRestartErrorDetail')}</dt>
-                <dd className="text-monospace">{agent.lastRestartErrorDetail}</dd>
+                <dt className="text-muted">{t('agentDetail.lastRebootErrorDetail')}</dt>
+                <dd className="text-monospace">{agent.lastRebootErrorDetail}</dd>
               </>
             )}
           </dl>

@@ -51,11 +51,19 @@ public record AgentDetailDto(
     /// </summary>
     string? LastInstallErrorDetail,
     DateTimeOffset? LastInstallCompletedAt,
-    DateTimeOffset? PendingRestartRequestedAt,
-    string? LastRestartOutcome,
-    /// <summary>Only ever non-null alongside a <see cref="LastRestartOutcome"/> of "Failed" — mirrors <see cref="LastInstallErrorDetail"/>.</summary>
-    string? LastRestartErrorDetail,
-    DateTimeOffset? LastRestartCompletedAt,
+    DateTimeOffset? PendingRebootRequestedAt,
+    string? LastRebootOutcome,
+    /// <summary>Only ever non-null alongside a <see cref="LastRebootOutcome"/> of "Failed" — mirrors <see cref="LastInstallErrorDetail"/>.</summary>
+    string? LastRebootErrorDetail,
+    DateTimeOffset? LastRebootCompletedAt,
+    /// <summary>
+    /// When the agent's own machine last booted, self-reported every
+    /// heartbeat — see <see cref="Db.Entities.Agent.BootTimeUtc"/>'s own
+    /// doc comment. What actually lets an admin confirm a triggered reboot
+    /// took effect, as opposed to <see cref="LastRebootOutcome"/>, which
+    /// only reflects whether the reboot command was scheduled successfully.
+    /// </summary>
+    DateTimeOffset? BootTimeUtc,
     /// <summary>
     /// SHA-256 thumbprint of the internal CA root that actually signed this
     /// agent's current client certificate (<see cref="Db.Entities.Agent.IssuingRootThumbprint"/>)
@@ -108,32 +116,36 @@ public record ReissueCertificateResult(bool Success, string? RegistrationToken, 
 }
 
 /// <summary>
-/// How a remote-triggered agent-service restart went, as self-reported by
-/// the agent once it has acted on the request. Mirrors
+/// How a remote-triggered machine reboot went, as self-reported by the
+/// agent once it has acted on the request — "Succeeded" only ever means
+/// the platform's reboot command was scheduled successfully, not that the
+/// machine has actually come back up yet (see
+/// <see cref="Db.Entities.Agent.BootTimeUtc"/> for that). Mirrors
 /// <c>Updates.InstallOutcome</c> field-for-field, including the same
 /// <see cref="JsonStringEnumConverter"/> requirement — this project has no
 /// global one configured, so without this attribute a wire body like
 /// <c>{"outcome":"Succeeded"}</c> 400s against the default numeric
-/// model-binding <c>Updates.InstallOutcome</c>'s own doc comment already
+/// model-binding, per <c>Updates.InstallOutcome</c>'s own doc comment
 /// confirmed live for that sibling enum. Kept as its own separate type
 /// rather than reusing <c>Updates.InstallOutcome</c> even though the shape
-/// is identical — a restart is a distinct agent-lifecycle action, not an
-/// OS-update install, and the two are deliberately never conflated
-/// (CLAUDE.md's "agent self-update is a separate mechanism... not to be
-/// conflated with" rule applies by the same reasoning here).
+/// is identical — a machine reboot is a distinct action from an OS-update
+/// install, deliberately never conflated (CLAUDE.md's "update installation
+/// never triggers a reboot itself... the admin decides when to actually
+/// trigger a reboot" rule is exactly the distinction this type exists to
+/// preserve on the wire).
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum RestartOutcome
+public enum RebootOutcome
 {
     Succeeded,
     Failed,
 }
 
 /// <summary>
-/// Body of <c>POST /api/agents/{hostname}/restart-ack</c> — the agent's
-/// acknowledgement that it acted on a pending restart request.
+/// Body of <c>POST /api/agents/{hostname}/reboot-ack</c> — the agent's
+/// acknowledgement that it acted on a pending reboot request.
 /// <see cref="ErrorDetail"/> is only ever meaningful alongside
-/// <see cref="RestartOutcome.Failed"/> (e.g. the platform-specific restart
-/// mechanism itself failed to launch) — mirrors <c>Updates.InstallAckRequest</c>.
+/// <see cref="RebootOutcome.Failed"/> (e.g. the platform-specific reboot
+/// command itself failed to launch) — mirrors <c>Updates.InstallAckRequest</c>.
 /// </summary>
-public record RestartAckRequest(RestartOutcome Outcome, string? ErrorDetail = null);
+public record RebootAckRequest(RebootOutcome Outcome, string? ErrorDetail = null);

@@ -43,12 +43,15 @@ export interface AgentDetail {
   /** Only ever non-null alongside lastInstallOutcome === 'Failed' — the agent's own OS-level tool output (apt-get/dnf stderr, a Windows Update result code) or a caught exception's message. */
   lastInstallErrorDetail: string | null;
   lastInstallCompletedAt: string | null;
-  /** Set while a remote restart (triggerRestart) has been requested but not yet acknowledged by the agent. Restarts the agent's own service process only — never the machine, never the OS-update install pipeline. */
-  pendingRestartRequestedAt: string | null;
-  lastRestartOutcome: 'Succeeded' | 'Failed' | null;
-  /** Only ever non-null alongside lastRestartOutcome === 'Failed' — mirrors lastInstallErrorDetail. */
-  lastRestartErrorDetail: string | null;
-  lastRestartCompletedAt: string | null;
+  /** Set while a remote reboot (triggerReboot) has been requested but not yet acknowledged by the agent. Reboots the agent's own machine — never just the agent's service process, never the OS-update install pipeline. */
+  pendingRebootRequestedAt: string | null;
+  /** Only ever reflects whether the platform's reboot command was scheduled successfully — whether the machine actually came back up is instead visible via bootTimeUtc jumping forward on a later heartbeat. */
+  lastRebootOutcome: 'Succeeded' | 'Failed' | null;
+  /** Only ever non-null alongside lastRebootOutcome === 'Failed' — mirrors lastInstallErrorDetail. */
+  lastRebootErrorDetail: string | null;
+  lastRebootCompletedAt: string | null;
+  /** When the agent's own machine last booted, self-reported every heartbeat — jumping forward to a recent timestamp is how an admin confirms a triggered reboot actually took effect. */
+  bootTimeUtc: string | null;
   /**
    * SHA-256 thumbprint of the internal CA root that signed this agent's
    * current client certificate — compare against the Administration →

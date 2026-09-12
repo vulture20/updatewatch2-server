@@ -54,6 +54,7 @@
     "ipAddress": "IP address",
     "agentVersion": "Agent version",
     "lastAliveAt": "Last alive",
+    "uptime": "Uptime",
     "never": "Never",
     "approve": "Approve",
     "triggerInstall": "Install selected ({{count}})",
@@ -64,15 +65,15 @@
       "Failed": "Failed"
     },
     "lastInstallErrorDetail": "Error detail",
-    "triggerRestart": "Restart agent",
-    "restartPending": "Restart pending…",
-    "restartConfirm": "This restarts the agent's background service on the target machine. Management connectivity may briefly drop while it comes back up. Continue?",
-    "lastRestartOutcome": "Last restart result",
-    "restartOutcome": {
+    "triggerReboot": "Reboot machine",
+    "rebootPending": "Reboot pending…",
+    "rebootConfirm": "This reboots the agent's machine. It will be unreachable for a short time while it restarts. Continue?",
+    "lastRebootOutcome": "Last reboot result",
+    "rebootOutcome": {
       "Succeeded": "Succeeded",
       "Failed": "Failed"
     },
-    "lastRestartErrorDetail": "Error detail",
+    "lastRebootErrorDetail": "Error detail",
     "updates": "Pending updates",
     "updateTitle": "Title",
     "updatePackageId": "Package ID",
@@ -86,8 +87,8 @@
       "certificate": "Certificate",
       "install": "Install status",
       "installCompletedAt": "Completed",
-      "restart": "Restart status",
-      "restartCompletedAt": "Completed"
+      "reboot": "Reboot status",
+      "rebootCompletedAt": "Completed"
     },
     "certificateThumbprintSha256": "Certificate thumbprint (SHA-256)",
     "certificateThumbprintSha1": "Certificate thumbprint (SHA-1)",

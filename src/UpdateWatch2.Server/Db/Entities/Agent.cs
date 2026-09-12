@@ -144,39 +144,54 @@ public class Agent
     public DateTimeOffset? LastInstallCompletedAt { get; set; }
 
     /// <summary>
-    /// Set when an admin triggers a remote agent-service restart; cleared
-    /// once the agent acknowledges having acted on it (see
-    /// <see cref="Agents.IAgentService.AcknowledgeRestartAsync"/>). Delivery
+    /// Set when an admin triggers a remote machine reboot; cleared once
+    /// the agent acknowledges having acted on it (see
+    /// <see cref="Agents.IAgentService.AcknowledgeRebootAsync"/>). Delivery
     /// is poll-based, exactly like <see cref="PendingInstallRequestedAt"/> —
     /// surfaced to the agent as part of its regular alive heartbeat
-    /// response, not pushed. Distinct from that field/from
-    /// <see cref="RebootRequired"/>: this restarts the agent's own service
-    /// process, never the OS-update install pipeline and never the
-    /// underlying machine (CLAUDE.md's "update installation never triggers
-    /// a reboot itself" rule is unrelated to this — a service restart is
-    /// not a machine reboot).
+    /// response, not pushed. Distinct from <see cref="RebootRequired"/>:
+    /// that field is the agent's own self-reported "an installed OS update
+    /// needs a reboot to take effect" signal (CLAUDE.md's "update
+    /// installation never triggers a reboot itself — the admin decides
+    /// when to actually trigger a reboot" rule); this field is that
+    /// decision actually being made and delivered.
     /// </summary>
-    public DateTimeOffset? PendingRestartRequestedAt { get; set; }
+    public DateTimeOffset? PendingRebootRequestedAt { get; set; }
 
     /// <summary>
-    /// The <see cref="Agents.RestartOutcome"/> name (e.g. "Succeeded") from
-    /// the agent's most recent restart acknowledgement — a plain string,
+    /// The <see cref="Agents.RebootOutcome"/> name (e.g. "Succeeded") from
+    /// the agent's most recent reboot acknowledgement — a plain string,
     /// not the enum type itself, matching <see cref="LastInstallOutcome"/>'s
-    /// own convention.
+    /// own convention. "Succeeded" only ever means the platform's reboot
+    /// command was scheduled successfully, not that the machine has
+    /// actually come back up yet — see <see cref="BootTimeUtc"/> for that.
     /// </summary>
-    public string? LastRestartOutcome { get; set; }
+    public string? LastRebootOutcome { get; set; }
 
     /// <summary>
-    /// Human-readable reason for the most recent restart acknowledgement,
+    /// Human-readable reason for the most recent reboot acknowledgement,
     /// only ever meaningful (and only ever set) alongside a
-    /// <see cref="LastRestartOutcome"/> of "Failed" — mirrors
+    /// <see cref="LastRebootOutcome"/> of "Failed" — mirrors
     /// <see cref="LastInstallErrorDetail"/>'s own reasoning. Reset to null
     /// on a Succeeded ack so a stale error never lingers next to a
-    /// since-successful restart.
+    /// since-successful reboot.
     /// </summary>
-    public string? LastRestartErrorDetail { get; set; }
+    public string? LastRebootErrorDetail { get; set; }
 
-    public DateTimeOffset? LastRestartCompletedAt { get; set; }
+    public DateTimeOffset? LastRebootCompletedAt { get; set; }
+
+    /// <summary>
+    /// When the agent's own machine last booted, self-reported on every
+    /// alive heartbeat (like <see cref="AgentVersion"/>/<see cref="IpAddress"/>
+    /// etc. — updatewatch2-agent#6's refresh channel) from
+    /// <c>Environment.TickCount64</c>, which .NET implements portably on
+    /// both Windows and Linux. Lets an admin actually confirm a
+    /// remote-triggered reboot took effect (this value jumping forward to
+    /// a recent timestamp) rather than just trusting <see cref="LastRebootOutcome"/>,
+    /// which only ever reflects whether the reboot command was scheduled
+    /// successfully, not whether the machine actually came back up.
+    /// </summary>
+    public DateTimeOffset? BootTimeUtc { get; set; }
 
     public DateTimeOffset? LastAliveAt { get; set; }
 

@@ -52,25 +52,33 @@ public interface IAgentService
     Task<bool> DeleteAsync(string hostname, string initiatedBy, CancellationToken ct = default);
 
     /// <summary>
-    /// Remote-triggers a restart of the agent's own service process (not
-    /// an OS reboot, not an update install — see <see cref="Db.Entities.Agent.PendingRestartRequestedAt"/>'s
-    /// doc comment). Sets that field, which the agent picks up on its next
-    /// alive heartbeat, mirroring <c>Updates.IUpdateService.TriggerInstallAsync</c>'s
-    /// exact delivery mechanism. Fire-and-forget from the admin's
-    /// perspective, like that sibling call. Returns false if no agent with
-    /// that hostname exists.
+    /// Remote-triggers a reboot of the agent's own machine — not just the
+    /// agent's own service process, and not an update install (see
+    /// <see cref="Db.Entities.Agent.PendingRebootRequestedAt"/>'s doc
+    /// comment, and CLAUDE.md's "update installation never triggers a
+    /// reboot itself... the admin decides when to actually trigger a
+    /// reboot" rule, which this implements). Sets that field, which the
+    /// agent picks up on its next alive heartbeat, mirroring
+    /// <c>Updates.IUpdateService.TriggerInstallAsync</c>'s exact delivery
+    /// mechanism. Fire-and-forget from the admin's perspective, like that
+    /// sibling call. Returns false if no agent with that hostname exists.
     /// </summary>
-    Task<bool> TriggerRestartAsync(string hostname, string triggeredBy, CancellationToken ct = default);
+    Task<bool> TriggerRebootAsync(string hostname, string triggeredBy, CancellationToken ct = default);
 
     /// <summary>
-    /// The agent's acknowledgement that it acted on a pending restart
-    /// request — clears <see cref="Db.Entities.Agent.PendingRestartRequestedAt"/>
+    /// The agent's acknowledgement that it acted on a pending reboot
+    /// request — clears <see cref="Db.Entities.Agent.PendingRebootRequestedAt"/>
     /// regardless of <paramref name="outcome"/> and records the
     /// outcome/timestamp/<paramref name="errorDetail"/> for the admin UI,
     /// mirroring <c>Updates.IUpdateService.AcknowledgeInstallAsync</c>
-    /// exactly. Returns false if no agent with that hostname exists.
+    /// exactly. <paramref name="outcome"/> only ever reflects whether the
+    /// platform's reboot command was scheduled successfully — whether the
+    /// machine has actually come back up is instead visible via
+    /// <see cref="Db.Entities.Agent.BootTimeUtc"/> jumping forward on a
+    /// later heartbeat. Returns false if no agent with that hostname
+    /// exists.
     /// </summary>
-    Task<bool> AcknowledgeRestartAsync(string hostname, RestartOutcome outcome, string? errorDetail, CancellationToken ct = default);
+    Task<bool> AcknowledgeRebootAsync(string hostname, RebootOutcome outcome, string? errorDetail, CancellationToken ct = default);
 
     /// <summary>
     /// How many/which approved agents' <see cref="Db.Entities.Agent.IssuingRootThumbprint"/>

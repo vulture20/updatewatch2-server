@@ -48,9 +48,12 @@ public record AgentRegistrationOutcome(AgentRegistrationStatus Status, string? R
 /// is the only remaining channel to keep it current. Nullable/all-optional
 /// rather than required: an agent built before this field existed sends no
 /// body at all, and that must keep working exactly as before (just with no
-/// metadata refresh), not fail the heartbeat.
+/// metadata refresh), not fail the heartbeat. <see cref="BootTimeUtc"/> is
+/// the same idea applied to <see cref="Db.Entities.Agent.BootTimeUtc"/> —
+/// added later than the other four fields, so it's independently nullable
+/// even on an agent build new enough to send everything else.
 /// </summary>
-public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string? IpAddress, string? AgentVersion);
+public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string? IpAddress, string? AgentVersion, DateTimeOffset? BootTimeUtc = null);
 
 /// <summary>
 /// Result of a recorded alive heartbeat (updatewatch2-server#10) —
@@ -73,12 +76,12 @@ public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string
 /// <c>AgentRegistrationService.RecordAliveAsync</c> for how it's computed.
 /// Self-correcting with no acknowledgement needed: once the agent renews,
 /// its next heartbeat computes this as false on its own.
-/// <see cref="RestartRequested"/> is the same delivery mechanism again,
+/// <see cref="RebootRequested"/> is the same delivery mechanism again,
 /// mirroring <see cref="InstallRequested"/> exactly — true whenever
-/// <c>Agent.PendingRestartRequestedAt</c> is set, cleared once the agent
-/// acknowledges via <c>POST .../restart-ack</c>.
+/// <c>Agent.PendingRebootRequestedAt</c> is set, cleared once the agent
+/// acknowledges via <c>POST .../reboot-ack</c>.
 /// </summary>
-public record AliveRecordResult(bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending, bool RestartRequested);
+public record AliveRecordResult(bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending, bool RebootRequested);
 
 /// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)

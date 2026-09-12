@@ -6,31 +6,37 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace UpdateWatch2.Server.Db.Migrations
 {
     /// <inheritdoc />
-    public partial class AddPendingAgentRestart : Migration
+    public partial class AddPendingAgentReboot : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<DateTimeOffset>(
-                name: "LastRestartCompletedAt",
-                table: "Agents",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "LastRestartErrorDetail",
-                table: "Agents",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "LastRestartOutcome",
+                name: "BootTimeUtc",
                 table: "Agents",
                 type: "TEXT",
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTimeOffset>(
-                name: "PendingRestartRequestedAt",
+                name: "LastRebootCompletedAt",
+                table: "Agents",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "LastRebootErrorDetail",
+                table: "Agents",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "LastRebootOutcome",
+                table: "Agents",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<DateTimeOffset>(
+                name: "PendingRebootRequestedAt",
                 table: "Agents",
                 type: "TEXT",
                 nullable: true);
@@ -40,19 +46,23 @@ namespace UpdateWatch2.Server.Db.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "LastRestartCompletedAt",
+                name: "BootTimeUtc",
                 table: "Agents");
 
             migrationBuilder.DropColumn(
-                name: "LastRestartErrorDetail",
+                name: "LastRebootCompletedAt",
                 table: "Agents");
 
             migrationBuilder.DropColumn(
-                name: "LastRestartOutcome",
+                name: "LastRebootErrorDetail",
                 table: "Agents");
 
             migrationBuilder.DropColumn(
-                name: "PendingRestartRequestedAt",
+                name: "LastRebootOutcome",
+                table: "Agents");
+
+            migrationBuilder.DropColumn(
+                name: "PendingRebootRequestedAt",
                 table: "Agents");
         }
     }

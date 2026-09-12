@@ -130,32 +130,32 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
     }
 
     [Fact]
-    public async Task Restart_requires_an_admin_session()
+    public async Task Reboot_requires_an_admin_session()
     {
         using var anonymousClient = _factory.CreateClient();
 
-        var response = await anonymousClient.PostAsync("/api/agents/some-host/restart", content: null);
+        var response = await anonymousClient.PostAsync("/api/agents/some-host/reboot", content: null);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task Restart_returns_not_found_for_an_unknown_hostname()
+    public async Task Reboot_returns_not_found_for_an_unknown_hostname()
     {
-        var response = await _client.PostAsync("/api/agents/does-not-exist/restart", content: null);
+        var response = await _client.PostAsync("/api/agents/does-not-exist/reboot", content: null);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task RestartAck_rejects_a_request_with_no_client_certificate()
+    public async Task RebootAck_rejects_a_request_with_no_client_certificate()
     {
         // Same limitation/reasoning as Renew_rejects_a_request_with_no_client_certificate
         // above — WebApplicationFactory can't exercise a real mTLS
         // handshake, only that the policy gate is wired up at all.
         using var anonymousClient = _factory.CreateClient();
 
-        var response = await anonymousClient.PostAsJsonAsync("/api/agents/some-host/restart-ack", new { outcome = "Succeeded" });
+        var response = await anonymousClient.PostAsJsonAsync("/api/agents/some-host/reboot-ack", new { outcome = "Succeeded" });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }

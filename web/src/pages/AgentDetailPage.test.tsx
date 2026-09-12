@@ -12,7 +12,7 @@ vi.mock('../api/endpoints', () => ({
     updates: vi.fn(),
     approve: vi.fn(),
     triggerInstall: vi.fn(),
-    triggerRestart: vi.fn(),
+    triggerReboot: vi.fn(),
     reissueCertificate: vi.fn(),
     delete: vi.fn(),
   },
@@ -22,7 +22,7 @@ const mockedGet = vi.mocked(agentsApi.get);
 const mockedUpdates = vi.mocked(agentsApi.updates);
 const mockedReissueCertificate = vi.mocked(agentsApi.reissueCertificate);
 const mockedTriggerInstall = vi.mocked(agentsApi.triggerInstall);
-const mockedTriggerRestart = vi.mocked(agentsApi.triggerRestart);
+const mockedTriggerReboot = vi.mocked(agentsApi.triggerReboot);
 const mockedDelete = vi.mocked(agentsApi.delete);
 
 const pendingUpdate: UpdateItem = {
@@ -52,10 +52,11 @@ const approvedAgent: AgentDetail = {
   lastInstallOutcome: null,
   lastInstallErrorDetail: null,
   lastInstallCompletedAt: null,
-  pendingRestartRequestedAt: null,
-  lastRestartOutcome: null,
-  lastRestartErrorDetail: null,
-  lastRestartCompletedAt: null,
+  pendingRebootRequestedAt: null,
+  lastRebootOutcome: null,
+  lastRebootErrorDetail: null,
+  lastRebootCompletedAt: null,
+  bootTimeUtc: null,
   issuingRootThumbprint: 'root-thumb-1',
   lastCertificateRejectionReason: null,
   lastCertificateRejectionAt: null,
@@ -277,11 +278,11 @@ describe('AgentDetailPage install trigger', () => {
   });
 });
 
-describe('AgentDetailPage restart trigger', () => {
+describe('AgentDetailPage reboot trigger', () => {
   beforeEach(() => {
     mockedGet.mockReset();
     mockedUpdates.mockReset();
-    mockedTriggerRestart.mockReset();
+    mockedTriggerReboot.mockReset();
     mockedUpdates.mockResolvedValue([]);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
@@ -290,26 +291,26 @@ describe('AgentDetailPage restart trigger', () => {
     vi.restoreAllMocks();
   });
 
-  it('triggers a restart and reloads the agent afterward', async () => {
+  it('triggers a reboot and reloads the agent afterward', async () => {
     mockedGet.mockResolvedValueOnce(approvedAgent).mockResolvedValueOnce({
       ...approvedAgent,
-      pendingRestartRequestedAt: '2026-01-02T00:00:00Z',
+      pendingRebootRequestedAt: '2026-01-02T00:00:00Z',
     });
-    mockedTriggerRestart.mockResolvedValue(undefined);
+    mockedTriggerReboot.mockResolvedValue(undefined);
     const user = userEvent.setup();
 
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
-    await user.click(screen.getByRole('button', { name: /^restart agent$/i }));
+    await user.click(screen.getByRole('button', { name: /^reboot machine$/i }));
 
     expect(window.confirm).toHaveBeenCalled();
-    await waitFor(() => expect(mockedTriggerRestart).toHaveBeenCalledWith('host-1'));
+    await waitFor(() => expect(mockedTriggerReboot).toHaveBeenCalledWith('host-1'));
     await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2));
-    expect(await screen.findByRole('button', { name: /restart pending/i })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: /reboot pending/i })).toBeDisabled();
   });
 
-  it('does not call the API when the restart confirmation is declined', async () => {
+  it('does not call the API when the reboot confirmation is declined', async () => {
     mockedGet.mockResolvedValue(approvedAgent);
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     const user = userEvent.setup();
@@ -317,25 +318,25 @@ describe('AgentDetailPage restart trigger', () => {
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
-    await user.click(screen.getByRole('button', { name: /^restart agent$/i }));
+    await user.click(screen.getByRole('button', { name: /^reboot machine$/i }));
 
-    expect(mockedTriggerRestart).not.toHaveBeenCalled();
+    expect(mockedTriggerReboot).not.toHaveBeenCalled();
   });
 
-  it('hides the restart button for an unapproved agent', async () => {
+  it('hides the reboot button for an unapproved agent', async () => {
     mockedGet.mockResolvedValue({ ...approvedAgent, approved: false });
 
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
-    expect(screen.queryByRole('button', { name: /^restart agent$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^reboot machine$/i })).not.toBeInTheDocument();
   });
 
-  it('shows the last restart outcome once acknowledged', async () => {
+  it('shows the last reboot outcome once acknowledged', async () => {
     mockedGet.mockResolvedValue({
       ...approvedAgent,
-      lastRestartOutcome: 'Succeeded',
-      lastRestartCompletedAt: '2026-01-02T00:00:00Z',
+      lastRebootOutcome: 'Succeeded',
+      lastRebootCompletedAt: '2026-01-02T00:00:00Z',
     });
 
     renderPage();
@@ -344,18 +345,55 @@ describe('AgentDetailPage restart trigger', () => {
     expect(screen.getByText(/succeeded/i)).toBeInTheDocument();
   });
 
-  it('shows the error detail for a failed restart', async () => {
+  it('shows the error detail for a failed reboot', async () => {
     mockedGet.mockResolvedValue({
       ...approvedAgent,
-      lastRestartOutcome: 'Failed',
-      lastRestartErrorDetail: 'sc.exe exited with code 5',
-      lastRestartCompletedAt: '2026-01-02T00:00:00Z',
+      lastRebootOutcome: 'Failed',
+      lastRebootErrorDetail: 'shutdown.exe exited with code 1190',
+      lastRebootCompletedAt: '2026-01-02T00:00:00Z',
     });
 
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
-    expect(screen.getByText(/sc\.exe exited with code 5/)).toBeInTheDocument();
+    expect(screen.getByText(/shutdown\.exe exited with code 1190/)).toBeInTheDocument();
+  });
+});
+
+describe('AgentDetailPage uptime', () => {
+  beforeEach(() => {
+    mockedGet.mockReset();
+    mockedUpdates.mockReset();
+    mockedUpdates.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('shows a placeholder when the machine has never reported a boot time', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+
+    renderPage();
+
+    await screen.findByText('Uptime');
+    expect(screen.getByText('Uptime').nextElementSibling).toHaveTextContent('—');
+  });
+
+  it('shows a relative time since the last reported boot — the way an admin confirms a triggered reboot actually took effect', async () => {
+    // shouldAdvanceTime: true — needed so React Testing Library's own
+    // internal polling (findByText's retry loop) still works alongside a
+    // faked system clock, the same reasoning already established
+    // elsewhere in this codebase for a polling page under fake timers.
+    vi.useFakeTimers({ shouldAdvanceTime: true }).setSystemTime(new Date('2026-01-02T02:00:00Z'));
+    mockedGet.mockResolvedValue({ ...approvedAgent, bootTimeUtc: '2026-01-02T00:00:00Z' });
+
+    renderPage();
+
+    await screen.findByText('Uptime');
+    expect(screen.getByText('Uptime').nextElementSibling).toHaveTextContent(/2 hours ago/i);
+
+    vi.useRealTimers();
   });
 });
 

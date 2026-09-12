@@ -59,13 +59,14 @@ public class AgentsController(IAgentService agentService) : ControllerBase
     }
 
     // Fire-and-forget, like ApproveAsync — actual delivery happens on the
-    // agent's own next alive heartbeat (see IAgentService.TriggerRestartAsync).
-    // Restarts the agent's own service process only, never the underlying
-    // machine and never the OS-update install pipeline.
-    [HttpPost("{hostname}/restart")]
-    public async Task<IActionResult> Restart(string hostname, CancellationToken ct)
+    // agent's own next alive heartbeat (see IAgentService.TriggerRebootAsync).
+    // Reboots the agent's own machine — not just its service process, and
+    // never the OS-update install pipeline (CLAUDE.md's "the admin decides
+    // when to actually trigger a reboot" rule).
+    [HttpPost("{hostname}/reboot")]
+    public async Task<IActionResult> Reboot(string hostname, CancellationToken ct)
     {
-        var found = await agentService.TriggerRestartAsync(hostname, triggeredBy: User.Identity!.Name!, ct);
+        var found = await agentService.TriggerRebootAsync(hostname, triggeredBy: User.Identity!.Name!, ct);
         return found ? Accepted() : NotFound();
     }
 

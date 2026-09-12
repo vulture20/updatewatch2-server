@@ -54,6 +54,7 @@
     "ipAddress": "IP-Adresse",
     "agentVersion": "Agent-Version",
     "lastAliveAt": "Letzte Alive-Meldung",
+    "uptime": "Laufzeit",
     "never": "Nie",
     "approve": "Bestätigen",
     "triggerInstall": "Ausgewählte installieren ({{count}})",
@@ -64,15 +65,15 @@
       "Failed": "Fehlgeschlagen"
     },
     "lastInstallErrorDetail": "Fehlerdetail",
-    "triggerRestart": "Agent neu starten",
-    "restartPending": "Neustart ausstehend…",
-    "restartConfirm": "Dies startet den Hintergrunddienst des Agents auf dem Zielrechner neu. Die Verbindung kann kurzzeitig unterbrochen sein, bis er wieder erreichbar ist. Fortfahren?",
-    "lastRestartOutcome": "Letztes Neustartergebnis",
-    "restartOutcome": {
+    "triggerReboot": "Rechner neu starten",
+    "rebootPending": "Neustart ausstehend…",
+    "rebootConfirm": "Dies startet den Rechner des Agents neu. Er ist kurzzeitig nicht erreichbar, bis er wieder hochgefahren ist. Fortfahren?",
+    "lastRebootOutcome": "Letztes Neustartergebnis",
+    "rebootOutcome": {
       "Succeeded": "Erfolgreich",
       "Failed": "Fehlgeschlagen"
     },
-    "lastRestartErrorDetail": "Fehlerdetail",
+    "lastRebootErrorDetail": "Fehlerdetail",
     "updates": "Ausstehende Updates",
     "updateTitle": "Titel",
     "updatePackageId": "Paket-ID",
@@ -86,8 +87,8 @@
       "certificate": "Zertifikat",
       "install": "Installationsstatus",
       "installCompletedAt": "Abgeschlossen",
-      "restart": "Neustartstatus",
-      "restartCompletedAt": "Abgeschlossen"
+      "reboot": "Neustartstatus",
+      "rebootCompletedAt": "Abgeschlossen"
     },
     "certificateThumbprintSha256": "Zertifikats-Fingerabdruck (SHA-256)",
     "certificateThumbprintSha1": "Zertifikats-Fingerabdruck (SHA-1)",

@@ -123,98 +123,98 @@ public class AgentServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task TriggerRestartAsync_sets_the_pending_restart_timestamp()
+    public async Task TriggerRebootAsync_sets_the_pending_reboot_timestamp()
     {
-        var hostname = await RegisterApproveAndCertifyAsync("restart-host");
+        var hostname = await RegisterApproveAndCertifyAsync("reboot-host");
 
-        var result = await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+        var result = await _service.TriggerRebootAsync(hostname, triggeredBy: "admin");
 
         Assert.True(result);
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
-        Assert.NotNull(agent.PendingRestartRequestedAt);
+        Assert.NotNull(agent.PendingRebootRequestedAt);
     }
 
     [Fact]
-    public async Task TriggerRestartAsync_returns_false_for_an_unknown_hostname()
+    public async Task TriggerRebootAsync_returns_false_for_an_unknown_hostname()
     {
-        var result = await _service.TriggerRestartAsync("does-not-exist", triggeredBy: "admin");
+        var result = await _service.TriggerRebootAsync("does-not-exist", triggeredBy: "admin");
 
         Assert.False(result);
     }
 
     [Fact]
-    public async Task TriggerRestartAsync_writes_an_audit_log_entry_with_the_triggering_admin_as_actor()
+    public async Task TriggerRebootAsync_writes_an_audit_log_entry_with_the_triggering_admin_as_actor()
     {
-        var hostname = await RegisterApproveAndCertifyAsync("audited-restart-host");
+        var hostname = await RegisterApproveAndCertifyAsync("audited-reboot-host");
 
-        await _service.TriggerRestartAsync(hostname, triggeredBy: "alice");
+        await _service.TriggerRebootAsync(hostname, triggeredBy: "alice");
 
-        var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "agent.restart.trigger" && e.Details == hostname);
+        var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "agent.reboot.trigger" && e.Details == hostname);
         Assert.Equal("alice", entry.Actor);
     }
 
     [Fact]
-    public async Task AcknowledgeRestartAsync_clears_the_pending_flag_and_records_a_succeeded_outcome()
+    public async Task AcknowledgeRebootAsync_clears_the_pending_flag_and_records_a_succeeded_outcome()
     {
-        var hostname = await RegisterApproveAndCertifyAsync("ack-restart-host");
-        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+        var hostname = await RegisterApproveAndCertifyAsync("ack-reboot-host");
+        await _service.TriggerRebootAsync(hostname, triggeredBy: "admin");
 
-        var result = await _service.AcknowledgeRestartAsync(hostname, RestartOutcome.Succeeded, errorDetail: null);
+        var result = await _service.AcknowledgeRebootAsync(hostname, RebootOutcome.Succeeded, errorDetail: null);
 
         Assert.True(result);
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
-        Assert.Null(agent.PendingRestartRequestedAt);
-        Assert.Equal("Succeeded", agent.LastRestartOutcome);
-        Assert.Null(agent.LastRestartErrorDetail);
-        Assert.NotNull(agent.LastRestartCompletedAt);
+        Assert.Null(agent.PendingRebootRequestedAt);
+        Assert.Equal("Succeeded", agent.LastRebootOutcome);
+        Assert.Null(agent.LastRebootErrorDetail);
+        Assert.NotNull(agent.LastRebootCompletedAt);
     }
 
     [Fact]
-    public async Task AcknowledgeRestartAsync_records_the_error_detail_only_for_a_failed_outcome()
+    public async Task AcknowledgeRebootAsync_records_the_error_detail_only_for_a_failed_outcome()
     {
-        var hostname = await RegisterApproveAndCertifyAsync("failed-restart-host");
-        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+        var hostname = await RegisterApproveAndCertifyAsync("failed-reboot-host");
+        await _service.TriggerRebootAsync(hostname, triggeredBy: "admin");
 
-        await _service.AcknowledgeRestartAsync(hostname, RestartOutcome.Failed, errorDetail: "sc.exe exited with code 5");
+        await _service.AcknowledgeRebootAsync(hostname, RebootOutcome.Failed, errorDetail: "shutdown.exe exited with code 1190");
 
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
-        Assert.Equal("Failed", agent.LastRestartOutcome);
-        Assert.Equal("sc.exe exited with code 5", agent.LastRestartErrorDetail);
+        Assert.Equal("Failed", agent.LastRebootOutcome);
+        Assert.Equal("shutdown.exe exited with code 1190", agent.LastRebootErrorDetail);
     }
 
     [Fact]
-    public async Task AcknowledgeRestartAsync_clears_a_stale_error_detail_on_a_subsequent_success()
+    public async Task AcknowledgeRebootAsync_clears_a_stale_error_detail_on_a_subsequent_success()
     {
-        var hostname = await RegisterApproveAndCertifyAsync("recovered-restart-host");
-        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
-        await _service.AcknowledgeRestartAsync(hostname, RestartOutcome.Failed, errorDetail: "sc.exe exited with code 5");
+        var hostname = await RegisterApproveAndCertifyAsync("recovered-reboot-host");
+        await _service.TriggerRebootAsync(hostname, triggeredBy: "admin");
+        await _service.AcknowledgeRebootAsync(hostname, RebootOutcome.Failed, errorDetail: "shutdown.exe exited with code 1190");
 
-        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
-        await _service.AcknowledgeRestartAsync(hostname, RestartOutcome.Succeeded, errorDetail: null);
+        await _service.TriggerRebootAsync(hostname, triggeredBy: "admin");
+        await _service.AcknowledgeRebootAsync(hostname, RebootOutcome.Succeeded, errorDetail: null);
 
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
-        Assert.Equal("Succeeded", agent.LastRestartOutcome);
-        Assert.Null(agent.LastRestartErrorDetail);
+        Assert.Equal("Succeeded", agent.LastRebootOutcome);
+        Assert.Null(agent.LastRebootErrorDetail);
     }
 
     [Fact]
-    public async Task AcknowledgeRestartAsync_returns_false_for_an_unknown_hostname()
+    public async Task AcknowledgeRebootAsync_returns_false_for_an_unknown_hostname()
     {
-        var result = await _service.AcknowledgeRestartAsync("does-not-exist", RestartOutcome.Succeeded, errorDetail: null);
+        var result = await _service.AcknowledgeRebootAsync("does-not-exist", RebootOutcome.Succeeded, errorDetail: null);
 
         Assert.False(result);
     }
 
     [Fact]
-    public async Task RecordAliveAsync_surfaces_a_pending_restart_request()
+    public async Task RecordAliveAsync_surfaces_a_pending_reboot_request()
     {
-        var hostname = await RegisterApproveAndCertifyAsync("alive-restart-host");
-        await _service.TriggerRestartAsync(hostname, triggeredBy: "admin");
+        var hostname = await RegisterApproveAndCertifyAsync("alive-reboot-host");
+        await _service.TriggerRebootAsync(hostname, triggeredBy: "admin");
 
         var result = await _registrationService.RecordAliveAsync(hostname, request: null);
 
         Assert.NotNull(result);
-        Assert.True(result!.RestartRequested);
+        Assert.True(result!.RebootRequested);
     }
 
     [Fact]

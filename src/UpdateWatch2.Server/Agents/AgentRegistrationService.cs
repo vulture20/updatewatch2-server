@@ -141,6 +141,7 @@ public class AgentRegistrationService(
             agent.OperatingSystem = request.OperatingSystem ?? agent.OperatingSystem;
             agent.IpAddress = request.IpAddress ?? agent.IpAddress;
             agent.AgentVersion = request.AgentVersion ?? agent.AgentVersion;
+            agent.BootTimeUtc = request.BootTimeUtc ?? agent.BootTimeUtc;
         }
 
         await db.SaveChangesAsync(ct);
@@ -164,7 +165,7 @@ public class AgentRegistrationService(
 
         return new AliveRecordResult(
             agent.PendingInstallRequestedAt is not null, installUpdateIds, updateOffer, certificateRotationPending,
-            agent.PendingRestartRequestedAt is not null);
+            agent.PendingRebootRequestedAt is not null);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)

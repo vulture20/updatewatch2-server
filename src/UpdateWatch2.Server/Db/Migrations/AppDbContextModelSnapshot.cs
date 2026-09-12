@@ -175,6 +175,9 @@ namespace UpdateWatch2.Server.Db.Migrations
                     b.Property<bool>("Approved")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTimeOffset?>("BootTimeUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset?>("ClientCertificateExpiresAt")
                         .HasColumnType("TEXT");
 
@@ -215,13 +218,13 @@ namespace UpdateWatch2.Server.Db.Migrations
                     b.Property<string>("LastInstallOutcome")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset?>("LastRestartCompletedAt")
+                    b.Property<DateTimeOffset?>("LastRebootCompletedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("LastRestartErrorDetail")
+                    b.Property<string>("LastRebootErrorDetail")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("LastRestartOutcome")
+                    b.Property<string>("LastRebootOutcome")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OperatingSystem")
@@ -233,7 +236,7 @@ namespace UpdateWatch2.Server.Db.Migrations
                     b.Property<string>("PendingInstallUpdateIds")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset?>("PendingRestartRequestedAt")
+                    b.Property<DateTimeOffset?>("PendingRebootRequestedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("PendingUpdateCount")
