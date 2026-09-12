@@ -11,6 +11,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [0.30.13] - 2026-09-12
+
+### Fixed
+
+- **A tag push to this repo published the Docker image but never created a matching GitHub Release — every server release before this had to be created by hand, unlike the agent repo's own `release.yml`, which already does this on every tag.** Found by the user directly, right after `v0.30.12` was tagged and its image published: "Beim Server fehlt leider v0.30.12 als Release." `docker-publish.yml` gained a new `release` job (needs `build-and-push`, gated on `startsWith(github.ref, 'refs/tags/v')`) using `softprops/action-gh-release@v3` with `generate_release_notes: true` — the same shape the agent's own release job already uses, minus a `files:` list, since this repo has no downloadable release artifact (only the container image `build-and-push` already publishes). Live-verified end to end, not just reasoned about: tagging and pushing this very version (`v0.30.13`) triggered the workflow, and a GitHub Release for it appeared automatically with no manual `gh release create` step needed — the first server release this project has ever produced without one.
+
 ## [0.30.12] - 2026-09-12
 
 ### Added

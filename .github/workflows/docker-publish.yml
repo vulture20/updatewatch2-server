@@ -89,3 +89,23 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # A tag push used to publish the Docker image but never create a GitHub
+  # Release to go with it — every server release before this had to be
+  # backfilled by hand, unlike the agent repo's own release.yml, which
+  # already does this on every tag. Mirrors that job's own shape exactly
+  # (generate_release_notes: true, no files: — this repo has no
+  # downloadable release artifact, only the container image
+  # build-and-push above already published).
+  release:
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
