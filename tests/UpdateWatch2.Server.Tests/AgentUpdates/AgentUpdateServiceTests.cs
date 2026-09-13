@@ -94,6 +94,37 @@ public class AgentUpdateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CheckForUpdatesAsync_ignores_a_release_asset_whose_name_contains_a_path_traversal_sequence()
+    {
+        // Security review finding: a malicious/compromised release on the
+        // pinned upstream repo could name an asset so that combining it
+        // with the storage directory escapes it entirely — the fix is to
+        // reject (not just warn about) any asset name Path.GetFileName
+        // would change, before it's ever downloaded or recorded.
+        _gitHub.Release = SampleRelease with
+        {
+            Assets =
+            [
+                new GitHubReleaseAsset("../../../etc/systemd/system/evil.exe", "https://github.com/example/releases/download/v0.11.0/evil.exe", 1000),
+                new GitHubReleaseAsset("updatewatch2-agent_0.11.0_amd64.deb", "https://github.com/example/releases/download/v0.11.0/updatewatch2-agent_0.11.0_amd64.deb", 2000),
+            ],
+        };
+
+        var outcome = await _service.CheckForUpdatesAsync();
+
+        Assert.Equal(AgentUpdateCheckOutcome.Downloaded, outcome);
+        var state = await _db.AgentUpdateStates.SingleAsync();
+        Assert.Null(state.WindowsInstallerFileName);
+        Assert.Equal("updatewatch2-agent_0.11.0_amd64.deb", state.LinuxDebFileName);
+
+        // The traversal target must never have been written anywhere,
+        // including outside the storage directory.
+        Assert.False(File.Exists(Path.Combine(_storageDirectory, "../../../etc/systemd/system/evil.exe")));
+        Assert.False(File.Exists(Path.GetFullPath(Path.Combine(_storageDirectory, "../../../etc/systemd/system/evil.exe"))));
+        Assert.Equal(["updatewatch2-agent_0.11.0_amd64.deb"], Directory.GetFiles(_storageDirectory).Select(Path.GetFileName));
+    }
+
+    [Fact]
     public async Task CheckForUpdatesAsync_strips_the_leading_v_from_the_git_tag()
     {
         _gitHub.Release = SampleRelease with { TagName = "v0.11.0" };

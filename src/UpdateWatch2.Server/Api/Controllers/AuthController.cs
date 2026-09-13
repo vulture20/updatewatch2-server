@@ -19,7 +19,8 @@ public class AuthController(
     IAdminAccountService accounts,
     IActiveDirectoryAuthService adAuth,
     IBruteForceLoginService bruteForce,
-    IAuditLogService auditLog) : ControllerBase
+    IAuditLogService auditLog,
+    ISessionInvalidationService sessionInvalidation) : ControllerBase
 {
     private const string AuthSourceClaimType = "updatewatch2:auth_source";
 
@@ -28,8 +29,17 @@ public class AuthController(
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
         var remoteIp = HttpContext.Connection.RemoteIpAddress;
+        // Deliberately NOT `remoteIp` for the brute-force/trusted-IP
+        // decision below — that value has already passed through
+        // UseForwardedHeaders(), whose allow-list is deliberately wide
+        // open (see ForwardedHeadersOptions's own comment), so ANY caller
+        // could set X-Forwarded-For to spoof their way past
+        // UPDATEWATCH2_TRUSTEDIP's lockout exemption. The captured,
+        // pre-forwarding value is immune to that — see
+        // RealRemoteIpAccessor's doc comment.
+        var realRemoteIp = RealRemoteIpAccessor.Get(HttpContext);
 
-        if (bruteForce.IsLockedOut(request.Username, remoteIp))
+        if (bruteForce.IsLockedOut(request.Username, realRemoteIp))
         {
             await auditLog.LogAsync(request.Username, "login.blocked", remoteIp?.ToString(), ct);
             return StatusCode(StatusCodes.Status423Locked, new { message = "Too many failed attempts. Try again later." });
@@ -45,7 +55,7 @@ public class AuthController(
             var adResult = await adAuth.AuthenticateAsync(request.Username, request.Password, ct);
             if (!adResult.Success)
             {
-                bruteForce.RecordFailedAttempt(request.Username, remoteIp);
+                bruteForce.RecordFailedAttempt(request.Username, realRemoteIp);
                 await auditLog.LogAsync(request.Username, "login.failed", remoteIp?.ToString(), ct);
                 return Unauthorized(new { message = "Invalid username or password." });
             }
@@ -53,13 +63,17 @@ public class AuthController(
             authSource = "ad";
         }
 
-        bruteForce.RecordSuccessfulLogin(request.Username, remoteIp);
+        bruteForce.RecordSuccessfulLogin(request.Username, realRemoteIp);
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(
             [
                 new Claim(ClaimTypes.Name, request.Username),
                 new Claim(ClaimTypes.Role, "Admin"),
                 new Claim(AuthSourceClaimType, authSource),
+                // Checked against ISessionInvalidationService on every
+                // subsequent request — see SessionClaimTypes.IssuedAt's
+                // doc comment.
+                new Claim(SessionClaimTypes.IssuedAt, DateTimeOffset.UtcNow.ToString("o")),
             ],
             CookieAuthenticationDefaults.AuthenticationScheme));
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
@@ -73,6 +87,11 @@ public class AuthController(
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
         var username = User.Identity?.Name ?? "unknown";
+        // Invalidates this ticket (and any other copy of it, e.g. stolen
+        // elsewhere) server-side — SignOutAsync below only ever clears the
+        // CALLING browser's own cookie, which used to be logout's entire
+        // effect. See Db.Entities.SessionInvalidation's doc comment.
+        await sessionInvalidation.InvalidateAsync(username, ct);
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         await auditLog.LogAsync(username, "logout", null, ct);
         return NoContent();

@@ -54,6 +54,19 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Registering_with_a_hostname_containing_DN_metacharacters_is_rejected_and_no_row_is_created()
+    {
+        // Security review finding: this hostname later gets interpolated
+        // verbatim into an issued certificate's Subject DN — a value
+        // containing a comma/equals would inject extra RDNs. Must be
+        // rejected before any Agent row for it is ever created.
+        var outcome = await _service.RegisterAsync("evil,O=Injected,OU=FakeOrg", BareRequest);
+
+        Assert.Equal(AgentRegistrationStatus.Rejected, outcome.Status);
+        Assert.False(await _db.Agents.AnyAsync(a => a.Hostname.Contains("Injected")));
+    }
+
+    [Fact]
     public async Task No_token_for_an_already_registered_hostname_is_rejected()
     {
         await _service.RegisterAsync("claimed-host", BareRequest);

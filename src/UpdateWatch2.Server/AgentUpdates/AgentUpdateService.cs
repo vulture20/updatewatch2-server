@@ -331,13 +331,30 @@ public class AgentUpdateService(
                 continue;
             }
 
-            var (sha256, size) = await DownloadOneAsync(asset, ct);
-            SetAssetSlot(state, kind.Value, asset.Name, sha256, size);
+            // Never trust a GitHub-reported asset name as-is — strip any
+            // directory component before it's combined into a path or
+            // recorded, the same defensive habit the manual-upload path
+            // (SaveUploadedFileAsync) already applies to an admin-supplied
+            // filename. Found by a security review: without this, a
+            // malicious/compromised release on the pinned upstream repo
+            // could name an asset e.g. "../../../etc/systemd/system/x.exe"
+            // and have it written outside AgentUpdates:Path here — and,
+            // once recorded, offered verbatim to every connected agent's
+            // own download logic too.
+            var safeName = Path.GetFileName(asset.Name);
+            if (string.IsNullOrEmpty(safeName) || !string.Equals(safeName, asset.Name, StringComparison.Ordinal))
+            {
+                logger.LogWarning("Ignoring GitHub release asset with an unsafe name: {AssetName}", asset.Name);
+                continue;
+            }
+
+            var (sha256, size) = await DownloadOneAsync(asset, safeName, ct);
+            SetAssetSlot(state, kind.Value, safeName, sha256, size);
         }
     }
 
-    private Task<(string Sha256, long SizeBytes)> DownloadOneAsync(GitHubReleaseAsset asset, CancellationToken ct) =>
-        gitHubClient.DownloadAssetAsync(asset.BrowserDownloadUrl, Path.Combine(storage.Path, asset.Name), ct);
+    private Task<(string Sha256, long SizeBytes)> DownloadOneAsync(GitHubReleaseAsset asset, string safeFileName, CancellationToken ct) =>
+        gitHubClient.DownloadAssetAsync(asset.BrowserDownloadUrl, Path.Combine(storage.Path, safeFileName), ct);
 
     private static void ClearAllAssetSlots(AgentUpdateState state)
     {

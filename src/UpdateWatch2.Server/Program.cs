@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Certificate;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
@@ -107,6 +109,7 @@ builder.Services.AddSingleton<ITrustedIpRangeProvider, EnvironmentTrustedIpRange
 builder.Services.AddSingleton<IBruteForceLoginService, BruteForceLoginService>();
 builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
 builder.Services.AddScoped<IAdminAccountService, AdminAccountService>();
+builder.Services.AddScoped<ISessionInvalidationService, SessionInvalidationService>();
 builder.Services.AddScoped<IActiveDirectoryAuthService, ActiveDirectoryAuthService>();
 builder.Services.AddSingleton<IAdminSettingsStore, AdminSettingsStore>();
 builder.Services.AddScoped<IDemoDataSeeder, DemoDataSeeder>();
@@ -283,6 +286,36 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             return Task.CompletedTask;
         };
+        // Security review finding: this cookie ticket was otherwise a pure,
+        // stateless, un-revocable credential — logout only ever cleared
+        // the calling browser's own cookie, and a password change didn't
+        // invalidate anything already issued, so a stolen ticket kept
+        // working (and, with SlidingExpiration above, kept renewing
+        // itself) regardless of either action. Every request now checks
+        // its ticket's own issued-at claim against ISessionInvalidationService
+        // — see SessionClaimTypes.IssuedAt and Db.Entities.SessionInvalidation's
+        // doc comments for the full picture. A ticket with no such claim
+        // (or one that fails to parse) is rejected outright rather than
+        // treated as still valid — the safer default, and it also closes
+        // off any pre-this-fix ticket from being permanently un-revocable
+        // for having nothing to check.
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var username = context.Principal?.Identity?.Name;
+            var issuedAtClaim = context.Principal?.FindFirst(SessionClaimTypes.IssuedAt)?.Value;
+            var isValid =
+                username is not null
+                && issuedAtClaim is not null
+                && DateTimeOffset.TryParse(issuedAtClaim, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var issuedAt)
+                && await context.HttpContext.RequestServices.GetRequiredService<ISessionInvalidationService>()
+                    .IsValidAsync(username, issuedAt, context.HttpContext.RequestAborted);
+
+            if (!isValid)
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+        };
     })
     .AddCertificate(CertificateAuthenticationSetup.SchemeName, options =>
     {
@@ -429,6 +462,18 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Captures the real, un-spoofable TCP peer address BEFORE
+// UseForwardedHeaders() below can overwrite Connection.RemoteIpAddress
+// from a client-suppliable X-Forwarded-For header — see
+// RealRemoteIpAccessor's own doc comment for the security review finding
+// this exists to fix (X-Forwarded-For spoofing bypassing the
+// UPDATEWATCH2_TRUSTEDIP brute-force-lockout exemption).
+app.Use(async (context, next) =>
+{
+    RealRemoteIpAccessor.CaptureCurrent(context);
+    await next(context);
+});
 
 // Must run before anything that inspects the request scheme/remote IP
 // (the cookie auth handler's SameAsRequest check, IP logging) — see the

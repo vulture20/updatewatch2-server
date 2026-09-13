@@ -13,6 +13,7 @@ public class AdminAccountServiceTests : IDisposable
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"updatewatch2-admin-account-test-{Guid.NewGuid()}.sqlite");
     private readonly AppDbContext _db;
     private readonly IAuditLogService _auditLog;
+    private readonly ISessionInvalidationService _sessionInvalidation;
 
     public AdminAccountServiceTests()
     {
@@ -20,6 +21,7 @@ public class AdminAccountServiceTests : IDisposable
         _db = new AppDbContext(options);
         _db.Database.Migrate();
         _auditLog = new AuditLogService(_db);
+        _sessionInvalidation = new SessionInvalidationService(_db);
     }
 
     public void Dispose()
@@ -33,7 +35,7 @@ public class AdminAccountServiceTests : IDisposable
     public async Task EnsureSeededAsync_creates_one_account_with_a_policy_valid_password_and_logs_it_once()
     {
         var capturingLogger = new CapturingLogger();
-        var service = new AdminAccountService(_db, _auditLog, capturingLogger);
+        var service = new AdminAccountService(_db, _auditLog, _sessionInvalidation, capturingLogger);
 
         await service.EnsureSeededAsync();
 
@@ -50,7 +52,7 @@ public class AdminAccountServiceTests : IDisposable
     [Fact]
     public async Task EnsureSeededAsync_is_idempotent()
     {
-        var service = new AdminAccountService(_db, _auditLog, new CapturingLogger());
+        var service = new AdminAccountService(_db, _auditLog, _sessionInvalidation, new CapturingLogger());
 
         await service.EnsureSeededAsync();
         await service.EnsureSeededAsync();
@@ -61,7 +63,7 @@ public class AdminAccountServiceTests : IDisposable
     [Fact]
     public async Task VerifyPasswordAsync_rejects_the_wrong_password()
     {
-        var service = new AdminAccountService(_db, _auditLog, new CapturingLogger());
+        var service = new AdminAccountService(_db, _auditLog, _sessionInvalidation, new CapturingLogger());
         await service.EnsureSeededAsync();
 
         Assert.False(await service.VerifyPasswordAsync(AdminAccountService.DefaultUsername, "definitely-wrong"));
@@ -70,7 +72,7 @@ public class AdminAccountServiceTests : IDisposable
     [Fact]
     public async Task VerifyPasswordAsync_rejects_an_unknown_username()
     {
-        var service = new AdminAccountService(_db, _auditLog, new CapturingLogger());
+        var service = new AdminAccountService(_db, _auditLog, _sessionInvalidation, new CapturingLogger());
         await service.EnsureSeededAsync();
 
         Assert.False(await service.VerifyPasswordAsync("nobody", "irrelevant"));
@@ -79,7 +81,7 @@ public class AdminAccountServiceTests : IDisposable
     [Fact]
     public async Task ResetPasswordFromEnvironmentIfConfiguredAsync_is_a_no_op_when_the_variable_is_unset()
     {
-        var service = new AdminAccountService(_db, _auditLog, new CapturingLogger());
+        var service = new AdminAccountService(_db, _auditLog, _sessionInvalidation, new CapturingLogger());
         await service.EnsureSeededAsync();
 
         await service.ResetPasswordFromEnvironmentIfConfiguredAsync();
@@ -93,7 +95,7 @@ public class AdminAccountServiceTests : IDisposable
     public async Task ResetPasswordFromEnvironmentIfConfiguredAsync_resets_the_password_logs_a_warning_and_audits_it()
     {
         var capturingLogger = new CapturingLogger();
-        var service = new AdminAccountService(_db, _auditLog, capturingLogger);
+        var service = new AdminAccountService(_db, _auditLog, _sessionInvalidation, capturingLogger);
         await service.EnsureSeededAsync();
 
         var newPassword = PasswordPolicy.Generate();
@@ -113,7 +115,7 @@ public class AdminAccountServiceTests : IDisposable
     [Fact]
     public async Task ResetPasswordFromEnvironmentIfConfiguredAsync_applying_the_same_value_twice_is_a_no_op_the_second_time()
     {
-        var service = new AdminAccountService(_db, _auditLog, new CapturingLogger());
+        var service = new AdminAccountService(_db, _auditLog, _sessionInvalidation, new CapturingLogger());
         await service.EnsureSeededAsync();
 
         var newPassword = PasswordPolicy.Generate();
@@ -135,7 +137,7 @@ public class AdminAccountServiceTests : IDisposable
     [Fact]
     public async Task ResetPasswordFromEnvironmentIfConfiguredAsync_resets_again_when_the_value_changes()
     {
-        var service = new AdminAccountService(_db, _auditLog, new CapturingLogger());
+        var service = new AdminAccountService(_db, _auditLog, _sessionInvalidation, new CapturingLogger());
         await service.EnsureSeededAsync();
 
         var firstPassword = PasswordPolicy.Generate();
@@ -155,7 +157,7 @@ public class AdminAccountServiceTests : IDisposable
     public async Task ResetPasswordFromEnvironmentIfConfiguredAsync_rejects_a_value_that_fails_the_password_policy()
     {
         var capturingLogger = new CapturingLogger();
-        var service = new AdminAccountService(_db, _auditLog, capturingLogger);
+        var service = new AdminAccountService(_db, _auditLog, _sessionInvalidation, capturingLogger);
         await service.EnsureSeededAsync();
 
         Environment.SetEnvironmentVariable(ResetEnvVar, "too-short1!");

@@ -8,7 +8,11 @@ using UpdateWatch2.Server.Db.Entities;
 
 namespace UpdateWatch2.Server.Auth;
 
-public class AdminAccountService(AppDbContext db, IAuditLogService auditLog, ILogger<AdminAccountService> logger) : IAdminAccountService
+public class AdminAccountService(
+    AppDbContext db,
+    IAuditLogService auditLog,
+    ISessionInvalidationService sessionInvalidation,
+    ILogger<AdminAccountService> logger) : IAdminAccountService
 {
     public const string DefaultUsername = "admin";
 
@@ -82,6 +86,14 @@ public class AdminAccountService(AppDbContext db, IAuditLogService auditLog, ILo
         account.PasswordChangedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
 
+        // Security review finding: a password reset/change used to leave
+        // any already-issued cookie ticket working — exactly the scenario
+        // (a locked-out or compromised admin) this recovery mechanism
+        // exists for should also kill off whatever session an attacker
+        // might already be holding. See Db.Entities.SessionInvalidation's
+        // doc comment.
+        await sessionInvalidation.InvalidateAsync(account.Username, ct);
+
         logger.LogWarning(
             "Admin password (username '{Username}') was reset via {EnvVar} — remove or change that environment variable once you've logged in, or this will keep overriding future password changes.",
             DefaultUsername, ResetPasswordEnvVarName);
@@ -125,6 +137,15 @@ public class AdminAccountService(AppDbContext db, IAuditLogService auditLog, ILo
         account.PasswordHash = _hasher.HashPassword(account, newPassword);
         account.PasswordChangedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
+
+        // Invalidates every already-issued cookie ticket for this account,
+        // including the one making this very request — the admin will need
+        // to log in again with the new password, the same expectation most
+        // "change my password" flows set. See
+        // Db.Entities.SessionInvalidation's doc comment for the finding
+        // this closes (a password change used to leave existing sessions,
+        // including a stolen one, working unaffected).
+        await sessionInvalidation.InvalidateAsync(account.Username, ct);
         return true;
     }
 }

@@ -154,6 +154,41 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task A_spoofed_X_Forwarded_For_header_does_not_bypass_the_lockout_even_when_UPDATEWATCH2_TRUSTEDIP_is_configured()
+    {
+        // Security review regression test: ForwardedHeadersOptions clears
+        // KnownProxies/KnownIPNetworks (deliberately, for X-Forwarded-Proto —
+        // see Program.cs's own comment), which used to also make
+        // X-Forwarded-For fully attacker-controllable, letting anyone claim
+        // to be inside the UPDATEWATCH2_TRUSTEDIP range and bypass the
+        // brute-force lockout entirely with one extra header. The fix
+        // (RealRemoteIpAccessor) captures the real TCP peer before
+        // UseForwardedHeaders() can touch it, and AuthController.Login now
+        // keys the lockout decision off that instead.
+        Environment.SetEnvironmentVariable("UPDATEWATCH2_TRUSTEDIP", "10.0.0.0/8");
+        try
+        {
+            using var client = _factory.CreateClient();
+            client.DefaultRequestHeaders.Add("X-Forwarded-For", "10.1.2.3");
+
+            // BruteForce:MaxAttempts is overridden to 3 above.
+            for (var i = 0; i < 3; i++)
+            {
+                await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(AuthTestHelper.Username, "wrong-password"));
+            }
+
+            var lockedOutResponse = await client.PostAsJsonAsync(
+                "/api/auth/login", new LoginRequest(AuthTestHelper.Username, AuthTestHelper.Password));
+
+            Assert.Equal(HttpStatusCode.Locked, lockedOutResponse.StatusCode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("UPDATEWATCH2_TRUSTEDIP", null);
+        }
+    }
+
+    [Fact]
     public async Task Logout_ends_the_session()
     {
         using var client = _factory.CreateClient();
@@ -165,6 +200,36 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
         var me = await client.GetFromJsonAsync<MeResponseDto>("/api/auth/me");
         Assert.NotNull(me);
         Assert.False(me.authenticated);
+    }
+
+    [Fact]
+    public async Task Logout_invalidates_the_ticket_server_side_so_a_copy_of_the_cookie_stops_working_elsewhere()
+    {
+        // Security review finding: logout used to only ever clear the
+        // CALLING browser's own cookie — a copy of the same raw cookie
+        // value used elsewhere (the "stolen cookie" scenario) kept
+        // authenticating indefinitely. This proves the fix actually
+        // revokes it server-side, not just client-side.
+        using var loginClient = _factory.CreateClient();
+        var loginResponse = await loginClient.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(AuthTestHelper.Username, AuthTestHelper.Password));
+        var rawCookie = Assert.Single(loginResponse.Headers.GetValues("Set-Cookie")).Split(';')[0];
+
+        // A completely independent client, presenting a copy of the exact
+        // same raw cookie value rather than sharing loginClient's own
+        // cookie jar — simulating a stolen/copied cookie used from
+        // somewhere else entirely.
+        using var copiedCookieClient = _factory.CreateClient();
+        copiedCookieClient.DefaultRequestHeaders.Add("Cookie", rawCookie);
+
+        var meBeforeLogout = await copiedCookieClient.GetFromJsonAsync<MeResponseDto>("/api/auth/me");
+        Assert.True(meBeforeLogout?.authenticated); // sanity check: the copied cookie really does work before logout
+
+        var logoutResponse = await loginClient.PostAsync("/api/auth/logout", content: null);
+        Assert.Equal(HttpStatusCode.NoContent, logoutResponse.StatusCode);
+
+        var meAfterLogout = await copiedCookieClient.GetFromJsonAsync<MeResponseDto>("/api/auth/me");
+        Assert.False(meAfterLogout?.authenticated);
     }
 
     [Fact]
@@ -192,6 +257,32 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
         var reloginResponse = await freshClient.PostAsJsonAsync(
             "/api/auth/login", new LoginRequest(AuthTestHelper.Username, newPassword));
         Assert.Equal(HttpStatusCode.OK, reloginResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Change_password_invalidates_the_ticket_server_side_so_a_copy_of_the_cookie_stops_working_elsewhere()
+    {
+        // Same finding as the logout regression test above, but for a
+        // password change: it used to leave every already-issued cookie
+        // (including a stolen copy) working unaffected — exactly the
+        // scenario a "change my password" action is often taken to
+        // respond to.
+        using var loginClient = _factory.CreateClient();
+        var loginResponse = await loginClient.PostAsJsonAsync(
+            "/api/auth/login", new LoginRequest(AuthTestHelper.Username, AuthTestHelper.Password));
+        var rawCookie = Assert.Single(loginResponse.Headers.GetValues("Set-Cookie")).Split(';')[0];
+
+        using var copiedCookieClient = _factory.CreateClient();
+        copiedCookieClient.DefaultRequestHeaders.Add("Cookie", rawCookie);
+        var meBeforeChange = await copiedCookieClient.GetFromJsonAsync<MeResponseDto>("/api/auth/me");
+        Assert.True(meBeforeChange?.authenticated);
+
+        var changeResponse = await loginClient.PutAsJsonAsync(
+            "/api/auth/password", new ChangePasswordRequest(AuthTestHelper.Password, "An0ther$ecureTestPassw0rd!"));
+        Assert.Equal(HttpStatusCode.NoContent, changeResponse.StatusCode);
+
+        var meAfterChange = await copiedCookieClient.GetFromJsonAsync<MeResponseDto>("/api/auth/me");
+        Assert.False(meAfterChange?.authenticated);
     }
 
     [Fact]

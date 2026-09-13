@@ -25,6 +25,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<UpdateThresholdNotificationState> UpdateThresholdNotificationStates => Set<UpdateThresholdNotificationState>();
 
+    public DbSet<SessionInvalidation> SessionInvalidations => Set<SessionInvalidation>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Agent>()
@@ -33,6 +35,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<AdminAccount>()
             .HasIndex(a => a.Username)
+            .IsUnique();
+
+        modelBuilder.Entity<SessionInvalidation>()
+            .HasIndex(s => s.Username)
             .IsUnique();
 
         modelBuilder.Entity<UpdateFilter>()

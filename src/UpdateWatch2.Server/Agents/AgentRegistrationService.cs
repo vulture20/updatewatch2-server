@@ -49,6 +49,21 @@ public class AgentRegistrationService(
 {
     public async Task<AgentRegistrationOutcome> RegisterAsync(string hostname, AgentRegisterRequest request, CancellationToken ct = default)
     {
+        // Security review finding: this hostname later gets interpolated
+        // verbatim into an issued certificate's Subject DN
+        // (ICertificateAuthority.IssueAgentLeaf -> "CN={hostname}"), which
+        // is parsed per RFC 2253 — a comma/equals-containing value (both
+        // legal, unencoded, in a URL path segment) would inject extra RDNs
+        // into a certificate this server's own CA vouches for. Reject
+        // anything that isn't a plausible hostname/FQDN before a row for
+        // it is ever created — Hostname is set exactly once, here, and
+        // never rewritten afterward, so validating only at creation time
+        // is sufficient.
+        if (!HostnameValidator.IsValid(hostname))
+        {
+            return AgentRegistrationOutcome.Rejected("Invalid hostname.");
+        }
+
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
 
         // Once a certificate has been delivered, the registration token has
