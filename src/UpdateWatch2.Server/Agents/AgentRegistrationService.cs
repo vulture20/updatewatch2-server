@@ -64,6 +64,17 @@ public class AgentRegistrationService(
             return AgentRegistrationOutcome.Rejected("Invalid hostname.");
         }
 
+        // Security review finding: DnsName/OperatingSystem/IpAddress/
+        // AgentVersion had no length limit anywhere — an anonymous caller
+        // (this endpoint has no certificate to authenticate with yet)
+        // could otherwise register unboundedly many hostnames each
+        // carrying near-Kestrel's-default-limit text fields. See
+        // AgentMetadataValidator's own doc comment.
+        if (!AgentMetadataValidator.IsValid(request))
+        {
+            return AgentRegistrationOutcome.Rejected("Registration data exceeds the allowed length.");
+        }
+
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
 
         // Once a certificate has been delivered, the registration token has
@@ -152,10 +163,15 @@ public class AgentRegistrationService(
         // predates this field — nothing to refresh, not an error.
         if (request is not null)
         {
-            agent.DnsName = request.DnsName ?? agent.DnsName;
-            agent.OperatingSystem = request.OperatingSystem ?? agent.OperatingSystem;
-            agent.IpAddress = request.IpAddress ?? agent.IpAddress;
-            agent.AgentVersion = request.AgentVersion ?? agent.AgentVersion;
+            // Clamp, not reject outright — unlike RegisterAsync, this path
+            // already requires an approved, mTLS-authenticated agent, so
+            // the same unbounded-length finding is lower severity here;
+            // truncating is proportionate defense-in-depth for what's
+            // purely display metadata. See AgentMetadataValidator.
+            agent.DnsName = AgentMetadataValidator.Clamp(request.DnsName, AgentMetadataValidator.MaxDnsNameLength) ?? agent.DnsName;
+            agent.OperatingSystem = AgentMetadataValidator.Clamp(request.OperatingSystem, AgentMetadataValidator.MaxOperatingSystemLength) ?? agent.OperatingSystem;
+            agent.IpAddress = AgentMetadataValidator.Clamp(request.IpAddress, AgentMetadataValidator.MaxIpAddressLength) ?? agent.IpAddress;
+            agent.AgentVersion = AgentMetadataValidator.Clamp(request.AgentVersion, AgentMetadataValidator.MaxAgentVersionLength) ?? agent.AgentVersion;
             agent.BootTimeUtc = request.BootTimeUtc ?? agent.BootTimeUtc;
         }
 

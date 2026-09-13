@@ -67,6 +67,20 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Registering_with_an_oversized_metadata_field_is_rejected_and_no_row_is_created()
+    {
+        // Security review finding: DnsName/OperatingSystem/IpAddress/
+        // AgentVersion had no length limit anywhere — an anonymous caller
+        // (this endpoint has no certificate to authenticate with yet)
+        // could otherwise register unboundedly many hostnames each
+        // carrying near-request-size-limit text fields.
+        var outcome = await _service.RegisterAsync("oversized-metadata-host", BareRequest with { OperatingSystem = new string('a', AgentMetadataValidator.MaxOperatingSystemLength + 1) });
+
+        Assert.Equal(AgentRegistrationStatus.Rejected, outcome.Status);
+        Assert.False(await _db.Agents.AnyAsync(a => a.Hostname == "oversized-metadata-host"));
+    }
+
+    [Fact]
     public async Task No_token_for_an_already_registered_hostname_is_rejected()
     {
         await _service.RegisterAsync("claimed-host", BareRequest);
@@ -349,5 +363,25 @@ public class AgentRegistrationServiceTests : IDisposable
         Assert.Equal("Windows 11 24H2", agent.OperatingSystem);
         Assert.Equal("10.0.0.2", agent.IpAddress);
         Assert.Equal("0.6.2", agent.AgentVersion);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_truncates_an_oversized_metadata_field_rather_than_rejecting_the_whole_heartbeat()
+    {
+        // Same security review finding as the registration-time check
+        // above, applied here as a truncation instead of an outright
+        // rejection — this path already requires an approved,
+        // mTLS-authenticated agent, a much smaller and already-trusted
+        // population, so clamping is proportionate rather than needing a
+        // new failure path on the wire.
+        await _service.RegisterAsync("oversized-heartbeat-host", BareRequest);
+        var oversized = new string('b', AgentMetadataValidator.MaxOperatingSystemLength + 50);
+
+        var result = await _service.RecordAliveAsync("oversized-heartbeat-host",
+            new AgentAliveRequest(DnsName: null, OperatingSystem: oversized, IpAddress: null, AgentVersion: null));
+
+        Assert.NotNull(result);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "oversized-heartbeat-host");
+        Assert.Equal(AgentMetadataValidator.MaxOperatingSystemLength, agent.OperatingSystem!.Length);
     }
 }

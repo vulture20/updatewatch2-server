@@ -12,6 +12,16 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.1] - 2026-09-13
+
+### Fixed
+
+- **A full, non-diff-scoped security review found and fixed a real resource-exhaustion gap in anonymous agent registration.** `POST /api/agents/{hostname}/register` is deliberately anonymous (an agent has no client certificate yet at first contact) — `HostnameValidator` already bounds `hostname` itself (253 chars, RFC 1123), but the body's `DnsName`/`OperatingSystem`/`IpAddress`/`AgentVersion` fields had no length limit anywhere (not the DTO, not the `Agent` DB column, not a route-specific request-size cap), the only ceiling being Kestrel's default ~28.6 MB request body size. An unauthenticated network caller reaching the agent-facing port could register unboundedly many distinct hostnames, each carrying near-that-limit text fields, growing the database and flooding the admin's pending-approval queue with no rate limit. Fixed with a new `Agents/AgentMetadataValidator` — registration rejects the whole call outright when a field exceeds a generous-but-finite cap (mirroring `HostnameValidator`'s own treatment, since this is the one anonymous entry point); the equivalent fields on the `alive` heartbeat (`AgentRegistrationService.RecordAliveAsync`) are truncated rather than rejected, since that path already requires an approved, mTLS-authenticated agent — a much smaller, already-trusted population — and this is purely display metadata.
+
+### Changed
+
+- Also reviewed, and deliberately not changed: `AgentUpdates/GitHubReleaseClient.DownloadAssetAsync` fetches a release asset's `browser_download_url` verbatim from the GitHub API with no host allowlist. Exploitability requires compromising the pinned upstream repository (`vulture20/updatewatch2-agent`) itself, at which point an attacker already controls the release content an allowlist wouldn't meaningfully constrain — no user-supplied input reaches this URL, so this is an accepted, already-implicit trust boundary rather than an actionable finding.
+
 ## [1.3.0] - 2026-09-13
 
 ### Added
