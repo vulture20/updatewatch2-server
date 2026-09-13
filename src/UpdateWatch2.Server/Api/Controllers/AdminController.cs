@@ -46,84 +46,94 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
         return Ok(updated);
     }
 
-    private static List<string> Validate(UpdateAdminSettingsRequest request)
+    // Every entry pairs its free-text English message (unchanged from
+    // before this method returned typed items — kept byte-identical as
+    // the fallback for a frontend build that doesn't recognize the code
+    // yet) with a stable ApiErrorCode the web UI translates via
+    // react-i18next's t() (updatewatch2-server#17). None of these need an
+    // ErrorItem.Detail — the interpolated bits (ValidLogLevels,
+    // Enum.GetNames<...>(), ValidAuditLogRetentionDays) are fixed constants
+    // baked into both locales' translation templates, not per-request
+    // dynamic content — see ApiErrorCode's own doc comment for what
+    // actually needs Detail instead.
+    private static List<ApiErrorItem> Validate(UpdateAdminSettingsRequest request)
     {
-        var errors = new List<string>();
+        var errors = new List<ApiErrorItem>();
 
         if (!ValidLogLevels.Contains(request.LogLevel.ToUpperInvariant()))
         {
-            errors.Add($"LogLevel must be one of: {string.Join(", ", ValidLogLevels)}.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.LogLevelInvalid, $"LogLevel must be one of: {string.Join(", ", ValidLogLevels)}."));
         }
 
         if (request.BruteForceMaxAttempts < 1)
         {
-            errors.Add("BruteForceMaxAttempts must be at least 1.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.BruteForceMaxAttemptsInvalid, "BruteForceMaxAttempts must be at least 1."));
         }
 
         if (request.BruteForceWindowMinutes < 1)
         {
-            errors.Add("BruteForceWindowMinutes must be at least 1.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.BruteForceWindowMinutesInvalid, "BruteForceWindowMinutes must be at least 1."));
         }
 
         if (request.BruteForceLockoutMinutes < 1)
         {
-            errors.Add("BruteForceLockoutMinutes must be at least 1.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.BruteForceLockoutMinutesInvalid, "BruteForceLockoutMinutes must be at least 1."));
         }
 
         if (request.SmtpPort is < 1 or > 65535)
         {
-            errors.Add("SmtpPort must be between 1 and 65535.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.SmtpPortInvalid, "SmtpPort must be between 1 and 65535."));
         }
 
         if (!Enum.TryParse<SmtpEncryption>(request.SmtpEncryption, ignoreCase: true, out _))
         {
-            errors.Add($"SmtpEncryption must be one of: {string.Join(", ", Enum.GetNames<SmtpEncryption>())}.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.SmtpEncryptionInvalid, $"SmtpEncryption must be one of: {string.Join(", ", Enum.GetNames<SmtpEncryption>())}."));
         }
 
         if (request.NotificationUpdatesPerMachineThreshold < 1)
         {
-            errors.Add("NotificationUpdatesPerMachineThreshold must be at least 1.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.NotificationUpdatesPerMachineThresholdInvalid, "NotificationUpdatesPerMachineThreshold must be at least 1."));
         }
 
         if (request.NotificationAffectedMachinesThreshold < 1)
         {
-            errors.Add("NotificationAffectedMachinesThreshold must be at least 1.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.NotificationAffectedMachinesThresholdInvalid, "NotificationAffectedMachinesThreshold must be at least 1."));
         }
 
         if (!Enum.TryParse<AdEncryption>(request.AdEncryption, ignoreCase: true, out _))
         {
-            errors.Add($"AdEncryption must be one of: {string.Join(", ", Enum.GetNames<AdEncryption>())}.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.AdEncryptionInvalid, $"AdEncryption must be one of: {string.Join(", ", Enum.GetNames<AdEncryption>())}."));
         }
 
         if (request.AdPort is < 1 or > 65535)
         {
-            errors.Add("AdPort must be between 1 and 65535.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.AdPortInvalid, "AdPort must be between 1 and 65535."));
         }
 
         if (request.AdEnabled)
         {
             if (string.IsNullOrWhiteSpace(request.AdHost))
             {
-                errors.Add("AdHost is required when AD login is enabled.");
+                errors.Add(new ApiErrorItem(ApiErrorCode.AdHostRequired, "AdHost is required when AD login is enabled."));
             }
 
             if (string.IsNullOrWhiteSpace(request.AdBaseDn))
             {
-                errors.Add("AdBaseDn is required when AD login is enabled.");
+                errors.Add(new ApiErrorItem(ApiErrorCode.AdBaseDnRequired, "AdBaseDn is required when AD login is enabled."));
             }
 
             if (string.IsNullOrWhiteSpace(request.AdUserSearchFilter))
             {
-                errors.Add("AdUserSearchFilter is required when AD login is enabled.");
+                errors.Add(new ApiErrorItem(ApiErrorCode.AdUserSearchFilterRequired, "AdUserSearchFilter is required when AD login is enabled."));
             }
             else if (!request.AdUserSearchFilter.Contains("{0}"))
             {
-                errors.Add("AdUserSearchFilter must contain a {0} placeholder for the submitted username.");
+                errors.Add(new ApiErrorItem(ApiErrorCode.AdUserSearchFilterMissingPlaceholder, "AdUserSearchFilter must contain a {0} placeholder for the submitted username."));
             }
 
             if (string.IsNullOrWhiteSpace(request.AdLoginGroupDn))
             {
-                errors.Add("AdLoginGroupDn is required when AD login is enabled.");
+                errors.Add(new ApiErrorItem(ApiErrorCode.AdLoginGroupDnRequired, "AdLoginGroupDn is required when AD login is enabled."));
             }
         }
 
@@ -132,17 +142,17 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
         // nonsensical, not just unusual.
         if (request.AgentCertificateValidityDays is < 1 or > 3650)
         {
-            errors.Add("AgentCertificateValidityDays must be between 1 and 3650.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.AgentCertificateValidityDaysInvalid, "AgentCertificateValidityDays must be between 1 and 3650."));
         }
 
         if (request.AgentAutoUpdateCheckIntervalHours < 1)
         {
-            errors.Add("AgentAutoUpdateCheckIntervalHours must be at least 1.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.AgentAutoUpdateCheckIntervalHoursInvalid, "AgentAutoUpdateCheckIntervalHours must be at least 1."));
         }
 
         if (!ValidAuditLogRetentionDays.Contains(request.AuditLogRetentionDays))
         {
-            errors.Add($"AuditLogRetentionDays must be one of: {string.Join(", ", ValidAuditLogRetentionDays)} (0 = unlimited).");
+            errors.Add(new ApiErrorItem(ApiErrorCode.AuditLogRetentionDaysInvalid, $"AuditLogRetentionDays must be one of: {string.Join(", ", ValidAuditLogRetentionDays)} (0 = unlimited)."));
         }
 
         // Upper bound is arbitrary but generous — a year's notice is more
@@ -150,25 +160,25 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
         // free-form-but-bounded style as AgentCertificateValidityDays above.
         if (request.CertificateExpiryWarningLeadDays is < 1 or > 365)
         {
-            errors.Add("CertificateExpiryWarningLeadDays must be between 1 and 365.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.CertificateExpiryWarningLeadDaysInvalid, "CertificateExpiryWarningLeadDays must be between 1 and 365."));
         }
 
         if (!string.IsNullOrWhiteSpace(request.NotificationRecipientAddress) && !request.NotificationRecipientAddress.Contains('@'))
         {
-            errors.Add("NotificationRecipientAddress must be a valid email address.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.NotificationRecipientAddressInvalid, "NotificationRecipientAddress must be a valid email address."));
         }
 
         if (!string.IsNullOrWhiteSpace(request.InstanceUrl)
             && (!Uri.TryCreate(request.InstanceUrl, UriKind.Absolute, out var instanceUri) || instanceUri.Scheme is not ("http" or "https")))
         {
-            errors.Add("InstanceUrl must be an absolute http:// or https:// URL.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.InstanceUrlInvalid, "InstanceUrl must be an absolute http:// or https:// URL."));
         }
 
         // Upper bound generous (a day) — same free-form-but-bounded style
         // as the other admin-configurable interval-like settings above.
         if (request.AgentOfflineThresholdMinutes is < 1 or > 1440)
         {
-            errors.Add("AgentOfflineThresholdMinutes must be between 1 and 1440.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.AgentOfflineThresholdMinutesInvalid, "AgentOfflineThresholdMinutes must be between 1 and 1440."));
         }
 
         return errors;

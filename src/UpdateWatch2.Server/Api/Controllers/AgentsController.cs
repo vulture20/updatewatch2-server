@@ -55,7 +55,7 @@ public class AgentsController(IAgentService agentService) : ControllerBase
 
         return result.FailureReason == "Agent not found."
             ? NotFound()
-            : Conflict(new { message = result.FailureReason });
+            : Conflict(new { message = result.FailureReason, errorCode = result.ErrorCode });
     }
 
     // Fire-and-forget, like ApproveAsync — actual delivery happens on the

@@ -42,7 +42,7 @@ public class AuthController(
         if (bruteForce.IsLockedOut(request.Username, realRemoteIp))
         {
             await auditLog.LogAsync(request.Username, "login.blocked", remoteIp?.ToString(), ct);
-            return StatusCode(StatusCodes.Status423Locked, new { message = "Too many failed attempts. Try again later." });
+            return StatusCode(StatusCodes.Status423Locked, new { message = "Too many failed attempts. Try again later.", errorCode = ApiErrorCode.TooManyFailedAttempts });
         }
 
         string authSource;
@@ -57,7 +57,7 @@ public class AuthController(
             {
                 bruteForce.RecordFailedAttempt(request.Username, realRemoteIp);
                 await auditLog.LogAsync(request.Username, "login.failed", remoteIp?.ToString(), ct);
-                return Unauthorized(new { message = "Invalid username or password." });
+                return Unauthorized(new { message = "Invalid username or password.", errorCode = ApiErrorCode.InvalidCredentials });
             }
 
             authSource = "ad";
@@ -113,13 +113,13 @@ public class AuthController(
         // (that's the directory's own concern, out of scope for this app).
         if (User.HasClaim(AuthSourceClaimType, "ad"))
         {
-            return BadRequest(new { message = "AD-authenticated sessions can't change the local admin password." });
+            return BadRequest(new { message = "AD-authenticated sessions can't change the local admin password.", errorCode = ApiErrorCode.AdSessionCannotChangePassword });
         }
 
         var changed = await accounts.ChangePasswordAsync(username, request.CurrentPassword, request.NewPassword, ct);
         if (!changed)
         {
-            return BadRequest(new { message = "Current password is incorrect, or the new password doesn't meet the complexity requirements." });
+            return BadRequest(new { message = "Current password is incorrect, or the new password doesn't meet the complexity requirements.", errorCode = ApiErrorCode.PasswordChangeRejected });
         }
 
         await auditLog.LogAsync(username, "admin.password.changed", null, ct);

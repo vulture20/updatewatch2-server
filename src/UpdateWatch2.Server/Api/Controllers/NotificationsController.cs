@@ -32,12 +32,12 @@ public class NotificationsController(IEmailNotificationService emailService, IAd
     {
         if (string.IsNullOrWhiteSpace(request.ToAddress) || !request.ToAddress.Contains('@'))
         {
-            return BadRequest(new { errors = new[] { "ToAddress must be a valid email address." } });
+            return BadRequest(new { errors = new[] { new ApiErrorItem(ApiErrorCode.TestEmailToAddressInvalid, "ToAddress must be a valid email address.") } });
         }
 
         if (!settingsStore.Smtp.IsConfigured)
         {
-            return BadRequest(new { errors = new[] { "SMTP is not configured." } });
+            return BadRequest(new { errors = new[] { new ApiErrorItem(ApiErrorCode.SmtpNotConfigured, "SMTP is not configured.") } });
         }
 
         try
@@ -46,11 +46,14 @@ public class NotificationsController(IEmailNotificationService emailService, IAd
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Surfaced verbatim to the admin UI — an SmtpException's own
-            // message (bad host, auth failure, connection refused, ...) is
-            // exactly what an admin debugging their SMTP config needs to
-            // see, not a generic "something went wrong".
-            return StatusCode(StatusCodes.Status502BadGateway, new { errors = new[] { ex.Message } });
+            // Message stays the exact, unwrapped exception text (bad host,
+            // auth failure, connection refused, ...) as the fallback for a
+            // frontend build that doesn't recognize the code — Detail
+            // carries the same text again, additively, purely so the
+            // translated template (updatewatch2-server#17) has something
+            // to interpolate; see ApiErrorCode.TestEmailFailed's own doc
+            // comment for why this is one of only two codes that need it.
+            return StatusCode(StatusCodes.Status502BadGateway, new { errors = new[] { new ApiErrorItem(ApiErrorCode.TestEmailFailed, ex.Message, ex.Message) } });
         }
 
         await auditLog.LogAsync(User.Identity!.Name!, "notifications.test-email.sent", request.ToAddress, ct);

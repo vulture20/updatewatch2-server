@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using UpdateWatch2.Server.Api;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
@@ -38,7 +39,7 @@ public class UpdateFilterService(AppDbContext db, IAuditLogService auditLog, ILo
         var validationError = await ValidateAsync(request, existingId: null, ct);
         if (validationError is not null)
         {
-            return UpdateFilterResult.Failed(validationError);
+            return UpdateFilterResult.Failed(validationError.Value.Message, validationError.Value.Code, validationError.Value.Detail);
         }
 
         var filter = new UpdateFilter { Name = request.Name, Pattern = request.Pattern };
@@ -60,7 +61,7 @@ public class UpdateFilterService(AppDbContext db, IAuditLogService auditLog, ILo
         var validationError = await ValidateAsync(request, existingId: id, ct);
         if (validationError is not null)
         {
-            return UpdateFilterResult.Failed(validationError);
+            return UpdateFilterResult.Failed(validationError.Value.Message, validationError.Value.Code, validationError.Value.Detail);
         }
 
         filter.Name = request.Name;
@@ -86,16 +87,16 @@ public class UpdateFilterService(AppDbContext db, IAuditLogService auditLog, ILo
         return true;
     }
 
-    private async Task<string?> ValidateAsync(UpsertUpdateFilterRequest request, int? existingId, CancellationToken ct)
+    private async Task<(ApiErrorCode Code, string Message, string? Detail)?> ValidateAsync(UpsertUpdateFilterRequest request, int? existingId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
         {
-            return "Name must not be empty.";
+            return (ApiErrorCode.UpdateFilterNameRequired, "Name must not be empty.", null);
         }
 
         if (string.IsNullOrWhiteSpace(request.Pattern))
         {
-            return "Pattern must not be empty.";
+            return (ApiErrorCode.UpdateFilterPatternRequired, "Pattern must not be empty.", null);
         }
 
         try
@@ -108,13 +109,17 @@ public class UpdateFilterService(AppDbContext db, IAuditLogService auditLog, ILo
         }
         catch (ArgumentException ex)
         {
-            return $"Invalid regular expression: {ex.Message}";
+            // Detail carries the regex engine's own parse-error message —
+            // one of only two ApiErrorCode values that need it (see that
+            // enum's own doc comment for why translating this specific
+            // text is out of scope).
+            return (ApiErrorCode.UpdateFilterPatternInvalid, $"Invalid regular expression: {ex.Message}", ex.Message);
         }
 
         var nameTaken = await db.UpdateFilters.AnyAsync(f => f.Name == request.Name && (existingId == null || f.Id != existingId), ct);
         if (nameTaken)
         {
-            return "A filter with this name already exists.";
+            return (ApiErrorCode.UpdateFilterNameTaken, "A filter with this name already exists.", null);
         }
 
         return null;

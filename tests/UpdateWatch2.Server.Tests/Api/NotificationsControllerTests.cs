@@ -83,7 +83,7 @@ public class NotificationsControllerTests : IClassFixture<WebApplicationFactory<
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<ErrorsDto>();
-        Assert.Contains(body!.Errors, e => e.Contains("SMTP", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(body!.Errors, e => e.Message.Contains("SMTP", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -129,7 +129,10 @@ public class NotificationsControllerTests : IClassFixture<WebApplicationFactory<
         Assert.Equal("", await response.Content.ReadAsStringAsync());
     }
 
-    private record ErrorsDto(string[] Errors);
+    // errors is now ApiErrorItem[], not a bare string[] — updatewatch2-server#17.
+    private record ErrorsDto(ErrorItemDto[] Errors);
+
+    private record ErrorItemDto(string Code, string Message, string? Detail);
 
     private class FakeEmailNotificationService : IEmailNotificationService
     {

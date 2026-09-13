@@ -23,7 +23,7 @@ public class UpdateFiltersController(IUpdateFilterService filterService) : Contr
     public async Task<IActionResult> Create([FromBody] UpsertUpdateFilterRequest request, CancellationToken ct)
     {
         var result = await filterService.CreateAsync(request, createdBy: User.Identity!.Name!, ct);
-        return result.Success ? Ok(result.Filter) : BadRequest(new { message = result.FailureReason });
+        return result.Success ? Ok(result.Filter) : BadRequest(new { message = result.FailureReason, errorCode = result.ErrorCode, errorDetail = result.ErrorDetail });
     }
 
     [HttpPut("{id:int}")]
@@ -37,7 +37,7 @@ public class UpdateFiltersController(IUpdateFilterService filterService) : Contr
 
         return result.FailureReason == "Not found."
             ? NotFound()
-            : BadRequest(new { message = result.FailureReason });
+            : BadRequest(new { message = result.FailureReason, errorCode = result.ErrorCode, errorDetail = result.ErrorDetail });
     }
 
     [HttpDelete("{id:int}")]

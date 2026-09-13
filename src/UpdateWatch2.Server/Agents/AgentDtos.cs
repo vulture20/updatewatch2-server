@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using UpdateWatch2.Server.Api;
 
 namespace UpdateWatch2.Server.Agents;
 
@@ -119,9 +120,15 @@ public record BulkApproveResult(int ApprovedCount, IReadOnlyList<string> NotFoun
 /// returned exactly once here, never persisted or retrievable again — for
 /// the admin to place into the affected agent's local configuration.
 /// </summary>
-public record ReissueCertificateResult(bool Success, string? RegistrationToken, string? FailureReason)
+/// <summary>
+/// <see cref="ErrorCode"/> is additive (updatewatch2-server#17) — null for
+/// the "Agent not found." failure, since <see cref="Api.Controllers.AgentsController.ReissueCertificate"/>
+/// maps that one straight to a bare 404 with no body at all, never
+/// surfacing <see cref="FailureReason"/> to the web UI in the first place.
+/// </summary>
+public record ReissueCertificateResult(bool Success, string? RegistrationToken, string? FailureReason, ApiErrorCode? ErrorCode = null)
 {
-    public static ReissueCertificateResult Failed(string reason) => new(false, null, reason);
+    public static ReissueCertificateResult Failed(string reason, ApiErrorCode? errorCode = null) => new(false, null, reason, errorCode);
 
     public static ReissueCertificateResult Succeeded(string registrationToken) => new(true, registrationToken, null);
 }

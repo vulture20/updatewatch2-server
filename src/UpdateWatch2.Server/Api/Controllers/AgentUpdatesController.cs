@@ -83,12 +83,18 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
     [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadBytes)]
     public async Task<IActionResult> Upload(IFormFileCollection files, CancellationToken ct)
     {
-        var errors = new List<string>();
+        // Every Detail here (updatewatch2-server#17) carries exactly the
+        // bit of admin-supplied context the un-translated Message already
+        // interpolates — a filename, an asset kind, a version pair — the
+        // same {{placeholder}} interpolation this app's i18n already uses
+        // elsewhere, not the "arbitrary opaque exception text" case
+        // ApiErrorCode's own doc comment scopes Detail's other use to.
+        var errors = new List<ApiErrorItem>();
         string? version = null;
 
         if (files.Count == 0)
         {
-            errors.Add("At least one file must be uploaded.");
+            errors.Add(new ApiErrorItem(ApiErrorCode.NoFilesUploaded, "At least one file must be uploaded."));
         }
         else
         {
@@ -98,20 +104,20 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
                 var kind = AgentUpdateAssetClassifier.Classify(file.FileName);
                 if (kind is null)
                 {
-                    errors.Add($"'{file.FileName}' is not a recognized agent release asset (.exe, .deb, or .rpm).");
+                    errors.Add(new ApiErrorItem(ApiErrorCode.UnrecognizedAssetFile, $"'{file.FileName}' is not a recognized agent release asset (.exe, .deb, or .rpm).", file.FileName));
                     continue;
                 }
 
                 if (!seenKinds.Add(kind.Value))
                 {
-                    errors.Add($"More than one {kind} file was uploaded in the same request.");
+                    errors.Add(new ApiErrorItem(ApiErrorCode.DuplicateAssetKind, $"More than one {kind} file was uploaded in the same request.", kind.Value.ToString()));
                     continue;
                 }
 
                 var extractedVersion = AgentUpdateVersionExtractor.Extract(file.FileName);
                 if (extractedVersion is null)
                 {
-                    errors.Add($"Could not determine the release version from '{file.FileName}' — expected a filename containing the version, e.g. 'updatewatch2-agent_0.13.0_amd64.deb'.");
+                    errors.Add(new ApiErrorItem(ApiErrorCode.VersionNotExtractable, $"Could not determine the release version from '{file.FileName}' — expected a filename containing the version, e.g. 'updatewatch2-agent_0.13.0_amd64.deb'.", file.FileName));
                 }
                 else if (version is null)
                 {
@@ -119,7 +125,7 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
                 }
                 else if (!string.Equals(version, extractedVersion, StringComparison.Ordinal))
                 {
-                    errors.Add($"All uploaded files must be from the same release version (found {version} and {extractedVersion}).");
+                    errors.Add(new ApiErrorItem(ApiErrorCode.VersionMismatch, $"All uploaded files must be from the same release version (found {version} and {extractedVersion}).", $"{version}, {extractedVersion}"));
                 }
             }
         }
@@ -139,7 +145,7 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
             var outcome = await agentUpdateService.UploadAssetsAsync(version!, uploaded, ct);
             if (outcome == AgentUpdateUploadOutcome.Disabled)
             {
-                return BadRequest(new { errors = new[] { "Agent auto-update must be enabled to accept a manual upload." } });
+                return BadRequest(new { errors = new[] { new ApiErrorItem(ApiErrorCode.AutoUpdateMustBeEnabledForUpload, "Agent auto-update must be enabled to accept a manual upload.") } });
             }
         }
         finally

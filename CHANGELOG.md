@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.2.0] - 2026-09-13
+
+### Added
+
+- **Admin-facing API error messages are now translatable, closing updatewatch2-server#17 ("Admin-facing API error messages are free-text English with no translation mechanism").** Every static, human-authored admin-facing failure response — form validation on `PUT /api/admin/settings`, login/password-change failures, the manual agent-update upload's validation, update-filter validation, CA-rotation guard errors — now carries an additive `errorCode` (single-message responses) or a structured `errors: [{ code, message, detail? }]` list (validation responses, replacing what used to be a bare `string[]`) alongside the exact free-text `message` this API always returned. `errorCode`/`errors[].code` is one of a new `Api.ApiErrorCode` enum (serialized as its name, matching every other enum-like wire value in this codebase), and `web/src/api/client.ts` translates it via react-i18next's `t()` against new `errors.*` keys in both locale files, falling back to the raw server-supplied text — unchanged from before this existed — for any code an older or newer frontend build doesn't recognize. Deliberately scoped to static failure reasons only, per the issue's own "worth deciding" note: two genuinely dynamic-content cases (a live SMTP exception's own message; a regex engine's own parse-error message for whatever pattern an admin just typed) keep a code but carry the dynamic fragment in a new, additive `errorDetail`/`detail` field for `{{detail}}`-style interpolation instead — translating an arbitrary upstream library's own English text would be its own, out-of-scope project. An agent-facing route (mutual-TLS, e.g. `AgentProtocolController.Register`/`.Renew`) is out of scope entirely — its failure text is read by the agent's own logs, never by a browser, so there's nothing for react-i18next to translate there. No protocol or DB schema bump — this only changes the admin-facing HTTP API's error bodies, never anything on the agent-facing wire.
+
 ## [1.1.0] - 2026-09-13
 
 ### Added

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.Api;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
@@ -152,7 +153,7 @@ public class AgentService(
         {
             // Never had a certificate to lose — guide the admin toward
             // Approve instead of handing back a confusing/misleading token.
-            return ReissueCertificateResult.Failed("Agent is not approved.");
+            return ReissueCertificateResult.Failed("Agent is not approved.", ApiErrorCode.AgentNotApproved);
         }
 
         agent.ClientCertificateThumbprint = null;

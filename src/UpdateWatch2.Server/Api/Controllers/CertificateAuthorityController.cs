@@ -38,7 +38,7 @@ public class CertificateAuthorityController(ICertificateAuthority ca, IAgentServ
     {
         if (ca.PendingRootCertificate is null)
         {
-            return Conflict(new { message = "No pending root to activate — prepare a rotation first." });
+            return Conflict(new { message = "No pending root to activate — prepare a rotation first.", errorCode = ApiErrorCode.NoRotationPendingToActivate });
         }
 
         ca.ActivateRotation();
@@ -80,7 +80,7 @@ public class CertificateAuthorityController(ICertificateAuthority ca, IAgentServ
     {
         if (ca.PreviousRootCertificate is null)
         {
-            return Conflict(new { message = "No previous root to retire." });
+            return Conflict(new { message = "No previous root to retire.", errorCode = ApiErrorCode.NoPreviousRootToRetire });
         }
 
         var thumbprint = ca.PreviousRootCertificate.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256);
