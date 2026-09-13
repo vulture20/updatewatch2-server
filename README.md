@@ -7,12 +7,12 @@
 [![Docker Image](https://img.shields.io/badge/ghcr.io-vulture20%2Fupdatewatch2--server-2496ED?logo=docker&logoColor=white)](https://github.com/vulture20/updatewatch2-server/pkgs/container/updatewatch2-server)
 [![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Fvulture20%2Fupdatewatch2-server%2Fupdatewatch2-server&query=downloadCount&label=Docker%20Pulls&color=2496ED&logo=docker&logoColor=white)](https://github.com/vulture20/updatewatch2-server/pkgs/container/updatewatch2-server)
 [![Docker Image Build](https://github.com/vulture20/updatewatch2-server/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/vulture20/updatewatch2-server/actions/workflows/docker-publish.yml)
-[![Status](https://img.shields.io/badge/status-beta-orange)](#-project-status)
+[![Status](https://img.shields.io/badge/status-v1.0-brightgreen)](#-project-status)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
 UpdateWatch2 Server is the self-hosted, single-container management hub for **UpdateWatch2** — a system for centrally distributing, monitoring, and remotely triggering software/OS updates on Windows and Linux endpoints. Agents register, get approved once, and from then on report their update status over mutual TLS; the admin decides who's approved, when to install, and when to reboot.
 
-> ⚠️ **Beta.** UpdateWatch2 is under active development. The certificate-based security backbone, agent onboarding, and the admin UI are implemented and covered by an automated test suite, but several pieces (real Windows Update installation, the RPM/dnf update path, the Windows installer's install/uninstall behavior) have not yet been verified against a real target host. See [Project status](#-project-status) below before relying on this in production.
+> ✅ **v1.0.** The certificate-based security backbone, agent onboarding, and the admin UI are implemented end to end, live-verified against a real running server, and covered by an automated test suite. A few pieces (real Windows Update installation, the RPM/dnf update path, the Windows installer's install/uninstall behavior) are still not verified against a real target host — see [Project status](#-project-status) below before relying on those specifically.
 
 Companion repository: [updatewatch2-agent](https://github.com/vulture20/updatewatch2-agent) — the Windows/Linux service this server manages.
 
@@ -44,9 +44,9 @@ Companion repository: [updatewatch2-agent](https://github.com/vulture20/updatewa
 ### 🎭 Demo mode
 - `UPDATEWATCH2_DEMOMODE=true` seeds a handful of realistic dummy agents and updates on an otherwise-empty instance — idempotent, env-var only, never for production.
 
-## 🚧 Project status
+## ✅ Project status
 
-UpdateWatch2 was built with **vibe coding**: implemented and iterated on with [Claude Code](https://claude.com/claude-code) (Anthropic) in conversation, rather than hand-written line by line, driven by a human-authored architecture brief. Code has been built, tested, and repeatedly run live at each step — not just compiled — and the mutual-TLS security backbone (registration, approval, renewal, re-issuance, root rotation), the admin UI, and the agent-server protocol are implemented end to end and covered by an automated test suite (server: xUnit; UI: Vitest). A few pieces are explicitly **not yet live-verified against a real target host**, and are called out as such in code comments: the Windows Update API (WUApiLib COM) integration, the Linux `dnf`/`yum` update path (only `apt` was verified against a real package cache), and the NSIS Windows installer's actual install/uninstall run through a package manager. Treat this as a well-researched, actively-tested implementation to build on — not yet battle-tested production software. Keep backups of the `/app/data` and `/app/certs` volumes.
+UpdateWatch2 was built with **vibe coding**: implemented and iterated on with [Claude Code](https://claude.com/claude-code) (Anthropic) in conversation, rather than hand-written line by line, driven by a human-authored architecture brief. Code has been built, tested, and repeatedly run live at each step — not just compiled — and the mutual-TLS security backbone (registration, approval, renewal, re-issuance, root rotation), the admin UI, and the agent-server protocol are implemented end to end, live-verified, and covered by an automated test suite (server: xUnit; UI: Vitest). A few pieces are explicitly **not yet live-verified against a real target host**, and are called out as such in code comments: the Windows Update API (WUApiLib COM) integration, the Linux `dnf`/`yum` update path (only `apt` was verified against a real package cache), and the NSIS Windows installer's actual install/uninstall run through a package manager. Everything else has been confirmed working end to end against a real running deployment. Keep backups of the `/app/data` and `/app/certs` volumes.
 
 ## 🐳 Installation & configuration (Docker)
 

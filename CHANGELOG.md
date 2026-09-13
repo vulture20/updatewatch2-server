@@ -4,12 +4,20 @@ All notable changes to the UpdateWatch2 Server are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and versioning follows [SemVer](https://semver.org/), starting at `0.x.x`
-(beta) per the project's CLAUDE.md. This file tracks the **server**
+(beta) per the project's CLAUDE.md and reaching `1.0.0` — ending the beta
+phase — at the user's explicit request. This file tracks the **server**
 version specifically — one of CLAUDE.md's four independent version
 numbers (server, agent, transfer protocol, DB schema), which evolve on
 their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
+
+## [1.0.0] - 2026-09-13
+
+### Changed
+
+- **Ends the beta phase, at the user's explicit request ("Ich würde die Beta-Phase gern beenden. Kannst du alle Versionen auf v1.0.0 setzen?").** All four of this project's independent version numbers move to `1.0.0` together as a deliberate, one-time milestone — server version (this file, `VERSION`, `AppVersion.cs`), transfer-protocol version (`Protocol/ProtocolVersion.cs`), and DB schema version (`Db/SchemaVersion.cs`, no accompanying migration — no schema actually changed, this is purely the version label) — matched by the agent repo's own agent and protocol versions moving to `1.0.0` too. This deliberately overrides CLAUDE.md's normal "these evolve independently, a server release doesn't imply a protocol or schema bump" rule for this one occasion.
+- README.md/README.de.md (this repo and the agent repo) no longer describe the project as "Beta" — the status badge and callout now read `v1.0`/`✅`. The substantive caveats those callouts already carried (real Windows Update installation, the RPM/dnf update path, and the Windows installer's install/uninstall behavior not yet verified against a real target host) are unchanged and still called out explicitly — reaching `1.0.0` is a versioning/maturity milestone, not a claim that those specific, honestly-flagged gaps have been closed.
 
 ## [0.30.20] - 2026-09-13
 
