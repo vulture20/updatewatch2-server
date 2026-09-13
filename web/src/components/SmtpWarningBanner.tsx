@@ -2,31 +2,56 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { onAdminSettingsSaved } from '../adminSettingsEvents';
-import { adminApi } from '../api/endpoints';
+import { adminApi, notificationsApi } from '../api/endpoints';
 import { WarningTriangleIcon } from './WarningTriangleIcon';
+
+// Same cadence CertificateRejectionBanner/AgentUpdateErrorBanner already
+// poll at — "notice within a reasonable time", not "watch it happen
+// live". Cheap here too: this only ever reads SmtpHealthCheckWorker's own
+// cached result (a plain in-memory flag), never triggers a live SMTP
+// probe itself — that only happens on the worker's own, much coarser
+// 5-minute cadence server-side. See SmtpHealthStatus's doc comment.
+const POLL_INTERVAL_MS = 15000;
 
 /**
  * Warning shown to admins when the mail server is unreachable or
- * misconfigured (CLAUDE.md section 6.3). Currently only reflects
- * `smtpConfigured` (host/from-address present) from `/api/admin/settings`
- * — the live reachability check already exists server-side
- * (`IEmailNotificationService.IsHealthyAsync`) but isn't exposed via that
- * endpoint yet. TODO: switch this to the reachability check once it is.
- * Neutral, divider-bordered treatment (`.banner-neutral`) — a
- * misconfiguration, not an active security event, unlike
- * CertificateRejectionBanner's accent-tinted styling.
+ * misconfigured (CLAUDE.md section 6.3) — both halves now, closing
+ * updatewatch2-server#12 ("wire the SMTP warning banner to the real
+ * reachability check, not just 'is it configured'"). Combines two
+ * independent signals rather than one:
  *
- * Beyond its initial mount-time fetch, this also listens for
- * `AdminPage`'s own settings save (`onAdminSettingsSaved` — a same-tab
- * `window` event, since this banner and `AdminPage` are siblings under
- * `App.tsx`, not parent/child) so fixing the SMTP config makes the
- * banner disappear the moment "Save" succeeds, not only after the next
- * page load — a user report that it otherwise needed a manual F5 after
- * every fix.
+ * - `smtpConfigured`, from `/api/admin/settings` (host/from-address
+ *   present) — updated instantly by `AdminPage`'s own settings-save event
+ *   (`onAdminSettingsSaved`), so fixing an obvious misconfiguration makes
+ *   the banner disappear the moment "Save" succeeds, the same snappy
+ *   behavior this half already had before this issue (server v0.29.1).
+ * - `smtpHealthy`, from the new, separately-polled `GET
+ *   /api/admin/notifications/smtp-health` — a server-side *cached* result
+ *   (`SmtpHealthCheckWorker`, every 5 minutes), not a live probe on every
+ *   read, the explicit trade-off this issue's own "worth deciding" note
+ *   called out and the one this codebase chose. Polled here on its own
+ *   `POLL_INTERVAL_MS` cadence (independent of the settings-save event)
+ *   specifically so a server that goes unreachable *while* an admin is
+ *   already logged in and looking at another page still becomes visible
+ *   without a manual reload — a plain one-time fetch on mount, like this
+ *   component used to do, would never notice that.
+ *
+ * The two are deliberately NOT collapsed into one combined "is it fine"
+ * flag server-side: `smtpConfigured` can react instantly to a save,
+ * `smtpHealthy` cannot (it's only as fresh as the worker's own last
+ * tick) — showing the warning whenever *either* signal says something's
+ * wrong, per CLAUDE.md's exact wording, means a save that fixes an
+ * obvious typo still disappears immediately even though the reachability
+ * half hasn't been re-checked yet.
+ *
+ * Neutral, divider-bordered treatment (`.banner-neutral`) — a
+ * misconfiguration/outage, not an active security event, unlike
+ * CertificateRejectionBanner's accent-tinted styling.
  */
 export function SmtpWarningBanner() {
   const { t } = useTranslation();
-  const [showWarning, setShowWarning] = useState(false);
+  const [smtpConfigured, setSmtpConfigured] = useState(true);
+  const [smtpHealthy, setSmtpHealthy] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +59,7 @@ export function SmtpWarningBanner() {
       .getSettings()
       .then((settings) => {
         if (!cancelled) {
-          setShowWarning(!settings.smtpConfigured);
+          setSmtpConfigured(settings.smtpConfigured);
         }
       })
       .catch(() => {
@@ -46,9 +71,25 @@ export function SmtpWarningBanner() {
     };
   }, []);
 
-  useEffect(() => onAdminSettingsSaved(({ smtpConfigured }) => setShowWarning(!smtpConfigured)), []);
+  useEffect(() => onAdminSettingsSaved(({ smtpConfigured: configured }) => setSmtpConfigured(configured)), []);
 
-  if (!showWarning) {
+  useEffect(() => {
+    const load = () => {
+      notificationsApi
+        .getSmtpHealth()
+        .then((status) => setSmtpHealthy(status.healthy))
+        .catch(() => {
+          // Same reasoning as the settings fetch above — say nothing
+          // rather than showing a misleading warning.
+        });
+    };
+
+    load();
+    const id = setInterval(load, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  if (smtpConfigured && smtpHealthy) {
     return null;
   }
 

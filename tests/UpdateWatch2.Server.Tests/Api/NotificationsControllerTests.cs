@@ -53,6 +53,35 @@ public class NotificationsControllerTests : IClassFixture<WebApplicationFactory<
     }
 
     [Fact]
+    public async Task Smtp_health_requires_an_admin_session()
+    {
+        var response = await _anonymousClient.GetAsync("/api/admin/notifications/smtp-health");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Reads the cache directly rather than reasoning about it — this test
+    /// class's own <see cref="WithoutBackgroundWorkers"/> host removes
+    /// SmtpHealthCheckWorker along with every other BackgroundService, so
+    /// nothing here ever populates it (updatewatch2-server#12): the
+    /// endpoint must still answer with a sensible "never checked yet"
+    /// shape instead of erroring.
+    /// </summary>
+    [Fact]
+    public async Task Smtp_health_reports_unhealthy_and_never_checked_when_the_worker_has_not_run_yet()
+    {
+        var response = await _client.GetAsync("/api/admin/notifications/smtp-health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<SmtpHealthStatusDto>();
+        Assert.False(body!.Healthy);
+        Assert.Null(body.CheckedAt);
+    }
+
+    private record SmtpHealthStatusDto(bool Healthy, DateTimeOffset? CheckedAt);
+
+    [Fact]
     public async Task Test_email_requires_an_admin_session()
     {
         var response = await _anonymousClient.PostAsJsonAsync("/api/admin/notifications/test-email", new { toAddress = "admin@example.com" });

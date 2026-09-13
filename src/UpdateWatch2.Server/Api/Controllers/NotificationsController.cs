@@ -23,9 +23,23 @@ namespace UpdateWatch2.Server.Api.Controllers;
 [ApiController]
 [Route("api/admin/notifications")]
 [Authorize]
-public class NotificationsController(IEmailNotificationService emailService, IAdminSettingsStore settingsStore, IAuditLogService auditLog) : ControllerBase
+public class NotificationsController(IEmailNotificationService emailService, IAdminSettingsStore settingsStore, IAuditLogService auditLog, ISmtpHealthCache smtpHealthCache) : ControllerBase
 {
     public record TestEmailRequest(string ToAddress);
+
+    /// <summary>
+    /// Backs <c>SmtpWarningBanner</c> (updatewatch2-server#12) —
+    /// deliberately reads <see cref="ISmtpHealthCache"/>'s last cached
+    /// result rather than calling <see cref="IEmailNotificationService.IsHealthyAsync"/>
+    /// directly, so this endpoint never itself performs a live TCP probe;
+    /// see that cache's own doc comment for why. <see cref="SmtpHealthStatus.CheckedAt"/>
+    /// is null until <c>SmtpHealthCheckWorker</c> has run at least once
+    /// (briefly, right after a fresh startup).
+    /// </summary>
+    public record SmtpHealthStatus(bool Healthy, DateTimeOffset? CheckedAt);
+
+    [HttpGet("smtp-health")]
+    public IActionResult GetSmtpHealth() => Ok(new SmtpHealthStatus(smtpHealthCache.IsHealthy, smtpHealthCache.CheckedAt));
 
     [HttpPost("test-email")]
     public async Task<IActionResult> SendTestEmail([FromBody] TestEmailRequest request, CancellationToken ct)

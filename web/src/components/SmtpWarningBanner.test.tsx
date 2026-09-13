@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { adminApi, agentUpdatesApi, auditLogApi, certificateAuthorityApi, updateFiltersApi, versionApi } from '../api/endpoints';
+import { adminApi, agentUpdatesApi, auditLogApi, certificateAuthorityApi, notificationsApi, updateFiltersApi, versionApi } from '../api/endpoints';
 import { AdminPage } from '../pages/AdminPage';
 import { SmtpWarningBanner } from './SmtpWarningBanner';
 
@@ -10,6 +10,10 @@ vi.mock('../api/endpoints', () => ({
   adminApi: {
     getSettings: vi.fn(),
     updateSettings: vi.fn(),
+  },
+  notificationsApi: {
+    testEmail: vi.fn(),
+    getSmtpHealth: vi.fn(),
   },
   versionApi: {
     get: vi.fn(),
@@ -30,6 +34,7 @@ vi.mock('../api/endpoints', () => ({
 
 const mockedGetSettings = vi.mocked(adminApi.getSettings);
 const mockedUpdateSettings = vi.mocked(adminApi.updateSettings);
+const mockedGetSmtpHealth = vi.mocked(notificationsApi.getSmtpHealth);
 
 const baseSettings = {
   logLevel: 'INFO',
@@ -88,6 +93,7 @@ describe('SmtpWarningBanner', () => {
   beforeEach(() => {
     mockedGetSettings.mockReset().mockResolvedValue(baseSettings);
     mockedUpdateSettings.mockReset();
+    mockedGetSmtpHealth.mockReset().mockResolvedValue({ healthy: true, checkedAt: '2026-01-01T00:00:00Z' });
     vi.mocked(versionApi.get).mockReset().mockResolvedValue({ server: '0.29.0', protocol: '0.1.0', database: '0.3.0' });
     vi.mocked(certificateAuthorityApi.getStatus).mockReset().mockResolvedValue({
       currentThumbprint: 'AAAA',
@@ -157,5 +163,47 @@ describe('SmtpWarningBanner', () => {
     await screen.findByRole('status');
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
+  // updatewatch2-server#12 — the reachability half, previously not wired
+  // up at all: smtpConfigured alone can be true (host/from-address both
+  // present) while the mail server is genuinely unreachable.
+  it('shows the warning when SMTP is configured but the cached reachability check reports unhealthy', async () => {
+    mockedGetSettings.mockResolvedValue({ ...baseSettings, smtpConfigured: true });
+    mockedGetSmtpHealth.mockResolvedValue({ healthy: false, checkedAt: '2026-01-01T00:00:00Z' });
+
+    render(
+      <MemoryRouter>
+        <SmtpWarningBanner />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
+  it('polls the reachability check independently, so an outage starting mid-session shows up without a reload', async () => {
+    mockedGetSettings.mockResolvedValue({ ...baseSettings, smtpConfigured: true });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockedGetSmtpHealth
+        .mockResolvedValueOnce({ healthy: true, checkedAt: '2026-01-01T00:00:00Z' })
+        .mockResolvedValueOnce({ healthy: false, checkedAt: '2026-01-01T00:05:00Z' });
+
+      render(
+        <MemoryRouter>
+          <SmtpWarningBanner />
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => expect(mockedGetSmtpHealth).toHaveBeenCalledTimes(1));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(15000);
+
+      await waitFor(() => expect(mockedGetSmtpHealth).toHaveBeenCalledTimes(2));
+      expect(await screen.findByRole('alert')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

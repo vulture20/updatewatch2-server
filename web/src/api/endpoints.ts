@@ -11,6 +11,7 @@ import type {
   LoginResponse,
   MeResponse,
   ReissueCertificateResult,
+  SmtpHealthStatus,
   UpdateAdminSettings,
   UpdateFilter,
   UpdateItem,
@@ -65,6 +66,8 @@ export const adminApi = {
 /** See NotificationsController — wires up the previously-unreachable SendTestEmailAsync. */
 export const notificationsApi = {
   testEmail: (toAddress: string) => apiClient.post<void>('/api/admin/notifications/test-email', { toAddress }),
+  // Cached, not a live probe — see SmtpHealthStatus's own doc comment (updatewatch2-server#12).
+  getSmtpHealth: () => apiClient.get<SmtpHealthStatus>('/api/admin/notifications/smtp-health'),
 };
 
 /** CA root rotation (updatewatch2-server#6) — see CertificateAuthorityController. */

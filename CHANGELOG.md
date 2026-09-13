@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.0] - 2026-09-13
+
+### Added
+
+- **The SMTP warning banner now reflects real mail-server reachability, not just whether it's configured — closes updatewatch2-server#12 ("wire the SMTP warning banner to the real reachability check, not just 'is it configured'").** CLAUDE.md's own requirement ("a red warning is shown to logged-in admins if the mail server is unreachable or misconfigured") only had its "misconfigured" half implemented before this; `IEmailNotificationService.IsHealthyAsync` already existed but nothing exposed its result to the frontend. A new `SmtpHealthCheckWorker` (this project's seventh server-side `BackgroundService`) refreshes a small in-memory `ISmtpHealthCache` from `IsHealthyAsync` every 5 minutes, and a new `GET /api/admin/notifications/smtp-health` (`NotificationsController`) reads that cache rather than ever performing the live TCP probe itself. Deliberately cached, not checked on every request — the explicit trade-off the issue itself called out as "worth deciding", chosen here over adding a real SMTP round trip to every settings-page load/poll. `web/`'s `SmtpWarningBanner` now combines two independent signals: `smtpConfigured` (from `GET /api/admin/settings`, still updated instantly by `AdminPage`'s own settings-save event — server v0.29.1's fix keeps working unchanged) and the new `smtpHealthy` (from the cached endpoint above, polled independently every 15 seconds, the same cadence `CertificateRejectionBanner`/`AgentUpdateErrorBanner` already use) — shown whenever *either* says something's wrong, matching CLAUDE.md's wording exactly rather than only the first half of it. The independent 15-second poll (rather than only reacting to a settings save) is what lets an outage that starts *while* an admin is already logged in and looking at another page become visible without a manual reload. No protocol or DB schema bump — purely an admin-facing addition, nothing on the agent-facing wire changed.
+
 ## [1.2.0] - 2026-09-13
 
 ### Added

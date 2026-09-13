@@ -109,6 +109,7 @@ builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddSingleton<ITrustedIpRangeProvider, EnvironmentTrustedIpRangeProvider>();
 builder.Services.AddSingleton<IBruteForceLoginService, BruteForceLoginService>();
 builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+builder.Services.AddSingleton<ISmtpHealthCache, SmtpHealthCache>();
 builder.Services.AddScoped<IAdminAccountService, AdminAccountService>();
 builder.Services.AddScoped<ISessionInvalidationService, SessionInvalidationService>();
 builder.Services.AddScoped<IActiveDirectoryAuthService, ActiveDirectoryAuthService>();
@@ -143,6 +144,7 @@ builder.Services.AddHostedService<CertificateExpiryWorker>();
 builder.Services.AddHostedService<DatabaseVacuumWorker>();
 builder.Services.AddHostedService<UpdateThresholdNotificationWorker>();
 builder.Services.AddHostedService<AgentOfflineNotificationWorker>();
+builder.Services.AddHostedService<SmtpHealthCheckWorker>();
 
 // The frontend (server/web) is a separate origin in development (its own
 // Vite dev server port) and, even in a same-origin production deployment

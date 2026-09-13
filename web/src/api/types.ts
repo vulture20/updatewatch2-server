@@ -192,6 +192,18 @@ export interface AdminSettings {
 }
 
 /**
+ * Backs SmtpWarningBanner's reachability half (updatewatch2-server#12) —
+ * a cached result from SmtpHealthCheckWorker's own periodic check, never a
+ * live probe performed by this request itself. checkedAt is null until
+ * that worker has run at least once (briefly, right after a fresh
+ * startup).
+ */
+export interface SmtpHealthStatus {
+  healthy: boolean;
+  checkedAt: string | null;
+}
+
+/**
  * smtpPassword/adBindPassword/gitHubToken: undefined/omitted leaves the
  * stored value unchanged; an empty string clears it. There is no way to
  * read any of them back out (AdminSettings only has the *Set booleans),
