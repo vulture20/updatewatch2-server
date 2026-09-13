@@ -1,0 +1,39 @@
+# Bootstrap data for ActiveDirectoryLdapIntegrationTests
+# (updatewatch2-server#13) — copied into place by scripts/run-ldap-test-server.sh
+# (never bind-mounted — see that script's own comment for why). Reproduces
+# this project's own manual OpenLDAP verification (see CLAUDE.md "Commands
+# (server)"): alice is a member of the "admins" login group, bob is a
+# directory user who is NOT — the case that actually matters, since
+# "authenticated but not authorized" is the one an LDAP bind alone can
+# never catch.
+#
+# dc=example,dc=org is osixia/openldap's own default base DN for
+# LDAP_DOMAIN=example.org (see run-ldap-test-server.sh) — not overridden,
+# to keep this file matched to that script without a separate setting.
+
+dn: ou=people,dc=example,dc=org
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=example,dc=org
+objectClass: organizationalUnit
+ou: groups
+
+dn: uid=alice,ou=people,dc=example,dc=org
+objectClass: inetOrgPerson
+uid: alice
+cn: Alice Example
+sn: Example
+userPassword: alice-p@ssw0rd
+
+dn: uid=bob,ou=people,dc=example,dc=org
+objectClass: inetOrgPerson
+uid: bob
+cn: Bob Example
+sn: Example
+userPassword: bob-p@ssw0rd
+
+dn: cn=admins,ou=groups,dc=example,dc=org
+objectClass: groupOfNames
+cn: admins
+member: uid=alice,ou=people,dc=example,dc=org

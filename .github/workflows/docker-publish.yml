@@ -8,6 +8,8 @@ on:
       - "src/**"
       - "web/**"
       - "docker/**"
+      - "tests/**"
+      - "scripts/**"
       - "VERSION"
       - ".github/workflows/docker-publish.yml"
   pull_request:
@@ -16,6 +18,8 @@ on:
       - "src/**"
       - "web/**"
       - "docker/**"
+      - "tests/**"
+      - "scripts/**"
       - ".github/workflows/docker-publish.yml"
   workflow_dispatch: {}
 
@@ -31,7 +35,12 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
-      - run: dotnet test
+      # Excludes ActiveDirectoryLdapIntegrationTests (updatewatch2-server#13)
+      # — those need a real LDAP server actually running (see the
+      # dedicated ldap-integration-test job below), which this job
+      # deliberately never sets up, so it stays fast for every ordinary
+      # push/PR.
+      - run: dotnet test --filter "Category!=LdapIntegration"
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -44,6 +53,34 @@ jobs:
         working-directory: web
       - run: npm test
         working-directory: web
+
+  # Real LDAP bind/search/group-membership coverage for
+  # ActiveDirectoryAuthService (updatewatch2-server#13) — deliberately its
+  # own job, not folded into `test` above, so pulling the OpenLDAP image
+  # and standing up a real directory never slows down the fast path every
+  # ordinary push/PR already takes. continue-on-error: true so a flaky
+  # container start (or an actual regression here) never blocks
+  # build-and-push/release — the same "don't let the newer, less-certain
+  # piece block the core pipeline" precedent the agent repo's own
+  # release.yml already established for its optional linux-packages job.
+  ldap-integration-test:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Start throwaway OpenLDAP test server
+        run: scripts/run-ldap-test-server.sh up
+
+      - run: dotnet test --filter "Category=LdapIntegration"
+
+      - name: Stop throwaway OpenLDAP test server
+        if: always()
+        run: scripts/run-ldap-test-server.sh down
 
   build-and-push:
     needs: test
