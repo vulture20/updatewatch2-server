@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
@@ -6,7 +7,11 @@ using UpdateWatch2.Server.UpdateFilters;
 
 namespace UpdateWatch2.Server.Agents;
 
-public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertificateRejectionService rejectionService) : IAgentService
+public class AgentService(
+    AppDbContext db,
+    IAuditLogService auditLog,
+    ICertificateRejectionService rejectionService,
+    IAdminSettingsStore settingsStore) : IAgentService
 {
     public async Task<IReadOnlyList<AgentListItemDto>> GetAllAsync(CancellationToken ct = default)
     {
@@ -17,12 +22,13 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
 
         var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct);
         var rejectionsByHostname = await rejectionService.GetRecentByHostnameAsync(ct);
+        var offlineThreshold = TimeSpan.FromMinutes(settingsStore.AgentOffline.ThresholdMinutes);
 
         return agents
             .Select(a => new AgentListItemDto(
                 a.Hostname, a.Approved, a.RebootRequired, countsByAgent.GetValueOrDefault(a.Id),
                 ResolveActiveRejection(rejectionsByHostname.GetValueOrDefault(a.Hostname), a.LastAliveAt)?.Reason,
-                a.OperatingSystem, a.LastAliveAt))
+                a.OperatingSystem, a.LastAliveAt, IsOffline(a.LastAliveAt, offlineThreshold)))
             .ToList();
     }
 
@@ -37,6 +43,7 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
         var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct, onlyAgentId: agent.Id);
         var rejectionsByHostname = await rejectionService.GetRecentByHostnameAsync(ct);
         var rejection = ResolveActiveRejection(rejectionsByHostname.GetValueOrDefault(agent.Hostname), agent.LastAliveAt);
+        var offlineThreshold = TimeSpan.FromMinutes(settingsStore.AgentOffline.ThresholdMinutes);
 
         return new AgentDetailDto(
             agent.Hostname, agent.DnsName, agent.OperatingSystem, agent.IpAddress, agent.AgentVersion,
@@ -44,8 +51,17 @@ public class AgentService(AppDbContext db, IAuditLogService auditLog, ICertifica
             agent.ClientCertificateThumbprint, agent.ClientCertificateThumbprintSha1, agent.ClientCertificateIssuedAt, agent.ClientCertificateExpiresAt,
             agent.PendingInstallRequestedAt, agent.LastInstallOutcome, agent.LastInstallErrorDetail, agent.LastInstallCompletedAt,
             agent.PendingRebootRequestedAt, agent.LastRebootOutcome, agent.LastRebootErrorDetail, agent.LastRebootCompletedAt, agent.BootTimeUtc,
-            agent.IssuingRootThumbprint, rejection?.Reason, rejection?.Timestamp);
+            agent.IssuingRootThumbprint, rejection?.Reason, rejection?.Timestamp, IsOffline(agent.LastAliveAt, offlineThreshold));
     }
+
+    /// <summary>
+    /// Live against the CURRENT admin-configured threshold, never a
+    /// periodically-updated stored flag — see <see cref="AgentOfflineOptions"/>'s
+    /// own doc comment for why. A never-heartbeated agent (<paramref name="lastAliveAt"/>
+    /// null) counts as offline too — it has never been seen online.
+    /// </summary>
+    private static bool IsOffline(DateTimeOffset? lastAliveAt, TimeSpan threshold) =>
+        lastAliveAt is null || DateTimeOffset.UtcNow - lastAliveAt.Value > threshold;
 
     /// <summary>
     /// A rejection only still flags an agent if there's been no successful

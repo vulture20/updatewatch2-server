@@ -33,6 +33,8 @@
     "lastSeen": "Last seen",
     "filteredCount": "{{filtered}} of {{total}} agents",
     "certificateRejectedIcon": "This agent presented a rejected certificate ({{reason}}) within the last 24 hours.",
+    "offline": "Offline",
+    "offlineIcon": "This agent hasn't sent a heartbeat within the configured offline threshold.",
     "stats": {
       "total": "Total agents",
       "pendingApproval": "Pending approval",
@@ -48,6 +50,9 @@
       "none": "None",
       "warning": "Warning",
       "warningPresent": "Certificate rejected",
+      "onlineStatus": "Online status",
+      "online": "Online",
+      "offline": "Offline",
       "clear": "Clear filters"
     }
   },
@@ -212,6 +217,12 @@
     "notificationUpdatesPerMachine": "Updates-per-machine threshold",
     "notificationAffectedMachines": "Affected-machines threshold",
     "notificationThresholdsHint": "Either condition on its own can be turned off — an admin can rely on just one of the two without the other ever firing. Each fires at most once per crossing; it clears once the count drops back below its threshold and can fire again the next time it's crossed.",
+    "agentOfflineNotifications": {
+      "title": "Agent offline notifications",
+      "offlineEnabled": "Email when an agent goes offline",
+      "recoveryEnabled": "Email when an agent comes back online",
+      "hint": "The offline threshold itself is configured under General → Offline detection. Each direction fires at most once per episode and can be turned off independently of the other."
+    },
     "adEnabled": "Enable Active Directory login",
     "adHost": "LDAP host",
     "adPort": "LDAP port",
@@ -224,6 +235,11 @@
     "adUserSearchFilterHint": "Must contain a {0} placeholder for the submitted username, e.g. (&(objectClass=user)(sAMAccountName={0})).",
     "adLoginGroupDn": "Login group DN",
     "adLoginGroupDnHint": "Only members of this group are granted login — checked via the group's own \"member\" attribute.",
+    "agentOffline": {
+      "title": "Offline detection",
+      "thresholdMinutes": "Offline threshold (minutes)",
+      "thresholdMinutesHint": "How long since an agent's last heartbeat before it's marked offline in the agent list/detail view. Takes effect immediately, no restart needed."
+    },
     "agentCertificateValidityDays": "Agent certificate validity (days)",
     "agentCertificateValidityDaysHint": "Applies to newly issued or renewed agent certificates only, not retroactively to already-issued ones. Each CA root's own lifetime is fixed and isn't configurable — rotate it below instead once it's due.",
     "certificateExpiryWarningLeadDays": "Certificate expiry lead time (days)",

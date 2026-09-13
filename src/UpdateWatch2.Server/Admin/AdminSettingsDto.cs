@@ -40,4 +40,7 @@ public record AdminSettingsDto(
     int AgentAutoUpdateCheckIntervalHours,
     int AuditLogRetentionDays,
     int CertificateExpiryWarningLeadDays,
-    bool CertificateExpiryNotificationsEnabled);
+    bool CertificateExpiryNotificationsEnabled,
+    int AgentOfflineThresholdMinutes,
+    bool AgentOfflineNotificationEnabled,
+    bool AgentOnlineRecoveryNotificationEnabled);

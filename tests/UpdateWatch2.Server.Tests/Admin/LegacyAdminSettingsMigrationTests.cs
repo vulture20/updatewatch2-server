@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.AgentUpdates;
+using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
@@ -77,7 +78,8 @@ public class LegacyAdminSettingsMigrationTests : IDisposable
             FakeOptions.Of(new NotificationThresholdOptions()),
             FakeOptions.Of(new AdOptions()),
             FakeOptions.Of(new CertificateOptions()),
-            FakeOptions.Of(new AgentAutoUpdateOptions()));
+            FakeOptions.Of(new AgentAutoUpdateOptions()),
+            FakeOptions.Of(new AgentOfflineOptions()));
 
         // The regression: this must not throw.
         await store.InitializeAsync();
@@ -104,6 +106,15 @@ public class LegacyAdminSettingsMigrationTests : IDisposable
         // backfilled to off.
         Assert.True(store.NotificationThresholds.UpdatesPerMachineEnabled);
         Assert.True(store.NotificationThresholds.AffectedMachinesEnabled);
+
+        // Same regression class again, for the new AgentOffline* columns:
+        // the AddColumn defaults must match AgentOfflineOptions' real
+        // defaults (15 minutes, both notification toggles on), or an
+        // upgrading deployment would silently get a 0-minute threshold
+        // (permanently "offline") and both checkboxes backfilled to off.
+        Assert.Equal(15, store.AgentOffline.ThresholdMinutes);
+        Assert.True(store.AgentOffline.OfflineNotificationEnabled);
+        Assert.True(store.AgentOffline.OnlineRecoveryNotificationEnabled);
     }
 
     private class FakeScopeFactory(DbContextOptions<AppDbContext> options) : IServiceScopeFactory

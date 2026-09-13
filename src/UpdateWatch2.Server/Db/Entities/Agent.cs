@@ -195,5 +195,36 @@ public class Agent
 
     public DateTimeOffset? LastAliveAt { get; set; }
 
+    /// <summary>
+    /// Internal bookkeeping for <see cref="Notifications.AgentOfflineNotificationWorker"/>
+    /// only — NOT what the admin UI's offline icon/filter reflects (that's
+    /// always computed live from <see cref="LastAliveAt"/> against the
+    /// current <see cref="Agents.AgentOfflineOptions.ThresholdMinutes"/>,
+    /// the same "never trust a periodically-updated stored flag for
+    /// display" precedent <see cref="Agents.AgentService"/>'s filtered
+    /// pending-update count already established). Holds the last offline
+    /// state the worker actually finished handling (notified, or decided
+    /// not to email but still recorded) — deliberately NOT "is this agent
+    /// offline right now"; a mismatch against a freshly computed live
+    /// check is what "pending, not yet handled" means, and it persists
+    /// unmodified across ticks until a send attempt actually succeeds or
+    /// is skipped, which is what lets a failed send retry cleanly on the
+    /// next tick. An earlier version of this worker instead gated on
+    /// <see cref="OfflineNotifiedAt"/> being null, which made a brand-new
+    /// agent that had never gone offline at all indistinguishable from one
+    /// genuinely pending a "back online" notification (both have
+    /// <c>OfflineCrossed = false</c>, <c>OfflineNotifiedAt = null</c>) —
+    /// caught by <c>Does_not_notify_while_the_agent_is_within_the_threshold</c>.
+    /// </summary>
+    public bool OfflineCrossed { get; set; }
+
+    /// <summary>
+    /// Purely informational — the last time this agent was actually
+    /// handled by <see cref="Notifications.AgentOfflineNotificationWorker"/>
+    /// (notified, or recorded as skipped). Deliberately does not gate
+    /// anything; see <see cref="OfflineCrossed"/>'s own doc comment for why.
+    /// </summary>
+    public DateTimeOffset? OfflineNotifiedAt { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

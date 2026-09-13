@@ -164,6 +164,13 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
             errors.Add("InstanceUrl must be an absolute http:// or https:// URL.");
         }
 
+        // Upper bound generous (a day) — same free-form-but-bounded style
+        // as the other admin-configurable interval-like settings above.
+        if (request.AgentOfflineThresholdMinutes is < 1 or > 1440)
+        {
+            errors.Add("AgentOfflineThresholdMinutes must be between 1 and 1440.");
+        }
+
         return errors;
     }
 }

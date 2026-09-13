@@ -111,5 +111,14 @@ public class AdminSettings
     /// <summary>See <see cref="Certificates.CertificateOptions.CertificateExpiryNotificationsEnabled"/>'s doc comment. Default true.</summary>
     public bool CertificateExpiryNotificationsEnabled { get; set; } = true;
 
+    /// <summary>See <see cref="Agents.AgentOfflineOptions.ThresholdMinutes"/>'s doc comment. Default 15.</summary>
+    public int AgentOfflineThresholdMinutes { get; set; } = 15;
+
+    /// <summary>See <see cref="Agents.AgentOfflineOptions.OfflineNotificationEnabled"/>'s doc comment. Default true.</summary>
+    public bool AgentOfflineNotificationEnabled { get; set; } = true;
+
+    /// <summary>See <see cref="Agents.AgentOfflineOptions.OnlineRecoveryNotificationEnabled"/>'s doc comment. Default true.</summary>
+    public bool AgentOnlineRecoveryNotificationEnabled { get; set; } = true;
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

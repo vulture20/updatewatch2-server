@@ -77,6 +77,8 @@ public class ActiveDirectoryAuthServiceTests
 
         public AgentAutoUpdateOptions AgentAutoUpdate => throw new NotSupportedException();
 
+        public UpdateWatch2.Server.Agents.AgentOfflineOptions AgentOffline => throw new NotSupportedException();
+
         public string LogLevel => throw new NotSupportedException();
 
         public int AuditLogRetentionDays => throw new NotSupportedException();

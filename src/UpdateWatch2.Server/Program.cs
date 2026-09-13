@@ -101,6 +101,7 @@ builder.Services.Configure<NotificationThresholdOptions>(builder.Configuration.G
 builder.Services.Configure<AdOptions>(builder.Configuration.GetSection(AdOptions.SectionName));
 builder.Services.Configure<CertificateOptions>(builder.Configuration.GetSection(CertificateOptions.SectionName));
 builder.Services.Configure<AgentAutoUpdateOptions>(builder.Configuration.GetSection(AgentAutoUpdateOptions.SectionName));
+builder.Services.Configure<AgentOfflineOptions>(builder.Configuration.GetSection(AgentOfflineOptions.SectionName));
 
 builder.Services.AddScoped<IAgentService, AgentService>();
 builder.Services.AddScoped<IUpdateService, UpdateService>();
@@ -141,6 +142,7 @@ builder.Services.AddHostedService<AuditLogRetentionWorker>();
 builder.Services.AddHostedService<CertificateExpiryWorker>();
 builder.Services.AddHostedService<DatabaseVacuumWorker>();
 builder.Services.AddHostedService<UpdateThresholdNotificationWorker>();
+builder.Services.AddHostedService<AgentOfflineNotificationWorker>();
 
 // The frontend (server/web) is a separate origin in development (its own
 // Vite dev server port) and, even in a same-origin production deployment

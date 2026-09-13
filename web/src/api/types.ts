@@ -21,6 +21,8 @@ export interface AgentListItem {
   /** Same free-text string as AgentDetail.operatingSystem (e.g. "Windows Server 2022") — drives the per-row OS icon and the OS/OS-family filter. */
   operatingSystem: string | null;
   lastAliveAt: string | null;
+  /** Live-computed from lastAliveAt against the current admin-configured offline threshold — never a stored/stale flag. Drives the offline icon and the online/offline filter. */
+  isOffline: boolean;
 }
 
 export interface AgentDetail {
@@ -63,6 +65,8 @@ export interface AgentDetail {
   /** Same as AgentListItem.lastCertificateRejectionReason — shown on the detail page alongside when it happened. */
   lastCertificateRejectionReason: string | null;
   lastCertificateRejectionAt: string | null;
+  /** Same live computation as AgentListItem.isOffline. */
+  isOffline: boolean;
 }
 
 /** Response of an admin-initiated certificate re-issuance (updatewatch2-server#8). */
@@ -179,6 +183,12 @@ export interface AdminSettings {
   certificateExpiryWarningLeadDays: number;
   /** On/off switch for the CA-root/server-leaf expiry emails specifically — doesn't affect the server leaf's own unconditional self-renewal. Default true. */
   certificateExpiryNotificationsEnabled: boolean;
+  /** Minutes since an agent's last heartbeat before it's considered offline (General tab). Default 15 — see AgentOfflineOptions. */
+  agentOfflineThresholdMinutes: number;
+  /** On/off switch for the "agent went offline" email — see AgentOfflineNotificationWorker. Default true. */
+  agentOfflineNotificationEnabled: boolean;
+  /** Independent on/off switch for the "agent back online" email. Default true. */
+  agentOnlineRecoveryNotificationEnabled: boolean;
 }
 
 /**

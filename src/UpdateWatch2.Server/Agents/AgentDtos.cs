@@ -25,7 +25,16 @@ public record AgentListItemDto(
     /// same as every other OS-family branch in this codebase.
     /// </summary>
     string? OperatingSystem,
-    DateTimeOffset? LastAliveAt);
+    DateTimeOffset? LastAliveAt,
+    /// <summary>
+    /// True when this agent hasn't heartbeated within the admin-configured
+    /// <see cref="AgentOfflineOptions.ThresholdMinutes"/> (or has never
+    /// heartbeated at all) — computed live against the current threshold
+    /// on every request, per <see cref="AgentOfflineOptions"/>'s own doc
+    /// comment, not from a periodically-updated stored flag. Flags the row
+    /// with a small icon in the overview list.
+    /// </summary>
+    bool IsOffline);
 
 /// <summary>Full shape for the per-agent detail view.</summary>
 public record AgentDetailDto(
@@ -76,7 +85,9 @@ public record AgentDetailDto(
     string? IssuingRootThumbprint,
     /// <summary>Same as <see cref="AgentListItemDto.LastCertificateRejectionReason"/> — the reason, if known, shown on the detail page.</summary>
     string? LastCertificateRejectionReason,
-    DateTimeOffset? LastCertificateRejectionAt);
+    DateTimeOffset? LastCertificateRejectionAt,
+    /// <summary>Same as <see cref="AgentListItemDto.IsOffline"/> — shown next to the hostname on the detail page's Identity card.</summary>
+    bool IsOffline);
 
 /// <summary>
 /// How many/which agents would stop authenticating if the CA's previous

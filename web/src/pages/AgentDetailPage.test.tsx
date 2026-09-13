@@ -60,6 +60,7 @@ const approvedAgent: AgentDetail = {
   issuingRootThumbprint: 'root-thumb-1',
   lastCertificateRejectionReason: null,
   lastCertificateRejectionAt: null,
+  isOffline: false,
 };
 
 function renderPage() {

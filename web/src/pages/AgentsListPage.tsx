@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { agentsApi } from '../api/endpoints';
 import type { AgentListItem } from '../api/types';
+import { OfflineIcon } from '../components/OfflineIcon';
 import { OsIcon } from '../components/OsIcon';
 import { WarningTriangleIcon } from '../components/WarningTriangleIcon';
 import { formatRelativeTime } from '../utils/relativeTime';
@@ -23,9 +24,18 @@ interface Filters {
   reboot: 'all' | 'yes' | 'no';
   updates: 'all' | 'yes' | 'no';
   warning: 'all' | 'yes' | 'no';
+  online: 'all' | 'online' | 'offline';
 }
 
-const DEFAULT_FILTERS: Filters = { osType: 'all', os: 'all', status: 'all', reboot: 'all', updates: 'all', warning: 'all' };
+const DEFAULT_FILTERS: Filters = {
+  osType: 'all',
+  os: 'all',
+  status: 'all',
+  reboot: 'all',
+  updates: 'all',
+  warning: 'all',
+  online: 'all',
+};
 
 export function AgentsListPage() {
   const { t, i18n } = useTranslation();
@@ -116,6 +126,8 @@ export function AgentsListPage() {
       if (filters.updates === 'no' && a.pendingUpdateCount > 0) return false;
       if (filters.warning === 'yes' && !a.lastCertificateRejectionReason) return false;
       if (filters.warning === 'no' && a.lastCertificateRejectionReason) return false;
+      if (filters.online === 'online' && a.isOffline) return false;
+      if (filters.online === 'offline' && !a.isOffline) return false;
       if (statFilter === 'pendingApproval' && a.approved) return false;
       if (statFilter === 'reboot' && !a.rebootRequired) return false;
       if (statFilter === 'pendingUpdates' && a.pendingUpdateCount === 0) return false;
@@ -245,6 +257,14 @@ export function AgentsListPage() {
                 <option value="no">{t('agents.filters.none')}</option>
               </select>
             </label>
+            <label>
+              {t('agents.filters.onlineStatus')}
+              <select value={filters.online} onChange={(e) => setFilters({ ...filters, online: e.target.value as Filters['online'] })}>
+                <option value="all">{t('agents.filters.all')}</option>
+                <option value="online">{t('agents.filters.online')}</option>
+                <option value="offline">{t('agents.filters.offline')}</option>
+              </select>
+            </label>
             {hasActiveFilters && (
               <button type="button" className="btn-ghost" onClick={clearFilters}>
                 {t('agents.filters.clear')}
@@ -313,6 +333,11 @@ export function AgentsListPage() {
                           <WarningTriangleIcon
                             title={t('agents.certificateRejectedIcon', { reason: agent.lastCertificateRejectionReason })}
                           />{' '}
+                        </>
+                      )}
+                      {agent.isOffline && (
+                        <>
+                          <OfflineIcon title={t('agents.offlineIcon')} />{' '}
                         </>
                       )}
                       <Link to={`/agents/${encodeURIComponent(agent.hostname)}`}>{agent.hostname}</Link>

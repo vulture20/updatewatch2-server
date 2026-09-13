@@ -123,6 +123,9 @@ const baseSettings = {
   auditLogRetentionDays: 90,
   certificateExpiryWarningLeadDays: 60,
   certificateExpiryNotificationsEnabled: true,
+  agentOfflineThresholdMinutes: 15,
+  agentOfflineNotificationEnabled: true,
+  agentOnlineRecoveryNotificationEnabled: true,
 };
 
 describe('AdminPage', () => {
@@ -490,6 +493,41 @@ describe('AdminPage', () => {
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(
       expect.objectContaining({ notificationRecipientAddress: 'alerts@example.com', certificateExpiryWarningLeadDays: 30 }),
+    );
+  });
+
+  it('submits an edited offline threshold and offline notification checkboxes', async () => {
+    mockedUpdateSettings.mockResolvedValue({
+      ...baseSettings,
+      agentOfflineThresholdMinutes: 30,
+      agentOfflineNotificationEnabled: false,
+      agentOnlineRecoveryNotificationEnabled: false,
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    const threshold = screen.getByLabelText('Offline threshold (minutes)');
+    await user.clear(threshold);
+    await user.type(threshold, '30');
+
+    await user.click(screen.getByRole('tab', { name: 'Notifications' }));
+    await user.click(screen.getByLabelText('Email when an agent goes offline'));
+    await user.click(screen.getByLabelText('Email when an agent comes back online'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentOfflineThresholdMinutes: 30,
+        agentOfflineNotificationEnabled: false,
+        agentOnlineRecoveryNotificationEnabled: false,
+      }),
     );
   });
 

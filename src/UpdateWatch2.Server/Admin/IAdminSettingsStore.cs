@@ -1,4 +1,5 @@
 using UpdateWatch2.Server.AgentUpdates;
+using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Notifications;
@@ -28,6 +29,9 @@ public interface IAdminSettingsStore
 
     /// <summary>Admin-configurable agent-auto-update toggle and optional GitHub token (updatewatch2-server#14).</summary>
     AgentAutoUpdateOptions AgentAutoUpdate { get; }
+
+    /// <summary>Admin-configurable offline-detection threshold and notification toggles — see <see cref="AgentOfflineOptions"/>'s own doc comment.</summary>
+    AgentOfflineOptions AgentOffline { get; }
 
     /// <summary>
     /// The persisted log level. Reflected here immediately on change, and

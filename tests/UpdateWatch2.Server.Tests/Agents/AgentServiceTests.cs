@@ -18,6 +18,7 @@ public class AgentServiceTests : IDisposable
     private readonly InternalCertificateAuthority _ca;
     private readonly AgentRegistrationService _registrationService;
     private readonly CertificateRejectionService _rejectionService;
+    private readonly FakeAdminSettingsStore _settingsStore = new();
 
     private static readonly AgentRegisterRequest BareRequest = new(null, null, null, null, null, null);
 
@@ -29,9 +30,9 @@ public class AgentServiceTests : IDisposable
 
         var auditLog = new AuditLogService(_db);
         _rejectionService = new CertificateRejectionService(_db, auditLog, NullLogger<CertificateRejectionService>.Instance);
-        _service = new AgentService(_db, auditLog, _rejectionService);
+        _service = new AgentService(_db, auditLog, _rejectionService, _settingsStore);
         _ca = new InternalCertificateAuthority(_certsDirectory);
-        _registrationService = new AgentRegistrationService(_db, _ca, auditLog, new FakeAdminSettingsStore(), new FakeAgentUpdateService());
+        _registrationService = new AgentRegistrationService(_db, _ca, auditLog, _settingsStore, new FakeAgentUpdateService());
     }
 
     public void Dispose()
@@ -502,5 +503,57 @@ public class AgentServiceTests : IDisposable
 
         var item = Assert.Single(list, a => a.Hostname == hostname);
         Assert.Null(item.LastCertificateRejectionReason);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_flags_an_agent_that_has_never_heartbeated_as_offline()
+    {
+        await _registrationService.RegisterAsync("never-alive-host", BareRequest);
+
+        var list = await _service.GetAllAsync();
+
+        Assert.True(Assert.Single(list, a => a.Hostname == "never-alive-host").IsOffline);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_flags_an_agent_as_offline_once_its_last_heartbeat_is_older_than_the_configured_threshold()
+    {
+        _settingsStore.AgentOffline = new AgentOfflineOptions { ThresholdMinutes = 15 };
+        var hostname = await RegisterApproveAndCertifyAsync("stale-heartbeat-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.LastAliveAt = DateTimeOffset.UtcNow.AddMinutes(-20);
+        await _db.SaveChangesAsync();
+
+        var list = await _service.GetAllAsync();
+
+        Assert.True(Assert.Single(list, a => a.Hostname == hostname).IsOffline);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_does_not_flag_an_agent_whose_last_heartbeat_is_within_the_configured_threshold()
+    {
+        _settingsStore.AgentOffline = new AgentOfflineOptions { ThresholdMinutes = 15 };
+        var hostname = await RegisterApproveAndCertifyAsync("fresh-heartbeat-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.LastAliveAt = DateTimeOffset.UtcNow.AddMinutes(-5);
+        await _db.SaveChangesAsync();
+
+        var list = await _service.GetAllAsync();
+
+        Assert.False(Assert.Single(list, a => a.Hostname == hostname).IsOffline);
+    }
+
+    [Fact]
+    public async Task GetByHostnameAsync_reflects_the_same_live_offline_computation_as_the_list()
+    {
+        _settingsStore.AgentOffline = new AgentOfflineOptions { ThresholdMinutes = 15 };
+        var hostname = await RegisterApproveAndCertifyAsync("detail-offline-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.LastAliveAt = DateTimeOffset.UtcNow.AddMinutes(-20);
+        await _db.SaveChangesAsync();
+
+        var detail = await _service.GetByHostnameAsync(hostname);
+
+        Assert.True(detail!.IsOffline);
     }
 }

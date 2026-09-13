@@ -334,6 +334,21 @@ export function AdminPage() {
           </div>
 
           <div className="card">
+            <span className="card-kicker">{t('admin.agentOffline.title')}</span>
+            <label>
+              {t('admin.agentOffline.thresholdMinutes')}
+              <input
+                type="number"
+                min={1}
+                max={1440}
+                value={form.agentOfflineThresholdMinutes}
+                onChange={(e) => update('agentOfflineThresholdMinutes', Number(e.target.value))}
+              />
+            </label>
+            <p className="field-hint">{t('admin.agentOffline.thresholdMinutesHint')}</p>
+          </div>
+
+          <div className="card">
             <span className="card-kicker">{t('admin.agentAutoUpdate.title')}</span>
             <p className="card-body">{t('admin.agentAutoUpdate.hint')}</p>
             <label>
@@ -530,6 +545,27 @@ export function AdminPage() {
             {t('admin.certificateExpiryNotifications.enabled')}
           </label>
           <p className="field-hint">{t('admin.certificateExpiryNotifications.hint')}</p>
+          </div>
+
+          <div className="card">
+          <span className="card-kicker">{t('admin.agentOfflineNotifications.title')}</span>
+          <label>
+            <input
+              type="checkbox"
+              checked={form.agentOfflineNotificationEnabled}
+              onChange={(e) => update('agentOfflineNotificationEnabled', e.target.checked)}
+            />
+            {t('admin.agentOfflineNotifications.offlineEnabled')}
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={form.agentOnlineRecoveryNotificationEnabled}
+              onChange={(e) => update('agentOnlineRecoveryNotificationEnabled', e.target.checked)}
+            />
+            {t('admin.agentOfflineNotifications.recoveryEnabled')}
+          </label>
+          <p className="field-hint">{t('admin.agentOfflineNotifications.hint')}</p>
           </div>
 
           <div className="card">

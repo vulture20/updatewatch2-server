@@ -33,6 +33,8 @@
     "lastSeen": "Zuletzt gesehen",
     "filteredCount": "{{filtered}} von {{total}} Agents",
     "certificateRejectedIcon": "Dieser Agent hat innerhalb der letzten 24 Stunden ein abgelehntes Zertifikat vorgelegt ({{reason}}).",
+    "offline": "Offline",
+    "offlineIcon": "Dieser Agent hat innerhalb der konfigurierten Warnschwelle keinen Heartbeat gesendet.",
     "stats": {
       "total": "Agents gesamt",
       "pendingApproval": "Genehmigung ausstehend",
@@ -48,6 +50,9 @@
       "none": "Keine",
       "warning": "Warnung",
       "warningPresent": "Zertifikat abgelehnt",
+      "onlineStatus": "Online-Status",
+      "online": "Online",
+      "offline": "Offline",
       "clear": "Filter zurücksetzen"
     }
   },
@@ -212,6 +217,12 @@
     "notificationUpdatesPerMachine": "Schwelle Updates pro Maschine",
     "notificationAffectedMachines": "Schwelle betroffene Maschinen",
     "notificationThresholdsHint": "Jede der beiden Bedingungen kann einzeln ausgeschaltet werden — so kann sich ein Admin auf nur eine der beiden verlassen, ohne dass die andere jemals auslöst. Jede Bedingung löst pro Überschreitung höchstens einmal aus; sie setzt sich zurück, sobald der Wert wieder unter den Schwellenwert fällt, und kann beim nächsten Überschreiten erneut auslösen.",
+    "agentOfflineNotifications": {
+      "title": "Agent-Offline-Benachrichtigungen",
+      "offlineEnabled": "E-Mail, wenn ein Agent offline geht",
+      "recoveryEnabled": "E-Mail, wenn ein Agent wieder online geht",
+      "hint": "Die Warnschwelle selbst wird unter Allgemein → Offline-Erkennung eingestellt. Jede Richtung löst pro Vorfall höchstens einmal aus und kann unabhängig von der anderen ausgeschaltet werden."
+    },
     "adEnabled": "Active-Directory-Anmeldung aktivieren",
     "adHost": "LDAP-Host",
     "adPort": "LDAP-Port",
@@ -224,6 +235,11 @@
     "adUserSearchFilterHint": "Muss einen {0}-Platzhalter für den eingegebenen Benutzernamen enthalten, z. B. (&(objectClass=user)(sAMAccountName={0})).",
     "adLoginGroupDn": "Login-Gruppen-DN",
     "adLoginGroupDnHint": "Nur Mitglieder dieser Gruppe erhalten Login-Berechtigung — geprüft über das \"member\"-Attribut der Gruppe.",
+    "agentOffline": {
+      "title": "Offline-Erkennung",
+      "thresholdMinutes": "Warnschwelle offline (Minuten)",
+      "thresholdMinutesHint": "Wie lange seit dem letzten Heartbeat eines Agents, bevor er in der Agent-Liste/-Detailansicht als offline markiert wird. Wird sofort wirksam, kein Neustart nötig."
+    },
     "agentCertificateValidityDays": "Gültigkeitsdauer Agent-Zertifikat (Tage)",
     "agentCertificateValidityDaysHint": "Gilt nur für neu ausgestellte oder erneuerte Agent-Zertifikate, nicht rückwirkend für bereits ausgestellte. Die Laufzeit jeder CA-Wurzel selbst ist fest und hier nicht konfigurierbar — bei Bedarf unten rotieren.",
     "certificateExpiryWarningLeadDays": "Vorlaufzeit Zertifikatsablauf (Tage)",

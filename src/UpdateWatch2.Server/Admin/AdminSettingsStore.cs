@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using UpdateWatch2.Server.AgentUpdates;
+using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
@@ -18,6 +19,7 @@ public class AdminSettingsStore(
     IOptions<AdOptions> defaultAd,
     IOptions<CertificateOptions> defaultCertificate,
     IOptions<AgentAutoUpdateOptions> defaultAgentAutoUpdate,
+    IOptions<AgentOfflineOptions> defaultAgentOffline,
     IConfiguration? configuration = null) : IAdminSettingsStore
 {
     private readonly object _lock = new();
@@ -28,6 +30,7 @@ public class AdminSettingsStore(
     private AdOptions _ad = defaultAd.Value;
     private CertificateOptions _certificate = defaultCertificate.Value;
     private AgentAutoUpdateOptions _agentAutoUpdate = defaultAgentAutoUpdate.Value;
+    private AgentOfflineOptions _agentOffline = defaultAgentOffline.Value;
     private string _logLevel = "INFO";
     private int _auditLogRetentionDays = DefaultAuditLogRetentionDays;
 
@@ -61,6 +64,11 @@ public class AdminSettingsStore(
     public AgentAutoUpdateOptions AgentAutoUpdate
     {
         get { lock (_lock) return _agentAutoUpdate; }
+    }
+
+    public AgentOfflineOptions AgentOffline
+    {
+        get { lock (_lock) return _agentOffline; }
     }
 
     public string LogLevel
@@ -143,6 +151,9 @@ public class AdminSettingsStore(
         row.AuditLogRetentionDays = request.AuditLogRetentionDays;
         row.CertificateExpiryWarningLeadDays = request.CertificateExpiryWarningLeadDays;
         row.CertificateExpiryNotificationsEnabled = request.CertificateExpiryNotificationsEnabled;
+        row.AgentOfflineThresholdMinutes = request.AgentOfflineThresholdMinutes;
+        row.AgentOfflineNotificationEnabled = request.AgentOfflineNotificationEnabled;
+        row.AgentOnlineRecoveryNotificationEnabled = request.AgentOnlineRecoveryNotificationEnabled;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -190,7 +201,10 @@ public class AdminSettingsStore(
                 _agentAutoUpdate.CheckIntervalHours,
                 _auditLogRetentionDays,
                 _certificate.CertificateExpiryWarningLeadDays,
-                _certificate.CertificateExpiryNotificationsEnabled);
+                _certificate.CertificateExpiryNotificationsEnabled,
+                _agentOffline.ThresholdMinutes,
+                _agentOffline.OfflineNotificationEnabled,
+                _agentOffline.OnlineRecoveryNotificationEnabled);
         }
     }
 
@@ -233,6 +247,9 @@ public class AdminSettingsStore(
         AuditLogRetentionDays = DefaultAuditLogRetentionDays,
         CertificateExpiryWarningLeadDays = defaultCertificate.Value.CertificateExpiryWarningLeadDays,
         CertificateExpiryNotificationsEnabled = defaultCertificate.Value.CertificateExpiryNotificationsEnabled,
+        AgentOfflineThresholdMinutes = defaultAgentOffline.Value.ThresholdMinutes,
+        AgentOfflineNotificationEnabled = defaultAgentOffline.Value.OfflineNotificationEnabled,
+        AgentOnlineRecoveryNotificationEnabled = defaultAgentOffline.Value.OnlineRecoveryNotificationEnabled,
     };
 
     private void Apply(AdminSettings row)
@@ -286,6 +303,12 @@ public class AdminSettingsStore(
             GitHubToken = row.GitHubToken,
             CheckIntervalHours = row.AgentAutoUpdateCheckIntervalHours,
         };
+        var agentOffline = new AgentOfflineOptions
+        {
+            ThresholdMinutes = row.AgentOfflineThresholdMinutes,
+            OfflineNotificationEnabled = row.AgentOfflineNotificationEnabled,
+            OnlineRecoveryNotificationEnabled = row.AgentOnlineRecoveryNotificationEnabled,
+        };
 
         lock (_lock)
         {
@@ -295,6 +318,7 @@ public class AdminSettingsStore(
             _ad = ad;
             _certificate = certificate;
             _agentAutoUpdate = agentAutoUpdate;
+            _agentOffline = agentOffline;
             _logLevel = row.LogLevel;
             _auditLogRetentionDays = row.AuditLogRetentionDays;
         }

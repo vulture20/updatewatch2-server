@@ -24,6 +24,7 @@ function makeAgent(overrides: Partial<AgentListItem> & { hostname: string }): Ag
     lastCertificateRejectionReason: null,
     operatingSystem: null,
     lastAliveAt: null,
+    isOffline: false,
     ...overrides,
   };
 }
@@ -179,6 +180,27 @@ describe('AgentsListPage', () => {
 
     await user.click(screen.getByRole('button', { name: /clear filters/i }));
     expect(screen.getByText('win-host')).toBeInTheDocument();
+  });
+
+  it('filters by online status and marks an offline agent with the offline icon', async () => {
+    const user = userEvent.setup();
+    mockedList.mockResolvedValue([
+      makeAgent({ hostname: 'online-host', isOffline: false }),
+      makeAgent({ hostname: 'offline-host', isOffline: true }),
+    ]);
+
+    renderPage();
+    await screen.findByText('online-host');
+
+    expect(screen.getByTitle(/heartbeat/i)).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Online status'), 'offline');
+
+    expect(screen.queryByText('online-host')).not.toBeInTheDocument();
+    expect(screen.getByText('offline-host')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /clear filters/i }));
+    expect(screen.getByText('online-host')).toBeInTheDocument();
   });
 
   it('sorts the table when a column header is clicked', async () => {

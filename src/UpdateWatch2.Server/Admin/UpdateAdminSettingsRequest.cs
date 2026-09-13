@@ -44,4 +44,7 @@ public record UpdateAdminSettingsRequest(
     bool CertificateExpiryNotificationsEnabled = true,
     bool NotificationUpdatesPerMachineEnabled = true,
     bool NotificationAffectedMachinesEnabled = true,
-    string? InstanceUrl = null);
+    string? InstanceUrl = null,
+    int AgentOfflineThresholdMinutes = 15,
+    bool AgentOfflineNotificationEnabled = true,
+    bool AgentOnlineRecoveryNotificationEnabled = true);

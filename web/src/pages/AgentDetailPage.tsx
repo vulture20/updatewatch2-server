@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { OneTimeSecretDialog } from '../components/OneTimeSecretDialog';
+import { OfflineIcon } from '../components/OfflineIcon';
 import { WarningTriangleIcon } from '../components/WarningTriangleIcon';
 import { agentsApi } from '../api/endpoints';
 import type { AgentDetail, UpdateItem } from '../api/types';
@@ -182,11 +183,13 @@ export function AgentDetailPage() {
 
       <div className="detail-header">
         <div className="detail-header-title">
+          {agent.isOffline && <OfflineIcon title={t('agents.offlineIcon')} />}
           <h1>{agent.hostname}</h1>
           <span className={agent.approved ? 'tag tag-accent' : 'tag tag-outline'}>
             {agent.approved ? t('agents.approved') : t('agents.filters.pending')}
           </span>
           {agent.rebootRequired && <span className="tag tag-neutral">{t('agents.rebootRequired')}</span>}
+          {agent.isOffline && <span className="tag tag-neutral">{t('agents.offline')}</span>}
         </div>
         <div className="detail-header-actions">
           {!agent.approved && (
