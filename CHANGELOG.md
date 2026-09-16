@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.5] - 2026-09-16
+
+### Fixed
+
+- **The agents overview list's "Status" filter dropdown still offered the old "Approved"/"Pending" options after the status badge itself was changed to show "Unapproved"/"Updates"/"Reboot" instead — an oversight from that change, caught by the user directly.** The filter now offers the same three states the badge can actually show (`Filters['status']`: `'unapproved' | 'installing' | 'rebooting'`, replacing `'approved' | 'pending'`), filtering on the same `pendingInstallRequestedAt`/`pendingRebootRequestedAt` fields the badge itself reads rather than a since-removed notion of "approved" as a filterable status.
+
 ## [1.3.4] - 2026-09-16
 
 ### Added

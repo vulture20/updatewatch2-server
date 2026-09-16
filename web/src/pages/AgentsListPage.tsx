@@ -20,7 +20,7 @@ type StatFilter = 'pendingApproval' | 'reboot' | 'pendingUpdates' | null;
 interface Filters {
   osType: 'all' | 'windows' | 'linux';
   os: string;
-  status: 'all' | 'approved' | 'pending';
+  status: 'all' | 'unapproved' | 'installing' | 'rebooting';
   reboot: 'all' | 'yes' | 'no';
   updates: 'all' | 'yes' | 'no';
   warning: 'all' | 'yes' | 'no';
@@ -118,8 +118,9 @@ export function AgentsListPage() {
       if (filters.osType === 'windows' && !isWindows(a)) return false;
       if (filters.osType === 'linux' && (isWindows(a) || !a.operatingSystem)) return false;
       if (filters.os !== 'all' && a.operatingSystem !== filters.os) return false;
-      if (filters.status === 'approved' && !a.approved) return false;
-      if (filters.status === 'pending' && a.approved) return false;
+      if (filters.status === 'unapproved' && a.approved) return false;
+      if (filters.status === 'installing' && !a.pendingInstallRequestedAt) return false;
+      if (filters.status === 'rebooting' && !a.pendingRebootRequestedAt) return false;
       if (filters.reboot === 'yes' && !a.rebootRequired) return false;
       if (filters.reboot === 'no' && a.rebootRequired) return false;
       if (filters.updates === 'yes' && a.pendingUpdateCount === 0) return false;
@@ -229,8 +230,9 @@ export function AgentsListPage() {
               {t('agents.filters.status')}
               <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value as Filters['status'] })}>
                 <option value="all">{t('agents.filters.all')}</option>
-                <option value="approved">{t('agents.approved')}</option>
-                <option value="pending">{t('agents.filters.pending')}</option>
+                <option value="unapproved">{t('agents.statusValues.unapproved')}</option>
+                <option value="installing">{t('agents.statusValues.installing')}</option>
+                <option value="rebooting">{t('agents.statusValues.rebooting')}</option>
               </select>
             </label>
             <label>

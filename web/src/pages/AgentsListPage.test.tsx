@@ -213,6 +213,36 @@ describe('AgentsListPage', () => {
     expect(screen.getByText('pending-host')).toBeInTheDocument();
   });
 
+  it('filters by the Status dropdown, matching the same states the status badge shows', async () => {
+    const user = userEvent.setup();
+    mockedList.mockResolvedValue([
+      makeAgent({ hostname: 'idle-host' }),
+      makeAgent({ hostname: 'unapproved-host', approved: false }),
+      makeAgent({ hostname: 'installing-host', pendingInstallRequestedAt: '2026-09-16T10:00:00Z' }),
+      makeAgent({ hostname: 'rebooting-host', pendingRebootRequestedAt: '2026-09-16T10:00:00Z' }),
+    ]);
+
+    renderPage();
+    await screen.findByText('idle-host');
+
+    await user.selectOptions(screen.getByLabelText('Status'), 'unapproved');
+    expect(screen.getByText('unapproved-host')).toBeInTheDocument();
+    expect(screen.queryByText('idle-host')).not.toBeInTheDocument();
+    expect(screen.queryByText('installing-host')).not.toBeInTheDocument();
+    expect(screen.queryByText('rebooting-host')).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Status'), 'installing');
+    expect(screen.getByText('installing-host')).toBeInTheDocument();
+    expect(screen.queryByText('unapproved-host')).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Status'), 'rebooting');
+    expect(screen.getByText('rebooting-host')).toBeInTheDocument();
+    expect(screen.queryByText('installing-host')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /clear filters/i }));
+    expect(screen.getByText('idle-host')).toBeInTheDocument();
+  });
+
   it('filters by the OS-type dropdown', async () => {
     const user = userEvent.setup();
     mockedList.mockResolvedValue([
