@@ -190,6 +190,38 @@ public class UpdateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task An_update_removed_by_a_successful_install_ack_is_re_added_with_a_fresh_DetectedAt_if_a_later_report_still_lists_it()
+    {
+        // Answers a direct question: if the "successful" install didn't
+        // actually take (needs a reboot to complete, failed silently at
+        // the OS level despite reporting success, ...) and the agent's own
+        // next real check still finds it pending, is it re-added? Yes —
+        // AcknowledgeInstallAsync's immediate removal has no way to tell
+        // "genuinely gone" apart from "not yet confirmed gone", so the
+        // next real report is what's actually authoritative, exactly as
+        // documented on RemoveJustInstalledItemsAsync. The one visible
+        // side effect: DetectedAt resets to the re-detection time, not the
+        // original one, since as far as the system can tell this is a
+        // fresh sighting, indistinguishable from a genuinely new update.
+        var agent = new Agent { Hostname = "readd-after-ack-host", Approved = true, PendingInstallUpdateIds = """["KB1"]""" };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        _db.UpdateItems.Add(new UpdateItem { AgentId = agent.Id, Title = "Security Update", PackageId = "KB1" });
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeInstallAsync("readd-after-ack-host", InstallOutcome.Succeeded, errorDetail: null);
+        Assert.Empty(await _db.UpdateItems.Where(u => u.AgentId == agent.Id).ToListAsync());
+
+        var before = DateTimeOffset.UtcNow;
+        await _service.ReportUpdatesAsync("readd-after-ack-host", new ReportUpdatesRequest(
+            [new ReportedUpdate("Security Update", "KB1", null)], RebootRequired: false));
+
+        var reAdded = await _db.UpdateItems.SingleAsync(u => u.AgentId == agent.Id);
+        Assert.Equal("KB1", reAdded.PackageId);
+        Assert.True(reAdded.DetectedAt >= before);
+    }
+
+    [Fact]
     public async Task AcknowledgeInstallAsync_with_no_selection_removes_everything_pending_immediately()
     {
         // No selection == "install everything currently pending" was

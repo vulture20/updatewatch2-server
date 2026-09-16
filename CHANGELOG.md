@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.6] - 2026-09-16
+
+### Added
+
+- **New regression test confirming behavior a user asked about directly: does an update immediately removed by a successful install-ack (v1.3.4) get re-added if a later real report still finds it pending?** Yes — `RemoveJustInstalledItemsAsync`'s removal has no way to distinguish "genuinely gone" from "not yet confirmed gone", so the next real `ReportUpdatesAsync` call is what's actually authoritative; not finding a matching existing row (since it was just deleted) means the update is added back exactly like a freshly-discovered one, with `DetectedAt` reset to the re-detection time rather than the original one. No behavior change — this confirms the already-intended self-correcting design with an actual test rather than only a doc comment.
+
 ## [1.3.5] - 2026-09-16
 
 ### Fixed
