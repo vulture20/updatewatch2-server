@@ -79,6 +79,9 @@ public class AgentService(
     private static CertificateRejectionDto? ResolveActiveRejection(CertificateRejectionDto? rejection, DateTimeOffset? lastAliveAt) =>
         rejection is not null && lastAliveAt is not null && lastAliveAt >= rejection.Timestamp ? null : rejection;
 
+    public async Task<int> GetTotalPendingUpdateCountAsync(CancellationToken ct = default) =>
+        (await CountFilteredPendingUpdatesByAgentAsync(ct)).Values.Sum();
+
     /// <summary>
     /// Pending-update count per agent, excluding anything an active
     /// <see cref="Db.Entities.UpdateFilter"/> matches — computed live on

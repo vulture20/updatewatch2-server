@@ -97,6 +97,10 @@ Einfach das neue Image ziehen und den Container neu anlegen (gleiche `docker run
 
 Das Image besitzt einen `HEALTHCHECK` (nicht authentifiziertes `GET /api/health`, alle 30s) — `docker ps` zeigt `(healthy)`/`(unhealthy)`, und `docker inspect --format='{{json .State.Health}}' <container>` liefert die Prüfhistorie. Er bestätigt nur, dass der Prozess läuft und antwortet, nicht dass die Datenbank erreichbar ist — ein vorübergehendes SQLite-Problem löst so keine Neustart-Schleife aus.
 
+### Anzahl ausstehender Updates (nicht authentifiziert)
+
+`GET /api/update-count` liefert die flottenweite Gesamtzahl ausstehender Updates (über alle Agents hinweg, unter Ausschluss aller Updates, die einem aktiven Update-Filter entsprechen) als `{"pendingUpdateCount": N}` — ohne Anmeldung, gedacht für eine externe Anzeige ohne eigene Session, z. B. einen Stream-Deck-Button. Nur über den browserseitigen Port (8795) erreichbar, nicht über den agentenseitigen mTLS-Port (8796), und liefert nie eine Aufschlüsselung nach einzelnen Agents.
+
 ## 🧱 Technischer Stack
 
 - **Backend:** ASP.NET Core (.NET 10), EF Core + SQLite, Swashbuckle für die OpenAPI/Swagger-Oberfläche. `System.DirectoryServices.Protocols` für plattformübergreifendes LDAP (Active-Directory-Login) — der Server muss dafür nicht selbst unter Windows laufen.

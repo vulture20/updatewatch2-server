@@ -97,6 +97,10 @@ Pull the new image and recreate the container (same `docker run` flags, or `dock
 
 The image has a `HEALTHCHECK` (unauthenticated `GET /api/health`, every 30s) — `docker ps` shows `(healthy)`/`(unhealthy)`, and `docker inspect --format='{{json .State.Health}}' <container>` gives the check history. It only confirms the process is up and serving requests, not that the database is reachable, so a transient SQLite hiccup won't trigger a restart loop.
 
+### Pending update count (unauthenticated)
+
+`GET /api/update-count` returns the fleet-wide total of pending updates (across every agent, with any active update filter already excluded) as `{"pendingUpdateCount": N}` — no session required, meant for an external display with no login of its own, e.g. a Stream Deck button. It's reachable only on the browser-facing port (8795), not the agent-facing mTLS port (8796), and never exposes a per-agent breakdown.
+
 ## 🧱 Tech stack
 
 - **Backend:** ASP.NET Core (.NET 10), EF Core + SQLite, Swashbuckle for the OpenAPI/Swagger UI. `System.DirectoryServices.Protocols` for cross-platform LDAP (Active Directory login) — the server doesn't need to run on Windows to talk to a directory.

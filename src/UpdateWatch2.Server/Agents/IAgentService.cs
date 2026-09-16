@@ -7,6 +7,16 @@ public interface IAgentService
     Task<AgentDetailDto?> GetByHostnameAsync(string hostname, CancellationToken ct = default);
 
     /// <summary>
+    /// The fleet-wide total of pending updates across every agent, filtered
+    /// the same way <see cref="GetAllAsync"/>'s per-agent counts are (an
+    /// active <see cref="Db.Entities.UpdateFilter"/> excludes a matching
+    /// update here too) — the one number an external, unauthenticated
+    /// display (e.g. a Stream Deck button) needs, without exposing
+    /// anything per-agent.
+    /// </summary>
+    Task<int> GetTotalPendingUpdateCountAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Approves a single unconfirmed agent. Returns false if no agent with
     /// that hostname exists. Certificate issuance (see CLAUDE.md onboarding
     /// flow) does not happen synchronously here — it happens lazily, the

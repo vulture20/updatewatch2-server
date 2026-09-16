@@ -75,6 +75,7 @@ public class AllowedOnAgentPortAttributeTests
             typeof(AgentsController), typeof(AdminController), typeof(AuthController),
             typeof(HealthController), typeof(CertificateAuthorityController),
             typeof(AgentUpdatesController), typeof(UpdateFiltersController), typeof(NotificationsController),
+            typeof(UpdateCountController),
         };
 
         foreach (var controller in adminOnlyControllers)

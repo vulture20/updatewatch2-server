@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.2] - 2026-09-16
+
+### Added
+
+- **New unauthenticated `GET /api/update-count` endpoint, at the user's explicit request, for displaying the fleet-wide pending-update count on an external device with no session of its own (e.g. a Stream Deck button).** Deliberately anonymous (no `[Authorize]`, matching `HealthController`'s model) and deliberately not marked `[AllowedOnAgentPort]`, so it's reachable only on the browser-facing port (8795), never the agent-facing mTLS port (8796). Returns just the one aggregate number (`{"pendingUpdateCount": N}`), never a per-agent breakdown, so an unauthenticated caller can't learn anything about individual agents. Reuses the exact same filtered-count logic `AgentService`'s per-agent counts already use (`UpdateFilterMatcher.IsExcluded` against the live admin filter list, not the raw unfiltered per-report column) via a new `IAgentService.GetTotalPendingUpdateCountAsync`, so this number always agrees with what the admin UI itself shows as pending, filters included.
+
 ## [1.3.1] - 2026-09-13
 
 ### Fixed

@@ -66,6 +66,21 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
     }
 
     [Fact]
+    public async Task Update_count_is_reachable_with_no_session_at_all()
+    {
+        // A separate, never-logged-in client — deliberately not _client,
+        // which InitializeAsync already logged in — because the whole
+        // point of this endpoint is that an external display (a Stream
+        // Deck button) can call it with no admin session at all.
+        using var anonymousClient = _factory.CreateClient();
+
+        var response = await anonymousClient.GetFromJsonAsync<UpdateCountResponse>("/api/update-count");
+
+        Assert.NotNull(response);
+        Assert.Equal(0, response.pendingUpdateCount);
+    }
+
+    [Fact]
     public async Task Unknown_agent_returns_not_found()
     {
         var response = await _client.GetAsync("/api/agents/does-not-exist");
@@ -179,4 +194,6 @@ public class ApiEndpointTests : IClassFixture<WebApplicationFactory<Program>>, I
     }
 
     private record VersionResponse(string server, string protocol, string database);
+
+    private record UpdateCountResponse(int pendingUpdateCount);
 }

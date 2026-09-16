@@ -389,6 +389,26 @@ public class AgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetTotalPendingUpdateCountAsync_sums_filtered_counts_across_every_agent()
+    {
+        var hostnameA = await RegisterApproveAndCertifyAsync("total-count-host-a");
+        var hostnameB = await RegisterApproveAndCertifyAsync("total-count-host-b");
+        var agentA = await _db.Agents.SingleAsync(a => a.Hostname == hostnameA);
+        var agentB = await _db.Agents.SingleAsync(a => a.Hostname == hostnameB);
+        _db.UpdateItems.AddRange(
+            new UpdateItem { AgentId = agentA.Id, Title = "Security Intelligence-Update für Microsoft Defender Antivirus" },
+            new UpdateItem { AgentId = agentA.Id, Title = "2026-08 Kumulatives Update für Windows 11" },
+            new UpdateItem { AgentId = agentB.Id, Title = "2026-08 Kumulatives Update für Windows 10" });
+        _db.UpdateFilters.Add(new UpdateFilter { Name = "Defender", Pattern = "Security Intelligence-Update" });
+        await _db.SaveChangesAsync();
+
+        var total = await _service.GetTotalPendingUpdateCountAsync();
+
+        // 3 reported updates, minus the one matching the active filter.
+        Assert.Equal(2, total);
+    }
+
+    [Fact]
     public async Task GetAllAsync_flags_an_agent_that_recently_presented_a_rejected_certificate()
     {
         var hostname = await RegisterApproveAndCertifyAsync("cert-flagged-host");
