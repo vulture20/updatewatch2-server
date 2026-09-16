@@ -41,8 +41,9 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
             AdEncryption = Enum.Parse<AdEncryption>(request.AdEncryption, ignoreCase: true).ToString(),
         };
 
+        var before = settingsStore.ToDto();
         var updated = await settingsStore.UpdateAsync(normalized, ct);
-        await auditLog.LogAsync(User.Identity!.Name!, "admin.settings.updated", ct: ct);
+        await auditLog.LogAsync(User.Identity!.Name!, "admin.settings.updated", AdminSettingsDiffFormatter.Format(before, updated), ct);
         return Ok(updated);
     }
 

@@ -12,6 +12,13 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.4] - 2026-09-16
+
+### Added
+
+- **Audit log entries for `admin.settings.updated` now carry a field-level "before -> after" diff, at the user's explicit request ("Im Audit-Log steht oft nur 'admin.settings.updated' und weitere Details fehlen. Die könnten noch den Unterschied von vorher zu nachher widerspiegeln.").** New `AdminSettingsDiffFormatter.Format`, reflection-based over `AdminSettingsDto` so a newly added settings field is covered automatically with no matching edit needed here. `AdminController.Update` now captures the settings snapshot before calling `IAdminSettingsStore.UpdateAsync` and passes the diff as the audit entry's `Details`; null (no entry text) when a save genuinely changed nothing. Safe to log every differing field's before/after value as-is — `AdminSettingsDto` never carries a raw secret value in the first place (`SmtpPassword`/`AdBindPassword`/`GitHubToken` are represented only as `*Set` booleans on this DTO), so there is nothing here that needed redacting.
+- **The agents overview list's status column no longer shows a redundant "Approved" badge for an approved, idle agent, and now shows an "Updates"/"Reboot" activity badge while an admin-triggered install or reboot is pending — at the user's explicit request ("Der Status 'Bestätigt' ist eigentlich unnötig. Hier sollte nur 'Unbestätigt' stehen und am besten noch der Status, ob gerade Updates installiert ('Updates') oder ein Neustart durchgeführt wird ('Neustart').").** `AgentListItemDto` gained `PendingInstallRequestedAt`/`PendingRebootRequestedAt` (mirroring the fields `AgentDetailDto` already had) so the overview list can show this without a per-agent round trip. An unapproved agent still shows "Unapproved"/"Unbestätigt"; an approved agent shows "Reboot" (taking priority, since a reboot ends the process a pending install's own follow-up report would otherwise still be running in) or "Updates" while one of those is pending, and no badge at all once idle.
+
 ## [1.3.3] - 2026-09-16
 
 ### Fixed

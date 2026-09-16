@@ -35,6 +35,11 @@
     "certificateRejectedIcon": "Dieser Agent hat innerhalb der letzten 24 Stunden ein abgelehntes Zertifikat vorgelegt ({{reason}}).",
     "offline": "Offline",
     "offlineIcon": "Dieser Agent hat innerhalb der konfigurierten Warnschwelle keinen Heartbeat gesendet.",
+    "statusValues": {
+      "unapproved": "Unbestätigt",
+      "installing": "Updates",
+      "rebooting": "Neustart"
+    },
     "stats": {
       "total": "Agents gesamt",
       "pendingApproval": "Genehmigung ausstehend",

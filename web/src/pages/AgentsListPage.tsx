@@ -346,9 +346,13 @@ export function AgentsListPage() {
                       <OsIcon operatingSystem={agent.operatingSystem} /> {agent.operatingSystem ?? '—'}
                     </td>
                     <td>
-                      <span className={agent.approved ? 'tag tag-accent' : 'tag tag-outline'}>
-                        {agent.approved ? t('agents.approved') : t('agents.filters.pending')}
-                      </span>
+                      {!agent.approved ? (
+                        <span className="tag tag-outline">{t('agents.statusValues.unapproved')}</span>
+                      ) : agent.pendingRebootRequestedAt ? (
+                        <span className="tag tag-accent">{t('agents.statusValues.rebooting')}</span>
+                      ) : agent.pendingInstallRequestedAt ? (
+                        <span className="tag tag-accent">{t('agents.statusValues.installing')}</span>
+                      ) : null}
                     </td>
                     <td>
                       <span className="tag tag-neutral">{agent.rebootRequired ? t('agents.yes') : '—'}</span>

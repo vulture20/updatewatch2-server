@@ -455,6 +455,26 @@ public class AgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAllAsync_surfaces_pending_install_and_reboot_requests_for_the_overview_lists_activity_badge()
+    {
+        // Added (server v1.3.4, at the user's explicit request) so
+        // AgentsListPage can show an "Updates"/"Neustart" activity badge
+        // for an approved agent, replacing the previous unconditional (and
+        // once approved, redundant) "Approved" badge.
+        var hostname = await RegisterApproveAndCertifyAsync("activity-badge-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.PendingInstallRequestedAt = DateTimeOffset.UtcNow;
+        agent.PendingRebootRequestedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var list = await _service.GetAllAsync();
+
+        var item = Assert.Single(list, a => a.Hostname == hostname);
+        Assert.Equal(agent.PendingInstallRequestedAt, item.PendingInstallRequestedAt);
+        Assert.Equal(agent.PendingRebootRequestedAt, item.PendingRebootRequestedAt);
+    }
+
+    [Fact]
     public async Task GetByHostnameAsync_surfaces_the_rejection_reason_and_timestamp()
     {
         var hostname = await RegisterApproveAndCertifyAsync("cert-flagged-detail-host");

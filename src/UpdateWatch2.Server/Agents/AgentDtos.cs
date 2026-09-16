@@ -35,7 +35,18 @@ public record AgentListItemDto(
     /// comment, not from a periodically-updated stored flag. Flags the row
     /// with a small icon in the overview list.
     /// </summary>
-    bool IsOffline);
+    bool IsOffline,
+    /// <summary>
+    /// Same as <see cref="AgentDetailDto.PendingInstallRequestedAt"/> —
+    /// added here (server v1.3.4, at the user's explicit request) so the
+    /// overview list can show a per-row "Updates" activity badge for an
+    /// approved agent without a per-agent round trip, replacing the
+    /// previous unconditional (and, once approved, redundant) "Approved"
+    /// badge.
+    /// </summary>
+    DateTimeOffset? PendingInstallRequestedAt,
+    /// <summary>Same as <see cref="PendingInstallRequestedAt"/>, for the "Neustart"/reboot activity badge — mirrors <see cref="AgentDetailDto.PendingRebootRequestedAt"/>.</summary>
+    DateTimeOffset? PendingRebootRequestedAt);
 
 /// <summary>Full shape for the per-agent detail view.</summary>
 public record AgentDetailDto(

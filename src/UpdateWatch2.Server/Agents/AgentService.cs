@@ -18,7 +18,11 @@ public class AgentService(
     {
         var agents = await db.Agents
             .OrderBy(a => a.Hostname)
-            .Select(a => new { a.Id, a.Hostname, a.Approved, a.RebootRequired, a.LastAliveAt, a.OperatingSystem })
+            .Select(a => new
+            {
+                a.Id, a.Hostname, a.Approved, a.RebootRequired, a.LastAliveAt, a.OperatingSystem,
+                a.PendingInstallRequestedAt, a.PendingRebootRequestedAt,
+            })
             .ToListAsync(ct);
 
         var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct);
@@ -29,7 +33,8 @@ public class AgentService(
             .Select(a => new AgentListItemDto(
                 a.Hostname, a.Approved, a.RebootRequired, countsByAgent.GetValueOrDefault(a.Id),
                 ResolveActiveRejection(rejectionsByHostname.GetValueOrDefault(a.Hostname), a.LastAliveAt)?.Reason,
-                a.OperatingSystem, a.LastAliveAt, IsOffline(a.LastAliveAt, offlineThreshold)))
+                a.OperatingSystem, a.LastAliveAt, IsOffline(a.LastAliveAt, offlineThreshold),
+                a.PendingInstallRequestedAt, a.PendingRebootRequestedAt))
             .ToList();
     }
 

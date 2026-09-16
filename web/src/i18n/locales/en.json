@@ -35,6 +35,11 @@
     "certificateRejectedIcon": "This agent presented a rejected certificate ({{reason}}) within the last 24 hours.",
     "offline": "Offline",
     "offlineIcon": "This agent hasn't sent a heartbeat within the configured offline threshold.",
+    "statusValues": {
+      "unapproved": "Unapproved",
+      "installing": "Updates",
+      "rebooting": "Reboot"
+    },
     "stats": {
       "total": "Total agents",
       "pendingApproval": "Pending approval",

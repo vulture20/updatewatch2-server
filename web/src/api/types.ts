@@ -23,6 +23,10 @@ export interface AgentListItem {
   lastAliveAt: string | null;
   /** Live-computed from lastAliveAt against the current admin-configured offline threshold — never a stored/stale flag. Drives the offline icon and the online/offline filter. */
   isOffline: boolean;
+  /** Non-null while an admin-triggered install is pending/in progress — drives the "Updates" activity badge for an approved agent. */
+  pendingInstallRequestedAt: string | null;
+  /** Non-null while an admin-triggered reboot is pending/in progress — drives the "Neustart"/reboot activity badge. */
+  pendingRebootRequestedAt: string | null;
 }
 
 export interface AgentDetail {

@@ -25,6 +25,8 @@ function makeAgent(overrides: Partial<AgentListItem> & { hostname: string }): Ag
     operatingSystem: null,
     lastAliveAt: null,
     isOffline: false,
+    pendingInstallRequestedAt: null,
+    pendingRebootRequestedAt: null,
     ...overrides,
   };
 }
@@ -53,6 +55,54 @@ describe('AgentsListPage', () => {
 
     expect(await screen.findByText('host-1')).toBeInTheDocument();
     expect(screen.getByText('host-2')).toBeInTheDocument();
+  });
+
+  it('shows no status badge at all for an approved, idle agent', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'idle-host' })]);
+
+    renderPage();
+
+    const row = (await screen.findByText('idle-host')).closest('tr');
+    expect(row && within(row).queryByText('Approved')).not.toBeInTheDocument();
+    expect(row && within(row).queryByText('Unapproved')).not.toBeInTheDocument();
+    expect(row && within(row).queryByText('Updates')).not.toBeInTheDocument();
+    expect(row && within(row).queryByText('Reboot')).not.toBeInTheDocument();
+  });
+
+  it('shows an "Unapproved" badge for an agent awaiting approval', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'unapproved-host', approved: false })]);
+
+    renderPage();
+
+    const row = (await screen.findByText('unapproved-host')).closest('tr');
+    expect(row && within(row).getByText('Unapproved')).toBeInTheDocument();
+  });
+
+  it('shows an "Updates" badge while an install is pending', async () => {
+    mockedList.mockResolvedValue([
+      makeAgent({ hostname: 'installing-host', pendingInstallRequestedAt: '2026-09-16T10:00:00Z' }),
+    ]);
+
+    renderPage();
+
+    const row = (await screen.findByText('installing-host')).closest('tr');
+    expect(row && within(row).getByText('Updates')).toBeInTheDocument();
+  });
+
+  it('shows a "Reboot" badge while a reboot is pending, taking priority over a simultaneously pending install', async () => {
+    mockedList.mockResolvedValue([
+      makeAgent({
+        hostname: 'rebooting-host',
+        pendingInstallRequestedAt: '2026-09-16T10:00:00Z',
+        pendingRebootRequestedAt: '2026-09-16T10:05:00Z',
+      }),
+    ]);
+
+    renderPage();
+
+    const row = (await screen.findByText('rebooting-host')).closest('tr');
+    expect(row && within(row).getByText('Reboot')).toBeInTheDocument();
+    expect(row && within(row).queryByText('Updates')).not.toBeInTheDocument();
   });
 
   it('shows the empty state when there are no agents', async () => {

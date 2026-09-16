@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Auth;
 using UpdateWatch2.Server.Tests.TestHelpers;
 
@@ -171,6 +172,36 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
 
         var settings = await _client.GetFromJsonAsync<AdminSettingsDto>("/api/admin/settings");
         Assert.Equal(24, settings!.AgentAutoUpdateCheckIntervalHours);
+    }
+
+    [Fact]
+    public async Task Put_records_an_audit_log_entry_with_the_actual_field_level_changes()
+    {
+        var response = await _client.PutAsJsonAsync(
+            "/api/admin/settings", ValidUpdateRequest() with { BruteForceMaxAttempts = 9, SmtpPort = 465 });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var page = await _client.GetFromJsonAsync<AuditLogPageDto>("/api/admin/audit-log?page=1&pageSize=1");
+        var entry = Assert.Single(page!.Entries);
+        Assert.Equal("admin.settings.updated", entry.Action);
+        Assert.Contains("BruteForceMaxAttempts: 6 -> 9", entry.Details);
+        Assert.Contains("SmtpPort: 587 -> 465", entry.Details);
+    }
+
+    [Fact]
+    public async Task Put_records_no_details_when_nothing_actually_changed()
+    {
+        // First PUT establishes ValidUpdateRequest()'s values as the
+        // current state (its fields don't all match the fresh-seeded
+        // defaults, e.g. SmtpFromAddress) — the second, identical PUT is
+        // the one actually under test here, since only that one is a true
+        // no-op relative to what's already stored.
+        await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest());
+        await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest());
+
+        var page = await _client.GetFromJsonAsync<AuditLogPageDto>("/api/admin/audit-log?page=1&pageSize=1");
+        var entry = Assert.Single(page!.Entries);
+        Assert.Null(entry.Details);
     }
 
     [Fact]
