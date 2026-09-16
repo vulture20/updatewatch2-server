@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.8] - 2026-09-16
+
+### Added
+
+- **The agents overview list now has a live, type-as-you-go hostname search, at the user's explicit request ("Es fehlt noch eine Suchfunktion für Agents... Diese sollte bereits beim Tippen die dort angezeigten Clients filtern.").** A new `Filters['search']` field, filtered case-insensitively against `agent.hostname`, applied purely client-side against the already-loaded agent list — no round trip per keystroke, consistent with every other filter already on this page (OS type, OS, status, reboot, pending updates, certificate warning, online status), and included automatically by the existing generic "Clear filters" logic and active-filter indicator.
+
 ## [1.3.7] - 2026-09-16 — DB schema `1.1.1`
 
 ### Added

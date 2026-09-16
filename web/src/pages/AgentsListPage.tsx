@@ -18,6 +18,7 @@ type SortKey = 'hostname' | 'os' | 'status' | 'reboot' | 'pending' | 'lastSeen';
 type StatFilter = 'pendingApproval' | 'reboot' | 'pendingUpdates' | null;
 
 interface Filters {
+  search: string;
   osType: 'all' | 'windows' | 'linux';
   os: string;
   status: 'all' | 'unapproved' | 'installing' | 'rebooting';
@@ -28,6 +29,7 @@ interface Filters {
 }
 
 const DEFAULT_FILTERS: Filters = {
+  search: '',
   osType: 'all',
   os: 'all',
   status: 'all',
@@ -114,7 +116,9 @@ export function AgentsListPage() {
 
   const filteredAndSorted = useMemo(() => {
     const isWindows = (a: AgentListItem) => a.operatingSystem?.includes('Windows') ?? false;
+    const search = filters.search.trim().toLowerCase();
     const filtered = (agents ?? []).filter((a) => {
+      if (search !== '' && !a.hostname.toLowerCase().includes(search)) return false;
       if (filters.osType === 'windows' && !isWindows(a)) return false;
       if (filters.osType === 'linux' && (isWindows(a) || !a.operatingSystem)) return false;
       if (filters.os !== 'all' && a.operatingSystem !== filters.os) return false;
@@ -207,6 +211,15 @@ export function AgentsListPage() {
           </div>
 
           <div className="card filter-card">
+            <label>
+              {t('agents.filters.search')}
+              <input
+                type="text"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                placeholder={t('agents.filters.searchPlaceholder')}
+              />
+            </label>
             <label>
               {t('agents.filters.osType')}
               <select value={filters.osType} onChange={(e) => setFilters({ ...filters, osType: e.target.value as Filters['osType'] })}>

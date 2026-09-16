@@ -47,6 +47,8 @@
       "totalPending": "Pending updates"
     },
     "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Filter by hostname…",
       "osType": "OS type",
       "all": "All",
       "pending": "Pending",

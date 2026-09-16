@@ -213,6 +213,34 @@ describe('AgentsListPage', () => {
     expect(screen.getByText('pending-host')).toBeInTheDocument();
   });
 
+  it('filters by hostname as the user types in the search box', async () => {
+    const user = userEvent.setup();
+    mockedList.mockResolvedValue([
+      makeAgent({ hostname: 'web-server-1' }),
+      makeAgent({ hostname: 'web-server-2' }),
+      makeAgent({ hostname: 'db-server-1' }),
+    ]);
+
+    renderPage();
+    await screen.findByText('web-server-1');
+
+    await user.type(screen.getByLabelText('Search'), 'web');
+
+    expect(screen.getByText('web-server-1')).toBeInTheDocument();
+    expect(screen.getByText('web-server-2')).toBeInTheDocument();
+    expect(screen.queryByText('db-server-1')).not.toBeInTheDocument();
+
+    // Case-insensitive.
+    await user.clear(screen.getByLabelText('Search'));
+    await user.type(screen.getByLabelText('Search'), 'DB-SERVER');
+    expect(screen.getByText('db-server-1')).toBeInTheDocument();
+    expect(screen.queryByText('web-server-1')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /clear filters/i }));
+    expect(screen.getByText('web-server-1')).toBeInTheDocument();
+    expect(screen.getByText('db-server-1')).toBeInTheDocument();
+  });
+
   it('filters by the Status dropdown, matching the same states the status badge shows', async () => {
     const user = userEvent.setup();
     mockedList.mockResolvedValue([

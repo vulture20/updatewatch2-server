@@ -47,6 +47,8 @@
       "totalPending": "Offene Updates"
     },
     "filters": {
+      "search": "Suche",
+      "searchPlaceholder": "Nach Hostname filtern…",
       "osType": "OS-Art",
       "all": "Alle",
       "pending": "Ausstehend",
