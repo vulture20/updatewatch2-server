@@ -71,6 +71,8 @@ export interface AgentDetail {
   lastCertificateRejectionAt: string | null;
   /** Same live computation as AgentListItem.isOffline. */
   isOffline: boolean;
+  /** When this agent last reported the result of an update check — distinct from lastAliveAt, which moves on the much shorter, separate heartbeat cadence. */
+  lastUpdateCheckAt: string | null;
 }
 
 /** Response of an admin-initiated certificate re-issuance (updatewatch2-server#8). */

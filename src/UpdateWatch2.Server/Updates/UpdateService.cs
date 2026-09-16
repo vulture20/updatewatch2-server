@@ -87,6 +87,7 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
         agent.PendingUpdateCount = report.Updates.Count;
         agent.RebootRequired = report.RebootRequired;
         agent.LastAliveAt = DateTimeOffset.UtcNow;
+        agent.LastUpdateCheckAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
         return true;

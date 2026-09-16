@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.7] - 2026-09-16 — DB schema `1.1.1`
+
+### Added
+
+- **The agent detail page's Identity card now shows when this agent last actually reported the result of an update check, at the user's explicit request ("Bei den Client-Details sollte unter 'Identität' noch festgehalten werden, wann zuletzt nach Updates gesucht wurde.").** New `Agent.LastUpdateCheckAt` (DB schema `1.1.1`), set by `UpdateService.ReportUpdatesAsync` on every successful report — its own timestamp, not derived from the reported items, so an agent with genuinely zero pending updates still updates it (an empty report is still a real check that just happened). Deliberately distinct from `LastAliveAt`: a heartbeat happens on its own, much shorter cadence and carries no update information at all, while this only moves on the separate, jittered update-check cadence. Surfaced via `AgentDetailDto.LastUpdateCheckAt`, shown on the Identity card right below "Last alive", formatted identically (localized date/time, or "Never").
+
 ## [1.3.6] - 2026-09-16
 
 ### Added

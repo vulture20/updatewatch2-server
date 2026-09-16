@@ -61,6 +61,7 @@ const approvedAgent: AgentDetail = {
   lastCertificateRejectionReason: null,
   lastCertificateRejectionAt: null,
   isOffline: false,
+  lastUpdateCheckAt: null,
 };
 
 function renderPage() {
@@ -94,6 +95,27 @@ describe('AgentDetailPage certificate re-issuance', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('shows the last update check timestamp on the Identity card', async () => {
+    mockedGet.mockResolvedValue({ ...approvedAgent, lastUpdateCheckAt: '2026-01-02T03:04:00Z' });
+
+    renderPage();
+
+    expect(await screen.findByText('Last update check')).toBeInTheDocument();
+    expect(screen.getByText(new Date('2026-01-02T03:04:00Z').toLocaleString())).toBeInTheDocument();
+  });
+
+  it('shows "Never" for the last update check when the agent has never reported one', async () => {
+    mockedGet.mockResolvedValue({ ...approvedAgent, lastUpdateCheckAt: null });
+
+    renderPage();
+
+    await screen.findByText('Last update check');
+    // "Never" also appears for lastAliveAt on this same fixture (also
+    // null) — assert there are at least two, rather than pin an exact
+    // count, so an unrelated future null-date field doesn't break this.
+    expect(screen.getAllByText('Never').length).toBeGreaterThanOrEqual(2);
   });
 
   it('shows both the SHA-256 and SHA-1 certificate thumbprints', async () => {

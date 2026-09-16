@@ -196,6 +196,24 @@ public class Agent
     public DateTimeOffset? LastAliveAt { get; set; }
 
     /// <summary>
+    /// When this agent last actually reported the result of an update
+    /// check (<see cref="Updates.IUpdateService.ReportUpdatesAsync"/>) —
+    /// set on every successful report, not read back from the reported
+    /// items themselves (an agent with genuinely zero pending updates
+    /// still reports, with an empty list, so this must be its own
+    /// timestamp rather than derived from <see cref="UpdateItem.DetectedAt"/>,
+    /// which would go stale the moment nothing new is found). Distinct
+    /// from <see cref="LastAliveAt"/>: a heartbeat happens on its own,
+    /// typically much shorter cadence and carries no update information at
+    /// all — this only moves on the separate, jittered update-check
+    /// cadence. Shown on the admin UI's Identity card, at the user's
+    /// explicit request ("Bei den Client-Details sollte unter 'Identität'
+    /// noch festgehalten werden, wann zuletzt nach Updates gesucht
+    /// wurde.").
+    /// </summary>
+    public DateTimeOffset? LastUpdateCheckAt { get; set; }
+
+    /// <summary>
     /// Internal bookkeeping for <see cref="Notifications.AgentOfflineNotificationWorker"/>
     /// only — NOT what the admin UI's offline icon/filter reflects (that's
     /// always computed live from <see cref="LastAliveAt"/> against the

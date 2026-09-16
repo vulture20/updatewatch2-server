@@ -68,6 +68,7 @@
     "ipAddress": "IP address",
     "agentVersion": "Agent version",
     "lastAliveAt": "Last alive",
+    "lastUpdateCheckAt": "Last update check",
     "uptime": "Uptime",
     "uptimeSince": {
       "minute": "{{count}} minutes",

@@ -57,7 +57,8 @@ public class AgentService(
             agent.ClientCertificateThumbprint, agent.ClientCertificateThumbprintSha1, agent.ClientCertificateIssuedAt, agent.ClientCertificateExpiresAt,
             agent.PendingInstallRequestedAt, agent.LastInstallOutcome, agent.LastInstallErrorDetail, agent.LastInstallCompletedAt,
             agent.PendingRebootRequestedAt, agent.LastRebootOutcome, agent.LastRebootErrorDetail, agent.LastRebootCompletedAt, agent.BootTimeUtc,
-            agent.IssuingRootThumbprint, rejection?.Reason, rejection?.Timestamp, IsOffline(agent.LastAliveAt, offlineThreshold));
+            agent.IssuingRootThumbprint, rejection?.Reason, rejection?.Timestamp, IsOffline(agent.LastAliveAt, offlineThreshold),
+            agent.LastUpdateCheckAt);
     }
 
     /// <summary>

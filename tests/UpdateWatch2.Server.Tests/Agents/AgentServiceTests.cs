@@ -338,6 +338,19 @@ public class AgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetByHostnameAsync_surfaces_the_last_update_check_timestamp()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("update-check-detail-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.LastUpdateCheckAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var detail = await _service.GetByHostnameAsync(hostname);
+
+        Assert.Equal(agent.LastUpdateCheckAt, detail!.LastUpdateCheckAt);
+    }
+
+    [Fact]
     public async Task GetAllAsync_excludes_updates_matching_an_active_filter_from_the_pending_count()
     {
         var hostname = await RegisterApproveAndCertifyAsync("filtered-host");

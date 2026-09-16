@@ -247,6 +247,8 @@ export function AgentDetailPage() {
             <dd>{agent.agentVersion ?? '—'}</dd>
             <dt className="text-muted">{t('agentDetail.lastAliveAt')}</dt>
             <dd>{agent.lastAliveAt ? new Date(agent.lastAliveAt).toLocaleString() : t('agentDetail.never')}</dd>
+            <dt className="text-muted">{t('agentDetail.lastUpdateCheckAt')}</dt>
+            <dd>{agent.lastUpdateCheckAt ? new Date(agent.lastUpdateCheckAt).toLocaleString() : t('agentDetail.never')}</dd>
             <dt className="text-muted">{t('agentDetail.uptime')}</dt>
             <dd>{formatUptime(agent.bootTimeUtc)}</dd>
           </dl>

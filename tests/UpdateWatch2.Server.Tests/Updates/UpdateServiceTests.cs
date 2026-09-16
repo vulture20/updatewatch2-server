@@ -313,6 +313,26 @@ public class UpdateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ReportUpdatesAsync_records_when_the_check_happened_even_with_zero_pending_updates()
+    {
+        // LastUpdateCheckAt must be its own timestamp, not derived from the
+        // reported items — an agent with genuinely nothing pending still
+        // reports (with an empty list), and that's still a real check that
+        // happened just now, not something to leave stale.
+        var agent = new Agent { Hostname = "update-check-timestamp-host", Approved = true };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        Assert.Null(agent.LastUpdateCheckAt);
+
+        var before = DateTimeOffset.UtcNow;
+        await _service.ReportUpdatesAsync("update-check-timestamp-host", new ReportUpdatesRequest([], RebootRequired: false));
+
+        var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "update-check-timestamp-host");
+        Assert.NotNull(reloaded.LastUpdateCheckAt);
+        Assert.True(reloaded.LastUpdateCheckAt >= before);
+    }
+
+    [Fact]
     public async Task ReportUpdatesAsync_removes_updates_no_longer_reported_and_adds_a_fresh_DetectedAt_for_new_ones()
     {
         var agent = new Agent { Hostname = "diff-report-host", Approved = true };

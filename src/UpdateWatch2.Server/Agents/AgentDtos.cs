@@ -99,7 +99,9 @@ public record AgentDetailDto(
     string? LastCertificateRejectionReason,
     DateTimeOffset? LastCertificateRejectionAt,
     /// <summary>Same as <see cref="AgentListItemDto.IsOffline"/> — shown next to the hostname on the detail page's Identity card.</summary>
-    bool IsOffline);
+    bool IsOffline,
+    /// <summary>Same as <see cref="Db.Entities.Agent.LastUpdateCheckAt"/> — shown on the detail page's Identity card, at the user's explicit request.</summary>
+    DateTimeOffset? LastUpdateCheckAt);
 
 /// <summary>
 /// How many/which agents would stop authenticating if the CA's previous
