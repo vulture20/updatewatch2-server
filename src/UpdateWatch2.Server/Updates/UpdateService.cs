@@ -94,6 +94,44 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
 
     private static string MatchKey(string title, string? packageId) => packageId ?? title;
 
+    /// <summary>
+    /// Removes the just-installed <see cref="UpdateItem"/> rows the moment
+    /// a Succeeded install-ack arrives, rather than relying solely on the
+    /// agent's own immediate follow-up re-check-and-report call
+    /// (<c>HeartbeatWorker.CheckAndReportNowAsync</c>, agent-side) to
+    /// eventually notice they're gone — that call can fail (a transient
+    /// network hiccup) or run before the OS-level update checker itself
+    /// has caught up to the just-completed install, either of which would
+    /// otherwise leave a just-installed update showing as still pending in
+    /// the admin UI until the next scheduled check, possibly a long time
+    /// later. This is the one place that already knows exactly what was
+    /// requested (<see cref="Db.Entities.Agent.PendingInstallUpdateIds"/>,
+    /// read here before it's cleared below) and can guarantee immediate,
+    /// deterministic removal — a null value means "everything pending was
+    /// requested", so every one of this agent's items is removed; a JSON
+    /// array of PackageIds (the same agent-native identifiers
+    /// <see cref="TriggerInstallAsync"/> already translated an admin's
+    /// selection into) removes only those. Purely a fast, best-effort
+    /// layer on top of — not a replacement for — the agent's own
+    /// subsequent real report: if this removes something that (rarely)
+    /// turns out to still genuinely be pending, that next report
+    /// re-adds it, the same self-correcting pattern this codebase already
+    /// relies on elsewhere (e.g. <c>certificateRotationPending</c>
+    /// recomputing itself false on the next heartbeat).
+    /// </summary>
+    private async Task RemoveJustInstalledItemsAsync(Agent agent, CancellationToken ct)
+    {
+        var itemsQuery = db.UpdateItems.Where(u => u.AgentId == agent.Id);
+
+        if (agent.PendingInstallUpdateIds is not null)
+        {
+            var packageIds = JsonSerializer.Deserialize<List<string>>(agent.PendingInstallUpdateIds) ?? [];
+            itemsQuery = itemsQuery.Where(u => u.PackageId != null && packageIds.Contains(u.PackageId));
+        }
+
+        await itemsQuery.ExecuteDeleteAsync(ct);
+    }
+
     public async Task<bool> TriggerInstallAsync(string hostname, string triggeredBy, IReadOnlyList<int>? updateItemIds, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
@@ -144,6 +182,11 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
         if (agent is null)
         {
             return false;
+        }
+
+        if (outcome == InstallOutcome.Succeeded)
+        {
+            await RemoveJustInstalledItemsAsync(agent, ct);
         }
 
         agent.PendingInstallRequestedAt = null;

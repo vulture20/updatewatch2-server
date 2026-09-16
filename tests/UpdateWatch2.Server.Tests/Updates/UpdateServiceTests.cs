@@ -172,6 +172,58 @@ public class UpdateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AcknowledgeInstallAsync_with_a_selection_removes_only_the_selected_updates_immediately()
+    {
+        var agent = new Agent { Hostname = "ack-removes-selected-host", Approved = true, PendingInstallUpdateIds = """["KB1"]""" };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        var installed = new UpdateItem { AgentId = agent.Id, Title = "Installed", PackageId = "KB1" };
+        var spared = new UpdateItem { AgentId = agent.Id, Title = "Spared", PackageId = "KB2" };
+        _db.UpdateItems.AddRange(installed, spared);
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeInstallAsync("ack-removes-selected-host", InstallOutcome.Succeeded, errorDetail: null);
+
+        var remaining = await _db.UpdateItems.Where(u => u.AgentId == agent.Id).ToListAsync();
+        var item = Assert.Single(remaining);
+        Assert.Equal("KB2", item.PackageId);
+    }
+
+    [Fact]
+    public async Task AcknowledgeInstallAsync_with_no_selection_removes_everything_pending_immediately()
+    {
+        // No selection == "install everything currently pending" was
+        // requested (TriggerInstallAsync's own null-updateItemIds
+        // behavior) — a Succeeded ack for that must clear the whole list,
+        // not just leave it for the agent's own next report to notice.
+        var agent = new Agent { Hostname = "ack-removes-all-host", Approved = true, PendingInstallUpdateIds = null };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        _db.UpdateItems.AddRange(
+            new UpdateItem { AgentId = agent.Id, Title = "One", PackageId = "KB1" },
+            new UpdateItem { AgentId = agent.Id, Title = "Two", PackageId = "KB2" });
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeInstallAsync("ack-removes-all-host", InstallOutcome.Succeeded, errorDetail: null);
+
+        Assert.Empty(await _db.UpdateItems.Where(u => u.AgentId == agent.Id).ToListAsync());
+    }
+
+    [Fact]
+    public async Task AcknowledgeInstallAsync_with_a_failed_outcome_leaves_the_pending_updates_untouched()
+    {
+        var agent = new Agent { Hostname = "ack-failed-keeps-pending-host", Approved = true, PendingInstallUpdateIds = null };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+        _db.UpdateItems.Add(new UpdateItem { AgentId = agent.Id, Title = "Still pending", PackageId = "KB1" });
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeInstallAsync("ack-failed-keeps-pending-host", InstallOutcome.Failed, "install failed");
+
+        Assert.Single(await _db.UpdateItems.Where(u => u.AgentId == agent.Id).ToListAsync());
+    }
+
+    [Fact]
     public async Task AcknowledgeInstallAsync_returns_false_for_an_unknown_agent()
     {
         var found = await _service.AcknowledgeInstallAsync("no-such-host", InstallOutcome.Succeeded, errorDetail: null);

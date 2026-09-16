@@ -37,7 +37,11 @@ public interface IUpdateService
     /// automatically; an admin who wants to retry just triggers again,
     /// matching the existing fire-and-forget trigger semantics) and records
     /// the outcome/timestamp/<paramref name="errorDetail"/> for the admin
-    /// UI. Returns false if no agent with that hostname exists.
+    /// UI. A Succeeded outcome also immediately removes the just-installed
+    /// items from the pending-updates list itself, rather than waiting on
+    /// the agent's own next report to notice they're gone — see
+    /// <see cref="UpdateService"/>'s private <c>RemoveJustInstalledItemsAsync</c>.
+    /// Returns false if no agent with that hostname exists.
     /// </summary>
     Task<bool> AcknowledgeInstallAsync(string hostname, InstallOutcome outcome, string? errorDetail, CancellationToken ct = default);
 }

@@ -12,7 +12,14 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
-## [1.3.2] - 2026-09-16
+## [1.3.3] - 2026-09-16
+
+### Fixed
+
+- **A successful install used to leave the just-installed updates showing as still pending until the agent's own next report caught up — reported by the user directly ("Wenn die Updates erfolgreich installiert wurden, sollten sie umgehend aus der Liste der anstehenden Updates entfernt werden").** `UpdateService.AcknowledgeInstallAsync` only ever cleared `Agent.PendingInstallRequestedAt`/`PendingInstallUpdateIds` and recorded the outcome — it relied entirely on the agent's own immediate `CheckAndReportNowAsync` follow-up call (agent v0.13.1) to notice the install and re-report a shorter pending list, which can be delayed by a transient network failure on that call or by the OS-level update checker not yet reflecting the just-finished install at that exact moment. A Succeeded ack now also removes the just-installed `UpdateItem` rows immediately and deterministically, reading `PendingInstallUpdateIds` before clearing it (a null value — "everything pending was requested" — removes every one of that agent's items; a stored PackageId list removes only those). Purely a fast, best-effort layer on top of the agent's own subsequent real report, not a replacement for it — if this ever removes something that turns out to still genuinely be pending, that next report re-adds it, the same self-correcting pattern already used elsewhere in this codebase (e.g. `certificateRotationPending`). A Failed outcome is unaffected — nothing is removed, matching the existing "no update was actually installed" behavior.
+- **The login page didn't focus the username field on load, at the user's explicit request.** Added `autoFocus` to `LoginPage`'s username input.
+- **The agents overview table's "last seen" column could wrap onto a second line for a relative-time value like "in dieser Minute"/"this minute" (longer than most of the column's other values), growing that row's height and shifting the whole table — reported by the user directly.** Fixed with a new `.nowrap` utility class (`white-space: nowrap`) applied to that cell.
+- **The README/README.de "Project status" badge and callout still said "v1.0" — at the user's explicit request, both now say "Stable"/"Stabil"** (mirrored in the agent repo's own README pair too, which carries the identical badge).
 
 ### Added
 

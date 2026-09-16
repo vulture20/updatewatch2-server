@@ -299,6 +299,15 @@ button:disabled {
   color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
 
+/* Keeps a cell's content on one line regardless of length — used on the
+   agents table's "last seen" column, whose relative-time text (e.g. "in
+   dieser Minute"/"this minute") is longer than most of the other values
+   that column shows and would otherwise wrap onto a second line, growing
+   that row's height and reflowing the whole table underneath it. */
+.nowrap {
+  white-space: nowrap;
+}
+
 /* — agents overview: stat cards, filter card, table wrapper — */
 .stat-cards {
   display: grid;

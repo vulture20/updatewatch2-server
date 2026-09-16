@@ -55,6 +55,7 @@ export function LoginPage() {
             type="text"
             name="username"
             autoComplete="username"
+            autoFocus
             value={username}
             onChange={(event) => setUsername(event.target.value)}
             required

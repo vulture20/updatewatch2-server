@@ -67,6 +67,12 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid username or password.');
   });
 
+  it('focuses the username field on load', async () => {
+    renderLoginPage();
+
+    expect(await screen.findByLabelText('Username')).toHaveFocus();
+  });
+
   it('shows a locked-out message on a 423 response', async () => {
     mockedLogin.mockRejectedValue(new ApiError(423, 'irrelevant body text'));
     const user = userEvent.setup();

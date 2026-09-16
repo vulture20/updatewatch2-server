@@ -7,12 +7,12 @@
 [![Docker Image](https://img.shields.io/badge/ghcr.io-vulture20%2Fupdatewatch2--server-2496ED?logo=docker&logoColor=white)](https://github.com/vulture20/updatewatch2-server/pkgs/container/updatewatch2-server)
 [![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Fvulture20%2Fupdatewatch2-server%2Fupdatewatch2-server&query=downloadCount&label=Docker%20Pulls&color=2496ED&logo=docker&logoColor=white)](https://github.com/vulture20/updatewatch2-server/pkgs/container/updatewatch2-server)
 [![Docker Image Build](https://github.com/vulture20/updatewatch2-server/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/vulture20/updatewatch2-server/actions/workflows/docker-publish.yml)
-[![Status](https://img.shields.io/badge/status-v1.0-brightgreen)](#-projektstatus)
+[![Status](https://img.shields.io/badge/status-stable-brightgreen)](#-projektstatus)
 [![Lizenz: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
 UpdateWatch2 Server ist die selbst gehostete, einzelne Container-Verwaltungszentrale für **UpdateWatch2** — ein System zur zentralen Verteilung, Überwachung und Fernauslösung von Software-/OS-Updates auf Windows- und Linux-Endgeräten. Agents registrieren sich, werden einmal freigegeben und melden von da an ihren Update-Status per gegenseitigem TLS — der Admin entscheidet, wer freigegeben ist, wann installiert wird und wann neu gestartet wird.
 
-> ✅ **v1.0.** Das zertifikatsbasierte Sicherheitsfundament, das Agent-Onboarding und die Admin-Oberfläche sind durchgängig implementiert, gegen einen echten laufenden Server verifiziert und durch eine automatisierte Testsuite abgedeckt. Einige wenige Teile (echte Windows-Update-Installation, der RPM/dnf-Update-Pfad, das Installations-/Deinstallationsverhalten des Windows-Installers) wurden noch nicht gegen ein echtes Zielsystem verifiziert — siehe [Projektstatus](#-projektstatus) weiter unten, bevor du dich speziell darauf verlässt.
+> ✅ **Stabil.** Das zertifikatsbasierte Sicherheitsfundament, das Agent-Onboarding und die Admin-Oberfläche sind durchgängig implementiert, gegen einen echten laufenden Server verifiziert und durch eine automatisierte Testsuite abgedeckt. Einige wenige Teile (echte Windows-Update-Installation, der RPM/dnf-Update-Pfad, das Installations-/Deinstallationsverhalten des Windows-Installers) wurden noch nicht gegen ein echtes Zielsystem verifiziert — siehe [Projektstatus](#-projektstatus) weiter unten, bevor du dich speziell darauf verlässt.
 
 Begleit-Repository: [updatewatch2-agent](https://github.com/vulture20/updatewatch2-agent) — der Windows-/Linux-Dienst, den dieser Server verwaltet.
 

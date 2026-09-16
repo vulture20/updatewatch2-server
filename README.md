@@ -7,12 +7,12 @@
 [![Docker Image](https://img.shields.io/badge/ghcr.io-vulture20%2Fupdatewatch2--server-2496ED?logo=docker&logoColor=white)](https://github.com/vulture20/updatewatch2-server/pkgs/container/updatewatch2-server)
 [![Docker Pulls](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2Fvulture20%2Fupdatewatch2-server%2Fupdatewatch2-server&query=downloadCount&label=Docker%20Pulls&color=2496ED&logo=docker&logoColor=white)](https://github.com/vulture20/updatewatch2-server/pkgs/container/updatewatch2-server)
 [![Docker Image Build](https://github.com/vulture20/updatewatch2-server/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/vulture20/updatewatch2-server/actions/workflows/docker-publish.yml)
-[![Status](https://img.shields.io/badge/status-v1.0-brightgreen)](#-project-status)
+[![Status](https://img.shields.io/badge/status-stable-brightgreen)](#-project-status)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
 UpdateWatch2 Server is the self-hosted, single-container management hub for **UpdateWatch2** — a system for centrally distributing, monitoring, and remotely triggering software/OS updates on Windows and Linux endpoints. Agents register, get approved once, and from then on report their update status over mutual TLS; the admin decides who's approved, when to install, and when to reboot.
 
-> ✅ **v1.0.** The certificate-based security backbone, agent onboarding, and the admin UI are implemented end to end, live-verified against a real running server, and covered by an automated test suite. A few pieces (real Windows Update installation, the RPM/dnf update path, the Windows installer's install/uninstall behavior) are still not verified against a real target host — see [Project status](#-project-status) below before relying on those specifically.
+> ✅ **Stable.** The certificate-based security backbone, agent onboarding, and the admin UI are implemented end to end, live-verified against a real running server, and covered by an automated test suite. A few pieces (real Windows Update installation, the RPM/dnf update path, the Windows installer's install/uninstall behavior) are still not verified against a real target host — see [Project status](#-project-status) below before relying on those specifically.
 
 Companion repository: [updatewatch2-agent](https://github.com/vulture20/updatewatch2-agent) — the Windows/Linux service this server manages.
 
