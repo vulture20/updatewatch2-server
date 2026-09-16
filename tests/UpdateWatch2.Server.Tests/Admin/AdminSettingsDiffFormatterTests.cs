@@ -42,7 +42,8 @@ public class AdminSettingsDiffFormatterTests
         CertificateExpiryNotificationsEnabled: true,
         AgentOfflineThresholdMinutes: 15,
         AgentOfflineNotificationEnabled: true,
-        AgentOnlineRecoveryNotificationEnabled: true);
+        AgentOnlineRecoveryNotificationEnabled: true,
+        PreDownloadWindowsUpdatesEnabled: true);
 
     [Fact]
     public void Returns_null_when_nothing_changed()
