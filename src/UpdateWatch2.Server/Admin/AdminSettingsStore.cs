@@ -33,6 +33,7 @@ public class AdminSettingsStore(
     private AgentOfflineOptions _agentOffline = defaultAgentOffline.Value;
     private string _logLevel = "INFO";
     private int _auditLogRetentionDays = DefaultAuditLogRetentionDays;
+    private bool _preDownloadWindowsUpdatesEnabled = true;
 
     private const int DefaultAuditLogRetentionDays = 90;
 
@@ -79,6 +80,11 @@ public class AdminSettingsStore(
     public int AuditLogRetentionDays
     {
         get { lock (_lock) return _auditLogRetentionDays; }
+    }
+
+    public bool PreDownloadWindowsUpdatesEnabled
+    {
+        get { lock (_lock) return _preDownloadWindowsUpdatesEnabled; }
     }
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -154,6 +160,7 @@ public class AdminSettingsStore(
         row.AgentOfflineThresholdMinutes = request.AgentOfflineThresholdMinutes;
         row.AgentOfflineNotificationEnabled = request.AgentOfflineNotificationEnabled;
         row.AgentOnlineRecoveryNotificationEnabled = request.AgentOnlineRecoveryNotificationEnabled;
+        row.PreDownloadWindowsUpdatesEnabled = request.PreDownloadWindowsUpdatesEnabled;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -204,7 +211,8 @@ public class AdminSettingsStore(
                 _certificate.CertificateExpiryNotificationsEnabled,
                 _agentOffline.ThresholdMinutes,
                 _agentOffline.OfflineNotificationEnabled,
-                _agentOffline.OnlineRecoveryNotificationEnabled);
+                _agentOffline.OnlineRecoveryNotificationEnabled,
+                _preDownloadWindowsUpdatesEnabled);
         }
     }
 
@@ -250,6 +258,7 @@ public class AdminSettingsStore(
         AgentOfflineThresholdMinutes = defaultAgentOffline.Value.ThresholdMinutes,
         AgentOfflineNotificationEnabled = defaultAgentOffline.Value.OfflineNotificationEnabled,
         AgentOnlineRecoveryNotificationEnabled = defaultAgentOffline.Value.OnlineRecoveryNotificationEnabled,
+        PreDownloadWindowsUpdatesEnabled = true,
     };
 
     private void Apply(AdminSettings row)
@@ -321,6 +330,7 @@ public class AdminSettingsStore(
             _agentOffline = agentOffline;
             _logLevel = row.LogLevel;
             _auditLogRetentionDays = row.AuditLogRetentionDays;
+            _preDownloadWindowsUpdatesEnabled = row.PreDownloadWindowsUpdatesEnabled;
         }
 
         // Pushes the change to the ACTUAL running logger, not just this

@@ -43,4 +43,5 @@ public record AdminSettingsDto(
     bool CertificateExpiryNotificationsEnabled,
     int AgentOfflineThresholdMinutes,
     bool AgentOfflineNotificationEnabled,
-    bool AgentOnlineRecoveryNotificationEnabled);
+    bool AgentOnlineRecoveryNotificationEnabled,
+    bool PreDownloadWindowsUpdatesEnabled);

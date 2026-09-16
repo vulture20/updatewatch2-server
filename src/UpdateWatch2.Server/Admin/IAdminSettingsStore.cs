@@ -53,6 +53,19 @@ public interface IAdminSettingsStore
     /// </summary>
     int AuditLogRetentionDays { get; }
 
+    /// <summary>
+    /// Whether a Windows agent should proactively download pending Windows
+    /// Updates ahead of an actual install trigger, so an eventual install
+    /// applies from local cache instead of paying for the download at
+    /// trigger time. Surfaced to the agent as an additive field on the
+    /// <c>alive</c> heartbeat response (<c>UpdateCheck.IPreDownloadPolicyState</c>
+    /// agent-side) — there is no per-agent override, this is a single
+    /// fleet-wide toggle. Default true; Windows-only today (a Linux agent
+    /// receives the same field but its <c>IUpdateChecker.PreDownloadAsync</c>
+    /// is currently a no-op).
+    /// </summary>
+    bool PreDownloadWindowsUpdatesEnabled { get; }
+
     /// <summary>Loads the persisted row into the cache, seeding one from appsettings.json's defaults if none exists yet. Call once at startup.</summary>
     Task InitializeAsync(CancellationToken ct = default);
 

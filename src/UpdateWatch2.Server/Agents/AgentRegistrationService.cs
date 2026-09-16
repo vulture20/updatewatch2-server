@@ -196,7 +196,7 @@ public class AgentRegistrationService(
 
         return new AliveRecordResult(
             agent.PendingInstallRequestedAt is not null, installUpdateIds, updateOffer, certificateRotationPending,
-            agent.PendingRebootRequestedAt is not null);
+            agent.PendingRebootRequestedAt is not null, settingsStore.PreDownloadWindowsUpdatesEnabled);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)

@@ -75,6 +75,7 @@ const baseSettings = {
   agentOfflineThresholdMinutes: 15,
   agentOfflineNotificationEnabled: true,
   agentOnlineRecoveryNotificationEnabled: true,
+  preDownloadWindowsUpdatesEnabled: true,
 };
 
 // Renders both siblings the way App.tsx actually does — SmtpWarningBanner

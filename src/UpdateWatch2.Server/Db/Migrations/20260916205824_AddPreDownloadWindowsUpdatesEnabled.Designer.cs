@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using UpdateWatch2.Server.Db;
 
@@ -10,9 +11,11 @@ using UpdateWatch2.Server.Db;
 namespace UpdateWatch2.Server.Db.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260916205824_AddPreDownloadWindowsUpdatesEnabled")]
+    partial class AddPreDownloadWindowsUpdatesEnabled
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
@@ -246,9 +249,6 @@ namespace UpdateWatch2.Server.Db.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LastRebootOutcome")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset?>("LastUpdateCheckAt")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("OfflineCrossed")

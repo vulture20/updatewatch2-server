@@ -81,7 +81,9 @@ public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string
 /// <c>Agent.PendingRebootRequestedAt</c> is set, cleared once the agent
 /// acknowledges via <c>POST .../reboot-ack</c>.
 /// </summary>
-public record AliveRecordResult(bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending, bool RebootRequested);
+public record AliveRecordResult(
+    bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending,
+    bool RebootRequested, bool PreDownloadWindowsUpdatesEnabled);
 
 /// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)

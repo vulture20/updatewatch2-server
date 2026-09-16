@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.9] - 2026-09-16
+
+### Added
+
+- **A new admin setting, "Pre-download Windows updates" (Settings → General), lets a Windows agent proactively download pending Windows Updates ahead of an actual install trigger — at the user's explicit request ("Gibt es die Möglichkeit die Windows-Updates im Vorfeld schon herunterladen zu lassen? Am besten über eine Option in den Einstellungen ein- und ausschaltbar machen.").** `AdminSettings.PreDownloadWindowsUpdatesEnabled` (default true), surfaced to agents as an additive `preDownloadWindowsUpdatesEnabled` field on the `alive` heartbeat response — the same pattern `installRequested`/`certificateRotationPending`/`rebootRequested` already established, chosen after confirming this codebase has no existing mechanism to push a raw admin-settings *value* down to a running agent (only a "server computes an offer, agent reacts to presence/absence" pattern, e.g. `agentUpdateAvailable`). Protocol version bumped to `1.1.0`, DB schema to `1.1.2`. Windows-only for its first version, per explicit user decision — a Linux agent receives the same field but its own pre-download step is currently a no-op (see the agent repo's CHANGELOG for the agent-side half of this feature).
+
 ## [1.3.8] - 2026-09-16
 
 ### Added

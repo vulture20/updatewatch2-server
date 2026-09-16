@@ -133,6 +133,8 @@ public class ActiveDirectoryLdapIntegrationTests
 
         public int AuditLogRetentionDays => throw new NotSupportedException();
 
+        public bool PreDownloadWindowsUpdatesEnabled => throw new NotSupportedException();
+
         public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
         public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>

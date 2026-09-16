@@ -126,6 +126,7 @@ const baseSettings = {
   agentOfflineThresholdMinutes: 15,
   agentOfflineNotificationEnabled: true,
   agentOnlineRecoveryNotificationEnabled: true,
+  preDownloadWindowsUpdatesEnabled: true,
 };
 
 describe('AdminPage', () => {
@@ -528,6 +529,26 @@ describe('AdminPage', () => {
         agentOfflineNotificationEnabled: false,
         agentOnlineRecoveryNotificationEnabled: false,
       }),
+    );
+  });
+
+  it('submits the pre-download Windows updates checkbox', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, preDownloadWindowsUpdatesEnabled: false });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.click(screen.getByLabelText('Proactively download pending Windows updates'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ preDownloadWindowsUpdatesEnabled: false }),
     );
   });
 

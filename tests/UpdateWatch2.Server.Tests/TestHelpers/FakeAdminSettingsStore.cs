@@ -44,6 +44,8 @@ public class FakeAdminSettingsStore(
 
     public int AuditLogRetentionDays { get; set; } = 90;
 
+    public bool PreDownloadWindowsUpdatesEnabled { get; set; } = true;
+
     public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
     public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>

@@ -248,6 +248,11 @@
       "thresholdMinutes": "Warnschwelle offline (Minuten)",
       "thresholdMinutesHint": "Wie lange seit dem letzten Heartbeat eines Agents, bevor er in der Agent-Liste/-Detailansicht als offline markiert wird. Wird sofort wirksam, kein Neustart nötig."
     },
+    "preDownloadWindowsUpdates": {
+      "title": "Windows-Updates vorab herunterladen",
+      "hint": "Lässt einen Windows-Agent anstehende Windows-Updates bereits vor einer tatsächlichen Installations-Anforderung herunterladen, sodass eine Installation aus dem lokalen Cache erfolgt statt erst zum Installationszeitpunkt herunterzuladen. Derzeit nur für Windows; ein Linux-Agent ignoriert diese Einstellung. Wird mit dem nächsten Heartbeat des Agents wirksam, kein Neustart nötig.",
+      "enabled": "Anstehende Windows-Updates proaktiv herunterladen"
+    },
     "agentCertificateValidityDays": "Gültigkeitsdauer Agent-Zertifikat (Tage)",
     "agentCertificateValidityDaysHint": "Gilt nur für neu ausgestellte oder erneuerte Agent-Zertifikate, nicht rückwirkend für bereits ausgestellte. Die Laufzeit jeder CA-Wurzel selbst ist fest und hier nicht konfigurierbar — bei Bedarf unten rotieren.",
     "certificateExpiryWarningLeadDays": "Vorlaufzeit Zertifikatsablauf (Tage)",

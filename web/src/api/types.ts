@@ -195,6 +195,8 @@ export interface AdminSettings {
   agentOfflineNotificationEnabled: boolean;
   /** Independent on/off switch for the "agent back online" email. Default true. */
   agentOnlineRecoveryNotificationEnabled: boolean;
+  /** Whether a Windows agent should proactively download pending Windows Updates ahead of an install trigger — surfaced to agents via the alive heartbeat response. Windows-only today. Default true. */
+  preDownloadWindowsUpdatesEnabled: boolean;
 }
 
 /**

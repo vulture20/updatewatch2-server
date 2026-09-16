@@ -49,6 +49,7 @@ public class AdminSettingsStoreTests : IDisposable
         Assert.Equal(6, store.BruteForce.MaxAttempts);
         Assert.Equal(5, store.BruteForce.WindowMinutes);
         Assert.Equal(30, store.BruteForce.LockoutMinutes);
+        Assert.True(store.PreDownloadWindowsUpdatesEnabled);
 
         using var scope = _services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -102,7 +103,8 @@ public class AdminSettingsStoreTests : IDisposable
             AgentAutoUpdateEnabled: false,
             GitHubToken: "ghp_secret",
             AgentAutoUpdateCheckIntervalHours: 12,
-            AuditLogRetentionDays: 30);
+            AuditLogRetentionDays: 30,
+            PreDownloadWindowsUpdatesEnabled: false);
 
         var dto = await store.UpdateAsync(request);
 
@@ -128,6 +130,8 @@ public class AdminSettingsStoreTests : IDisposable
         Assert.Equal(12, dto.AgentAutoUpdateCheckIntervalHours);
         Assert.Equal(30, store.AuditLogRetentionDays);
         Assert.Equal(30, dto.AuditLogRetentionDays);
+        Assert.False(store.PreDownloadWindowsUpdatesEnabled);
+        Assert.False(dto.PreDownloadWindowsUpdatesEnabled);
 
         // Neither password ever comes back out through the DTO.
         Assert.True(dto.SmtpPasswordSet);

@@ -349,6 +349,19 @@ export function AdminPage() {
           </div>
 
           <div className="card">
+            <span className="card-kicker">{t('admin.preDownloadWindowsUpdates.title')}</span>
+            <p className="card-body">{t('admin.preDownloadWindowsUpdates.hint')}</p>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.preDownloadWindowsUpdatesEnabled}
+                onChange={(e) => update('preDownloadWindowsUpdatesEnabled', e.target.checked)}
+              />
+              {t('admin.preDownloadWindowsUpdates.enabled')}
+            </label>
+          </div>
+
+          <div className="card">
             <span className="card-kicker">{t('admin.agentAutoUpdate.title')}</span>
             <p className="card-body">{t('admin.agentAutoUpdate.hint')}</p>
             <label>

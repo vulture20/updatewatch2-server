@@ -221,6 +221,21 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAliveAsync_surfaces_the_live_PreDownloadWindowsUpdatesEnabled_setting()
+    {
+        await _service.RegisterAsync("pre-download-host", BareRequest);
+
+        _settingsStore.PreDownloadWindowsUpdatesEnabled = false;
+        var disabled = await _service.RecordAliveAsync("pre-download-host", request: null);
+
+        _settingsStore.PreDownloadWindowsUpdatesEnabled = true;
+        var enabled = await _service.RecordAliveAsync("pre-download-host", request: null);
+
+        Assert.False(disabled!.PreDownloadWindowsUpdatesEnabled);
+        Assert.True(enabled!.PreDownloadWindowsUpdatesEnabled);
+    }
+
+    [Fact]
     public async Task RecordAliveAsync_surfaces_whatever_IAgentUpdateService_offers_for_this_agents_reported_version()
     {
         await _service.RegisterAsync("update-offer-host", BareRequest with { AgentVersion = "0.9.0" });

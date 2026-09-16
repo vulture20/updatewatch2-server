@@ -120,5 +120,8 @@ public class AdminSettings
     /// <summary>See <see cref="Agents.AgentOfflineOptions.OnlineRecoveryNotificationEnabled"/>'s doc comment. Default true.</summary>
     public bool AgentOnlineRecoveryNotificationEnabled { get; set; } = true;
 
+    /// <summary>See <see cref="Admin.IAdminSettingsStore.PreDownloadWindowsUpdatesEnabled"/>'s doc comment. Default true.</summary>
+    public bool PreDownloadWindowsUpdatesEnabled { get; set; } = true;
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

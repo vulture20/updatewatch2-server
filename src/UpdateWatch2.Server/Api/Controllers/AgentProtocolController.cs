@@ -78,6 +78,11 @@ public class AgentProtocolController(
         // an agent build that predates it just keeps installing
         // everything whenever installRequested is true, since null/absent
         // is exactly what that older behavior already meant.
+        // preDownloadWindowsUpdatesEnabled is the same additive pattern
+        // again — the fleet-wide admin toggle for proactively downloading
+        // pending Windows updates ahead of an install trigger; an agent
+        // build that predates it just never sees the field, equivalent to
+        // "disabled".
         return result is null
             ? NotFound()
             : Ok(new
@@ -87,6 +92,7 @@ public class AgentProtocolController(
                 agentUpdateAvailable = result.UpdateAvailable,
                 certificateRotationPending = result.CertificateRotationPending,
                 rebootRequested = result.RebootRequested,
+                preDownloadWindowsUpdatesEnabled = result.PreDownloadWindowsUpdatesEnabled,
             });
     }
 

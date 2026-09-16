@@ -47,4 +47,5 @@ public record UpdateAdminSettingsRequest(
     string? InstanceUrl = null,
     int AgentOfflineThresholdMinutes = 15,
     bool AgentOfflineNotificationEnabled = true,
-    bool AgentOnlineRecoveryNotificationEnabled = true);
+    bool AgentOnlineRecoveryNotificationEnabled = true,
+    bool PreDownloadWindowsUpdatesEnabled = true);
