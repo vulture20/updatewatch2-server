@@ -52,8 +52,19 @@ public record AgentRegistrationOutcome(AgentRegistrationStatus Status, string? R
 /// the same idea applied to <see cref="Db.Entities.Agent.BootTimeUtc"/> —
 /// added later than the other four fields, so it's independently nullable
 /// even on an agent build new enough to send everything else.
+/// <see cref="RebootRequired"/> is a different thing again — not identity
+/// metadata, but a fresh, lightweight check of the same "a restart is
+/// needed to finish already-installed updates" signal the agent's own
+/// periodic full update-check report already carries, now also riding
+/// every heartbeat so it's checked far more often — at the user's explicit
+/// request ("Der Check, ob ein Neustart nötig ist, sollte öfter
+/// stattfinden."). Null means the agent's own check failed or hasn't run
+/// this tick, never a confirmed false — see <see cref="AgentRegistrationService.RecordAliveAsync"/>'s
+/// handling for why that distinction is preserved through to the stored value.
 /// </summary>
-public record AgentAliveRequest(string? DnsName, string? OperatingSystem, string? IpAddress, string? AgentVersion, DateTimeOffset? BootTimeUtc = null);
+public record AgentAliveRequest(
+    string? DnsName, string? OperatingSystem, string? IpAddress, string? AgentVersion, DateTimeOffset? BootTimeUtc = null,
+    bool? RebootRequired = null);
 
 /// <summary>
 /// Result of a recorded alive heartbeat (updatewatch2-server#10) —

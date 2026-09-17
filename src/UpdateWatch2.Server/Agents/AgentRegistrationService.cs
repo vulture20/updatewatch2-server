@@ -173,6 +173,7 @@ public class AgentRegistrationService(
             agent.IpAddress = AgentMetadataValidator.Clamp(request.IpAddress, AgentMetadataValidator.MaxIpAddressLength) ?? agent.IpAddress;
             agent.AgentVersion = AgentMetadataValidator.Clamp(request.AgentVersion, AgentMetadataValidator.MaxAgentVersionLength) ?? agent.AgentVersion;
             agent.BootTimeUtc = request.BootTimeUtc ?? agent.BootTimeUtc;
+            agent.RebootRequired = request.RebootRequired ?? agent.RebootRequired;
         }
 
         await db.SaveChangesAsync(ct);

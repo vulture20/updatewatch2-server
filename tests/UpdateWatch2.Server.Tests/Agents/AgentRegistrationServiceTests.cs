@@ -236,6 +236,29 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAliveAsync_updates_RebootRequired_when_reported_and_leaves_it_unchanged_when_null()
+    {
+        await _service.RegisterAsync("reboot-check-host", BareRequest);
+
+        await _service.RecordAliveAsync(
+            "reboot-check-host",
+            new AgentAliveRequest(DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null, RebootRequired: true));
+
+        var afterTrue = await _db.Agents.SingleAsync(a => a.Hostname == "reboot-check-host");
+        Assert.True(afterTrue.RebootRequired);
+
+        // Load-bearing part of this test: a null RebootRequired (the
+        // agent's own check failed or hasn't run this tick) must leave the
+        // last-known-good value untouched, never reset it to false.
+        await _service.RecordAliveAsync(
+            "reboot-check-host",
+            new AgentAliveRequest(DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null, RebootRequired: null));
+
+        var afterNull = await _db.Agents.SingleAsync(a => a.Hostname == "reboot-check-host");
+        Assert.True(afterNull.RebootRequired);
+    }
+
+    [Fact]
     public async Task RecordAliveAsync_surfaces_whatever_IAgentUpdateService_offers_for_this_agents_reported_version()
     {
         await _service.RegisterAsync("update-offer-host", BareRequest with { AgentVersion = "0.9.0" });

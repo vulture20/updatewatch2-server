@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.10] - 2026-09-17
+
+### Added
+
+- **`Agent.RebootRequired` now also updates from every agent heartbeat (~5 min default), not only from the coarser periodic full-update-check report (~4h default) — the server-side half of the agent's new, more-frequent reboot-required check, at the user's explicit request.** `Agents/AgentRegistrationDtos.AgentAliveRequest` gains an additive `RebootRequired` field (protocol bumped to `1.2.0`); `AgentRegistrationService.RecordAliveAsync` sets `agent.RebootRequired = request.RebootRequired ?? agent.RebootRequired`, the same null-coalescing-fallback shape every other self-reported-metadata field on that request already uses — so a null (the agent's own check failed or hasn't run this tick) never overwrites the last-known-good value with a false negative. No DB schema change: this is a second writer to the already-existing `Agent.RebootRequired` column, not a new one. The existing, full-update-check-driven write path (`Updates/UpdateService.ReportUpdatesAsync`) is unchanged and runs alongside this unmodified — both read the same real OS state on the agent, so they can only ever report different snapshots in time, not disagree in any meaningful sense.
+
 ## [1.3.9] - 2026-09-16
 
 ### Added
