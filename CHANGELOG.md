@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.19] - 2026-09-17
+
+### Changed
+
+- **`AgentsListPage`'s bulk-action buttons renamed, at the user's explicit request** ("Der Button 'Auswahl neu starten' sollte zu 'Neustart', 'Auswahl bestätigen' zu 'Bestätigen' und 'Auswahl löschen' zu 'Löschen' umbenannt werden."): DE "Auswahl bestätigen"/"Auswahl neu starten"/"Auswahl löschen" become "Bestätigen"/"Neustart"/"Löschen"; the matching EN labels ("Approve selected"/"Reboot selected"/"Delete selected") were shortened the same way ("Approve"/"Reboot"/"Delete") for consistency, since v1.3.15 already moved the selected-count out of these buttons into its own "N selected" label next to the filtered/total count — "selected" in the button text itself has been redundant since then. `installSelected`'s "Updates installieren"/"Install updates" is unchanged; the user didn't ask for it and it was never phrased with "Auswahl"/"selected" to begin with.
+
 ## [1.3.18] - 2026-09-17
 
 ### Fixed

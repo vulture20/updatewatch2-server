@@ -132,7 +132,7 @@ describe('AgentsListPage', () => {
 
     await screen.findByText('host-1');
     await user.click(screen.getByLabelText('select host-1'));
-    await user.click(screen.getByRole('button', { name: /approve selected/i }));
+    await user.click(screen.getByRole('button', { name: /^approve$/i }));
 
     await waitFor(() => expect(mockedApproveMany).toHaveBeenCalledWith(['host-1']));
     expect(mockedList).toHaveBeenCalledTimes(2); // initial load + reload after approve
@@ -162,7 +162,7 @@ describe('AgentsListPage', () => {
 
     await screen.findByText('host-1');
     await user.click(screen.getByLabelText('select host-1'));
-    await user.click(screen.getByRole('button', { name: /reboot selected/i }));
+    await user.click(screen.getByRole('button', { name: /^reboot$/i }));
 
     await waitFor(() => expect(mockedRebootMany).toHaveBeenCalledWith(['host-1']));
     expect(window.confirm).toHaveBeenCalled();
@@ -177,7 +177,7 @@ describe('AgentsListPage', () => {
 
     await screen.findByText('host-1');
     await user.click(screen.getByLabelText('select host-1'));
-    await user.click(screen.getByRole('button', { name: /reboot selected/i }));
+    await user.click(screen.getByRole('button', { name: /^reboot$/i }));
 
     expect(mockedRebootMany).not.toHaveBeenCalled();
   });
@@ -191,7 +191,7 @@ describe('AgentsListPage', () => {
 
     await screen.findByText('host-1');
     await user.click(screen.getByLabelText('select host-1'));
-    await user.click(screen.getByRole('button', { name: /delete selected/i }));
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
 
     await waitFor(() => expect(mockedDeleteMany).toHaveBeenCalledWith(['host-1']));
     expect(window.confirm).toHaveBeenCalled();
@@ -203,10 +203,10 @@ describe('AgentsListPage', () => {
     renderPage();
     await screen.findByText('host-1');
 
-    expect(screen.getByRole('button', { name: /approve selected/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /reboot selected/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^approve$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^reboot$/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /install updates/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /delete selected/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^delete$/i })).toBeDisabled();
   });
 
   it('shows the selected count next to the filtered/total count, not inside the bulk action buttons', async () => {
@@ -217,14 +217,14 @@ describe('AgentsListPage', () => {
     await screen.findByText('host-1');
 
     expect(screen.queryByText(/^\d+ selected$/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Approve selected' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
 
     await user.click(screen.getByLabelText('select host-1'));
 
     expect(screen.getByText('2 of 2 agents')).toBeInTheDocument();
     expect(screen.getByText('1 selected')).toBeInTheDocument();
     // The button label itself stays fixed, no count appended.
-    expect(screen.getByRole('button', { name: 'Approve selected' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
   });
 
   it('selects and deselects every visible row via the header checkbox', async () => {
