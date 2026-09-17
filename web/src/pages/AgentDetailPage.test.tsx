@@ -694,7 +694,45 @@ describe('AgentDetailPage pushed settings', () => {
     mockedUpdates.mockResolvedValue([]);
   });
 
-  it('saves the entered LogLevel and interval/jitter overrides', async () => {
+  it('always pre-populates every field with a real current value, never blank', async () => {
+    mockedGet.mockResolvedValue({
+      ...approvedAgent,
+      desiredLogLevel: 'DEBUG',
+      actualLogLevel: 'DEBUG',
+      desiredUpdateCheckIntervalMinutes: 15,
+      actualUpdateCheckIntervalMinutes: 15,
+      desiredUpdateCheckJitterSeconds: 5,
+      actualUpdateCheckJitterSeconds: 5,
+    });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+
+    expect(screen.getByLabelText(/LogLevel/i)).toHaveValue('DEBUG');
+    expect(screen.getByLabelText(/update-check interval/i)).toHaveValue(15);
+    expect(screen.getByLabelText(/update-check jitter/i)).toHaveValue(5);
+  });
+
+  it('falls back to the actual value, and then a sane default, when no desired value is known yet', async () => {
+    // No agent has ever confirmed a value at all (a brand new registration,
+    // no heartbeat with these fields yet) — the field must still show
+    // something concrete, never blank.
+    mockedGet.mockResolvedValue(approvedAgent);
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    await userEvent.setup().click(screen.getByRole('button', { name: /^settings$/i }));
+
+    expect(screen.getByLabelText(/LogLevel/i)).toHaveValue('INFO');
+    expect(screen.getByLabelText(/update-check interval/i)).toHaveValue(240);
+    expect(screen.getByLabelText(/update-check jitter/i)).toHaveValue(300);
+  });
+
+  it('saves the edited LogLevel and interval/jitter values', async () => {
     mockedGet.mockResolvedValue(approvedAgent);
     mockedUpdateSettings.mockResolvedValue(undefined);
     const user = userEvent.setup();
@@ -704,7 +742,9 @@ describe('AgentDetailPage pushed settings', () => {
     await screen.findByRole('heading', { name: 'host-1' });
     await user.click(screen.getByRole('button', { name: /^settings$/i }));
     await user.selectOptions(screen.getByLabelText(/LogLevel/i), 'DEBUG');
+    await user.clear(screen.getByLabelText(/update-check interval/i));
     await user.type(screen.getByLabelText(/update-check interval/i), '15');
+    await user.clear(screen.getByLabelText(/update-check jitter/i));
     await user.type(screen.getByLabelText(/update-check jitter/i), '5');
     await user.click(screen.getByRole('button', { name: /save settings/i }));
 
@@ -718,32 +758,20 @@ describe('AgentDetailPage pushed settings', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(/saved/i);
   });
 
-  it('saves null for every field left blank, clearing any existing override', async () => {
-    mockedGet.mockResolvedValue({
-      ...approvedAgent,
-      desiredLogLevel: 'DEBUG',
-      desiredUpdateCheckIntervalMinutes: 15,
-      desiredUpdateCheckJitterSeconds: 5,
-    });
-    mockedUpdateSettings.mockResolvedValue(undefined);
+  it('disables Save while a number field is empty or out of range — there is no longer a way to "clear" a field', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
     const user = userEvent.setup();
 
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
     await user.click(screen.getByRole('button', { name: /^settings$/i }));
-    await user.selectOptions(screen.getByLabelText(/LogLevel/i), '');
-    await user.clear(screen.getByLabelText(/update-check interval/i));
-    await user.clear(screen.getByLabelText(/update-check jitter/i));
-    await user.click(screen.getByRole('button', { name: /save settings/i }));
 
-    await waitFor(() =>
-      expect(mockedUpdateSettings).toHaveBeenCalledWith('host-1', {
-        desiredLogLevel: null,
-        desiredUpdateCheckIntervalMinutes: null,
-        desiredUpdateCheckJitterSeconds: null,
-      }),
-    );
+    expect(screen.getByRole('button', { name: /save settings/i })).toBeEnabled();
+
+    await user.clear(screen.getByLabelText(/update-check interval/i));
+
+    expect(screen.getByRole('button', { name: /save settings/i })).toBeDisabled();
   });
 
   it('shows an error message when saving fails, without closing the dialog', async () => {

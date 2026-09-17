@@ -316,6 +316,77 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAliveAsync_bootstraps_desired_from_the_first_ever_reported_actual_value()
+    {
+        // Db.Entities.Agent.DesiredLogLevel's own doc comment: the field
+        // should never sit at null forever for an agent that has actually
+        // reported in — the admin UI needs a real current value to show,
+        // not a blank field, the very first time the dialog is opened.
+        await _service.RegisterAsync("bootstrap-settings-host", BareRequest);
+
+        var result = await _service.RecordAliveAsync(
+            "bootstrap-settings-host",
+            new AgentAliveRequest(
+                DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null,
+                ActualLogLevel: "INFO", ActualUpdateCheckIntervalMinutes: 240, ActualUpdateCheckJitterSeconds: 300));
+
+        Assert.Equal("INFO", result!.DesiredLogLevel);
+        Assert.Equal(240, result.DesiredUpdateCheckIntervalMinutes);
+        Assert.Equal(300, result.DesiredUpdateCheckJitterSeconds);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_does_not_adopt_a_stale_actual_while_a_server_push_is_still_pending()
+    {
+        // The core fix for "not correctly implemented" (user report): a
+        // heartbeat already in flight before an admin's save arrives must
+        // not immediately overwrite that save with the agent's stale,
+        // pre-push actual value.
+        await _service.RegisterAsync("pending-push-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "pending-push-host");
+        agent.DesiredLogLevel = "DEBUG";
+        agent.PendingSettingsPush = true;
+        await _db.SaveChangesAsync();
+
+        var result = await _service.RecordAliveAsync(
+            "pending-push-host",
+            new AgentAliveRequest(DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null, ActualLogLevel: "INFO"));
+
+        Assert.Equal("DEBUG", result!.DesiredLogLevel);
+        var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "pending-push-host");
+        Assert.True(reloaded.PendingSettingsPush);
+        Assert.Equal("DEBUG", reloaded.DesiredLogLevel);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_clears_pending_once_the_agent_confirms_the_pushed_value_and_then_adopts_a_later_local_change()
+    {
+        await _service.RegisterAsync("converge-then-adopt-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "converge-then-adopt-host");
+        agent.DesiredLogLevel = "DEBUG";
+        agent.PendingSettingsPush = true;
+        await _db.SaveChangesAsync();
+
+        // The agent applied the push and now reports a matching actual.
+        await _service.RecordAliveAsync(
+            "converge-then-adopt-host",
+            new AgentAliveRequest(DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null, ActualLogLevel: "DEBUG"));
+
+        var afterConvergence = await _db.Agents.SingleAsync(a => a.Hostname == "converge-then-adopt-host");
+        Assert.False(afterConvergence.PendingSettingsPush);
+
+        // Some time later, a human hand-edits the local config — no longer
+        // pending, so this genuine local change must now surface server-side.
+        var result = await _service.RecordAliveAsync(
+            "converge-then-adopt-host",
+            new AgentAliveRequest(DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null, ActualLogLevel: "WARNING"));
+
+        Assert.Equal("WARNING", result!.DesiredLogLevel);
+        var afterLocalEdit = await _db.Agents.SingleAsync(a => a.Hostname == "converge-then-adopt-host");
+        Assert.Equal("WARNING", afterLocalEdit.DesiredLogLevel);
+    }
+
+    [Fact]
     public async Task RecordAliveAsync_surfaces_whatever_IAgentUpdateService_offers_for_this_agents_reported_version()
     {
         await _service.RegisterAsync("update-offer-host", BareRequest with { AgentVersion = "0.9.0" });

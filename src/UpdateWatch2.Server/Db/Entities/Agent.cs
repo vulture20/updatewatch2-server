@@ -214,36 +214,67 @@ public class Agent
     public DateTimeOffset? LastUpdateCheckAt { get; set; }
 
     /// <summary>
-    /// An admin-set LogLevel override for this one agent (DEBUG/INFO/WARNING/ERROR),
-    /// pushed down on every heartbeat and enforced unconditionally whenever
-    /// non-null — this is what implements CLAUDE.md's "server always wins
-    /// on conflict" rule for pushed agent settings, at the user's explicit
-    /// request. Null means no override: the agent's own local registry/config
-    /// file value decides, and nothing here overwrites it. Distinct from
-    /// <see cref="Admin.AdminSettings.LogLevel"/>, which only ever controls
-    /// this server's own ASP.NET Core logging.
+    /// The current LogLevel this agent should be running with (DEBUG/INFO/
+    /// WARNING/ERROR) — a single, bidirectionally-synced value, not an
+    /// optional "override" (server v1.3.16, replacing that framing at the
+    /// user's explicit request: "Der aktuelle Wert soll immer im Auswahl-
+    /// bzw. Textfeld stehen... Änderungen sollen auf beiden Seiten möglich
+    /// sein und direkt auf die Gegenseite gespiegelt werden."). Null only
+    /// for an agent that has never sent a single heartbeat with this field
+    /// populated (genuinely unknown, not "no override"). Editing it in the
+    /// admin UI's Settings dialog marks <see cref="PendingSettingsPush"/>
+    /// and pushes it down on every heartbeat until <see cref="ActualLogLevel"/>
+    /// confirms it was applied; editing the agent's own local registry/config
+    /// file instead flows the other way — see <see cref="ActualLogLevel"/>
+    /// and <see cref="PendingSettingsPush"/>'s own doc comments for the full
+    /// adoption logic in <c>AgentRegistrationService.RecordAliveAsync</c>.
+    /// Distinct from <see cref="Admin.AdminSettings.LogLevel"/>, which only
+    /// ever controls this server's own ASP.NET Core logging.
     /// </summary>
     public string? DesiredLogLevel { get; set; }
 
     /// <summary>
-    /// The agent's own actual, currently-effective LogLevel, self-reported
-    /// on every heartbeat — display-only, lets an admin see what's really
-    /// running even with no <see cref="DesiredLogLevel"/> override set (e.g.
-    /// after a manual registry/config-file edit).
+    /// This agent's own actual, currently-effective LogLevel, self-reported
+    /// on every heartbeat. Always shown to the admin (the Settings dialog's
+    /// hint text); also what <see cref="DesiredLogLevel"/> gets adopted
+    /// from whenever it diverges and <see cref="PendingSettingsPush"/> is
+    /// false — see that field's doc comment.
     /// </summary>
     public string? ActualLogLevel { get; set; }
 
-    /// <summary>Admin-set override for <c>AgentOptions.UpdateCheckIntervalMinutes</c> — same null-means-no-override/server-always-wins semantics as <see cref="DesiredLogLevel"/>.</summary>
+    /// <summary>The current update-check interval (minutes) this agent should be running with — same bidirectional-sync semantics as <see cref="DesiredLogLevel"/>.</summary>
     public int? DesiredUpdateCheckIntervalMinutes { get; set; }
 
-    /// <summary>The agent's own actual update-check interval, self-reported every heartbeat — same reasoning as <see cref="ActualLogLevel"/>.</summary>
+    /// <summary>This agent's own actual update-check interval, self-reported every heartbeat — same reasoning as <see cref="ActualLogLevel"/>.</summary>
     public int? ActualUpdateCheckIntervalMinutes { get; set; }
 
-    /// <summary>Admin-set override for <c>AgentOptions.UpdateCheckJitterSeconds</c> — same null-means-no-override/server-always-wins semantics as <see cref="DesiredLogLevel"/>.</summary>
+    /// <summary>The current update-check jitter (seconds) this agent should be running with — same bidirectional-sync semantics as <see cref="DesiredLogLevel"/>.</summary>
     public int? DesiredUpdateCheckJitterSeconds { get; set; }
 
-    /// <summary>The agent's own actual update-check jitter, self-reported every heartbeat — same reasoning as <see cref="ActualLogLevel"/>.</summary>
+    /// <summary>This agent's own actual update-check jitter, self-reported every heartbeat — same reasoning as <see cref="ActualLogLevel"/>.</summary>
     public int? ActualUpdateCheckJitterSeconds { get; set; }
+
+    /// <summary>
+    /// True from the moment an admin saves a change via the Settings dialog
+    /// (<see cref="Agents.AgentService.UpdateSettingsAsync"/>) until a later
+    /// heartbeat confirms the agent actually applied it (<c>Actual*</c>
+    /// matching every <c>Desired*</c> field again) — at which point
+    /// <c>AgentRegistrationService.RecordAliveAsync</c> clears it back to
+    /// false. This is what makes "the server always wins on a race
+    /// condition" (CLAUDE.md, at the user's explicit request) actually
+    /// correct rather than merely usual: while true, a heartbeat reporting
+    /// a still-divergent <c>Actual*</c> is NEVER adopted back into
+    /// <c>Desired*</c> — without this guard, a heartbeat already in flight
+    /// the moment an admin saves (carrying the agent's OLD, pre-push actual
+    /// value) would otherwise immediately stomp the admin's own just-saved
+    /// change, every single time, not just in some rare true race. Once
+    /// false (settled/converged), any future divergent <c>Actual*</c> IS
+    /// adopted into <c>Desired*</c> — this is what lets a manual registry/
+    /// config-file edit surface in the dialog the next time it's opened.
+    /// One shared flag for all three settings, not one per field, since
+    /// the Settings dialog always saves all three together.
+    /// </summary>
+    public bool PendingSettingsPush { get; set; }
 
     /// <summary>
     /// Internal bookkeeping for <see cref="Notifications.AgentOfflineNotificationWorker"/>

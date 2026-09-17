@@ -117,18 +117,22 @@ public record AliveRecordResult(
 
 /// <summary>
 /// Body of <c>PUT /api/agents/{hostname}/settings</c> — an admin's way to
-/// set (or clear, by sending null) a per-agent override for one or more of
-/// the settings the server can push to a specific agent, at the user's
-/// explicit request ("LogLevel des Agents über den Server setzen... Diese
-/// Logik soll für alle (auch spätere) Einstellungen am Server für den Agent
-/// gelten."). A full replace, not a partial merge — matching
-/// <c>PUT /api/admin/settings</c>'s own convention — so a field's absence
-/// from the caller's JSON (defaulting to null) genuinely means "no
-/// override", not "leave whatever was there before". See
-/// <see cref="AgentSettingsValidator"/> for the accepted value ranges.
+/// set the current value for one or more of the settings the server keeps
+/// bidirectionally synced with a specific agent, at the user's explicit
+/// request ("LogLevel des Agents über den Server setzen... Änderungen
+/// sollen auf beiden Seiten möglich sein und direkt auf die Gegenseite
+/// gespiegelt werden. Diese Logik soll für alle (auch spätere)
+/// Einstellungen am Server für den Agent gelten."). All three fields are
+/// required — there is no longer a "clear to defer to the local value"
+/// concept: the admin UI always shows and submits the agent's actual
+/// current value, edited in place, matching <see cref="Db.Entities.Agent.DesiredLogLevel"/>'s
+/// own doc comment. A full replace, not a partial merge — matching
+/// <c>PUT /api/admin/settings</c>'s own convention, so the Settings dialog
+/// always submits all three together. See <see cref="AgentSettingsValidator"/>
+/// for the accepted value ranges.
 /// </summary>
 public record UpdateAgentSettingsRequest(
-    string? DesiredLogLevel, int? DesiredUpdateCheckIntervalMinutes, int? DesiredUpdateCheckJitterSeconds);
+    string DesiredLogLevel, int DesiredUpdateCheckIntervalMinutes, int DesiredUpdateCheckJitterSeconds);
 
 /// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)

@@ -145,6 +145,55 @@ public class AgentRegistrationService(
         return AgentRegistrationOutcome.Approved(Convert.ToBase64String(issued.PfxBytes));
     }
 
+    /// <summary>
+    /// Reconciles <c>Desired*</c> against the just-refreshed <c>Actual*</c>
+    /// for the three bidirectionally-synced settings (LogLevel, update-check
+    /// interval/jitter) — see <see cref="Db.Entities.Agent.PendingSettingsPush"/>'s
+    /// doc comment for the full reasoning. Two things happen here, in order:
+    /// (1) if a push is pending, check whether the agent has now caught up
+    /// (every <c>Actual*</c> matches its <c>Desired*</c>) and clear the flag
+    /// if so; (2) only when NOT pending (either never was, or just cleared
+    /// above), adopt any still-divergent <c>Actual*</c> into <c>Desired*</c> —
+    /// this is what surfaces a manual registry/config-file edit in the
+    /// Settings dialog, and what bootstraps <c>Desired*</c> from null to a
+    /// real value the very first time an agent ever reports one. Never
+    /// adopts while still pending, which is precisely what stops a
+    /// heartbeat that was already in flight before an admin's own push
+    /// arrived from immediately overwriting that push with the agent's
+    /// stale pre-push value.
+    /// </summary>
+    private static void ReconcilePushedSettings(Agent agent)
+    {
+        if (agent.PendingSettingsPush)
+        {
+            var converged =
+                agent.ActualLogLevel == agent.DesiredLogLevel
+                && agent.ActualUpdateCheckIntervalMinutes == agent.DesiredUpdateCheckIntervalMinutes
+                && agent.ActualUpdateCheckJitterSeconds == agent.DesiredUpdateCheckJitterSeconds;
+            if (!converged)
+            {
+                return;
+            }
+
+            agent.PendingSettingsPush = false;
+        }
+
+        if (agent.ActualLogLevel is not null && agent.ActualLogLevel != agent.DesiredLogLevel)
+        {
+            agent.DesiredLogLevel = agent.ActualLogLevel;
+        }
+
+        if (agent.ActualUpdateCheckIntervalMinutes is not null && agent.ActualUpdateCheckIntervalMinutes != agent.DesiredUpdateCheckIntervalMinutes)
+        {
+            agent.DesiredUpdateCheckIntervalMinutes = agent.ActualUpdateCheckIntervalMinutes;
+        }
+
+        if (agent.ActualUpdateCheckJitterSeconds is not null && agent.ActualUpdateCheckJitterSeconds != agent.DesiredUpdateCheckJitterSeconds)
+        {
+            agent.DesiredUpdateCheckJitterSeconds = agent.ActualUpdateCheckJitterSeconds;
+        }
+    }
+
     public async Task<AliveRecordResult?> RecordAliveAsync(string hostname, AgentAliveRequest? request, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
@@ -177,6 +226,7 @@ public class AgentRegistrationService(
             agent.ActualLogLevel = request.ActualLogLevel ?? agent.ActualLogLevel;
             agent.ActualUpdateCheckIntervalMinutes = request.ActualUpdateCheckIntervalMinutes ?? agent.ActualUpdateCheckIntervalMinutes;
             agent.ActualUpdateCheckJitterSeconds = request.ActualUpdateCheckJitterSeconds ?? agent.ActualUpdateCheckJitterSeconds;
+            ReconcilePushedSettings(agent);
         }
 
         await db.SaveChangesAsync(ct);

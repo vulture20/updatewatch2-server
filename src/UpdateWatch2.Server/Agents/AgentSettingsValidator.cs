@@ -27,12 +27,12 @@ public static class AgentSettingsValidator
         && IsValidUpdateCheckIntervalMinutes(request.DesiredUpdateCheckIntervalMinutes)
         && IsValidUpdateCheckJitterSeconds(request.DesiredUpdateCheckJitterSeconds);
 
-    public static bool IsValidLogLevel(string? value) =>
-        value is null || AllowedLogLevels.Contains(value, StringComparer.OrdinalIgnoreCase);
+    public static bool IsValidLogLevel(string value) =>
+        AllowedLogLevels.Contains(value, StringComparer.OrdinalIgnoreCase);
 
-    public static bool IsValidUpdateCheckIntervalMinutes(int? value) =>
-        value is null || (value >= MinIntervalMinutes && value <= MaxIntervalMinutes);
+    public static bool IsValidUpdateCheckIntervalMinutes(int value) =>
+        value >= MinIntervalMinutes && value <= MaxIntervalMinutes;
 
-    public static bool IsValidUpdateCheckJitterSeconds(int? value) =>
-        value is null || (value >= MinJitterSeconds && value <= MaxJitterSeconds);
+    public static bool IsValidUpdateCheckJitterSeconds(int value) =>
+        value >= MinJitterSeconds && value <= MaxJitterSeconds;
 }

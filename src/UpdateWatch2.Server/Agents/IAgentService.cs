@@ -107,18 +107,22 @@ public interface IAgentService
     Task<CaRotationImpactDto> GetCaRotationImpactAsync(string? previousRootThumbprintSha256, CancellationToken ct = default);
 
     /// <summary>
-    /// Sets (or clears, for a null field) this one agent's pushed-setting
-    /// overrides — see <see cref="Db.Entities.Agent.DesiredLogLevel"/> and
-    /// its siblings, and <see cref="UpdateAgentSettingsRequest"/>'s own doc
-    /// comment for the full-replace semantics. Delivery is the agent's own
-    /// alive-heartbeat poll picking this up, exactly like
-    /// <see cref="TriggerRebootAsync"/> — no separate acknowledgement
-    /// needed, since there's no distinct "acted on it" moment the way
-    /// install/reboot have; the agent's own next heartbeat reporting a
-    /// matching actual value is confirmation enough. Returns false if no
-    /// agent with that hostname exists.
+    /// Sets this one agent's current LogLevel/update-check interval/jitter
+    /// — see <see cref="Db.Entities.Agent.DesiredLogLevel"/> and its
+    /// siblings, and <see cref="UpdateAgentSettingsRequest"/>'s own doc
+    /// comment for the full-replace semantics. Also sets
+    /// <see cref="Db.Entities.Agent.PendingSettingsPush"/>, which is what
+    /// stops a heartbeat already in flight at the moment this is called
+    /// from immediately overwriting this change with the agent's stale
+    /// pre-push actual value — see that field's own doc comment. Delivery
+    /// is the agent's own alive-heartbeat poll picking this up, exactly
+    /// like <see cref="TriggerRebootAsync"/> — no separate acknowledgement
+    /// endpoint needed, since <c>AgentRegistrationService.RecordAliveAsync</c>'s
+    /// own reconciliation logic already clears the pending flag once a
+    /// matching actual value comes back. Returns false if no agent with
+    /// that hostname exists.
     /// </summary>
     Task<bool> UpdateSettingsAsync(
-        string hostname, string initiatedBy, string? desiredLogLevel, int? desiredUpdateCheckIntervalMinutes,
-        int? desiredUpdateCheckJitterSeconds, CancellationToken ct = default);
+        string hostname, string initiatedBy, string desiredLogLevel, int desiredUpdateCheckIntervalMinutes,
+        int desiredUpdateCheckJitterSeconds, CancellationToken ct = default);
 }

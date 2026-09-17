@@ -5,12 +5,11 @@ namespace UpdateWatch2.Server.Tests.Agents;
 public class AgentSettingsValidatorTests
 {
     [Theory]
-    [InlineData(null)]
     [InlineData("DEBUG")]
     [InlineData("Info")]
     [InlineData("warning")]
     [InlineData("ERROR")]
-    public void IsValidLogLevel_accepts_null_or_a_known_level_case_insensitively(string? value)
+    public void IsValidLogLevel_accepts_a_known_level_case_insensitively(string value)
     {
         Assert.True(AgentSettingsValidator.IsValidLogLevel(value));
     }
@@ -25,11 +24,10 @@ public class AgentSettingsValidatorTests
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData(1)]
     [InlineData(240)]
     [InlineData(10_080)]
-    public void IsValidUpdateCheckIntervalMinutes_accepts_null_or_a_value_within_range(int? value)
+    public void IsValidUpdateCheckIntervalMinutes_accepts_a_value_within_range(int value)
     {
         Assert.True(AgentSettingsValidator.IsValidUpdateCheckIntervalMinutes(value));
     }
@@ -44,11 +42,10 @@ public class AgentSettingsValidatorTests
     }
 
     [Theory]
-    [InlineData(null)]
     [InlineData(0)]
     [InlineData(300)]
     [InlineData(3_600)]
-    public void IsValidUpdateCheckJitterSeconds_accepts_null_or_a_value_within_range(int? value)
+    public void IsValidUpdateCheckJitterSeconds_accepts_a_value_within_range(int value)
     {
         Assert.True(AgentSettingsValidator.IsValidUpdateCheckJitterSeconds(value));
     }
@@ -62,16 +59,16 @@ public class AgentSettingsValidatorTests
     }
 
     [Fact]
-    public void IsValid_accepts_a_request_with_every_field_null()
+    public void IsValid_accepts_a_request_with_every_field_within_range()
     {
-        Assert.True(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest(null, null, null)));
+        Assert.True(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 240, 300)));
     }
 
     [Fact]
     public void IsValid_rejects_a_request_with_any_invalid_field()
     {
-        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("NOT-A-LEVEL", null, null)));
-        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest(null, 0, null)));
-        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest(null, null, -1)));
+        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("NOT-A-LEVEL", 240, 300)));
+        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 0, 300)));
+        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 240, -1)));
     }
 }

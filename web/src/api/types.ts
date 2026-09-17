@@ -87,11 +87,16 @@ export interface AgentDetail {
   actualUpdateCheckJitterSeconds: number | null;
 }
 
-/** Body of PUT /api/agents/{hostname}/settings — a full replace, see agentsApi.updateSettings. */
+/**
+ * Body of PUT /api/agents/{hostname}/settings — a full replace, see
+ * agentsApi.updateSettings. All three fields are required: this sets the
+ * agent's current value for each setting (bidirectionally synced, not an
+ * optional override), matching AgentDetail's own desired* fields.
+ */
 export interface UpdateAgentSettings {
-  desiredLogLevel: string | null;
-  desiredUpdateCheckIntervalMinutes: number | null;
-  desiredUpdateCheckJitterSeconds: number | null;
+  desiredLogLevel: string;
+  desiredUpdateCheckIntervalMinutes: number;
+  desiredUpdateCheckJitterSeconds: number;
 }
 
 /** Response of an admin-initiated certificate re-issuance (updatewatch2-server#8). */

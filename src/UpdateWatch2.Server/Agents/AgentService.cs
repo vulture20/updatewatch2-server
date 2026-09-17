@@ -292,8 +292,8 @@ public class AgentService(
     }
 
     public async Task<bool> UpdateSettingsAsync(
-        string hostname, string initiatedBy, string? desiredLogLevel, int? desiredUpdateCheckIntervalMinutes,
-        int? desiredUpdateCheckJitterSeconds, CancellationToken ct = default)
+        string hostname, string initiatedBy, string desiredLogLevel, int desiredUpdateCheckIntervalMinutes,
+        int desiredUpdateCheckJitterSeconds, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
         if (agent is null)
@@ -304,11 +304,18 @@ public class AgentService(
         agent.DesiredLogLevel = desiredLogLevel;
         agent.DesiredUpdateCheckIntervalMinutes = desiredUpdateCheckIntervalMinutes;
         agent.DesiredUpdateCheckJitterSeconds = desiredUpdateCheckJitterSeconds;
+        // Set unconditionally, even if these values happen to already match
+        // what's currently Desired/Actual — see Agent.PendingSettingsPush's
+        // own doc comment for why this must be set on every save, not just
+        // when something actually changed: a heartbeat already in flight
+        // right now must not be allowed to adopt its own (possibly stale)
+        // actual value back over what was just saved here.
+        agent.PendingSettingsPush = true;
         await db.SaveChangesAsync(ct);
 
         await auditLog.LogAsync(
             initiatedBy, "agent.settings.update",
-            $"{hostname}: LogLevel={desiredLogLevel ?? "(none)"}, UpdateCheckIntervalMinutes={desiredUpdateCheckIntervalMinutes?.ToString() ?? "(none)"}, UpdateCheckJitterSeconds={desiredUpdateCheckJitterSeconds?.ToString() ?? "(none)"}",
+            $"{hostname}: LogLevel={desiredLogLevel}, UpdateCheckIntervalMinutes={desiredUpdateCheckIntervalMinutes}, UpdateCheckJitterSeconds={desiredUpdateCheckJitterSeconds}",
             ct);
 
         return true;
