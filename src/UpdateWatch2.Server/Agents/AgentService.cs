@@ -59,7 +59,8 @@ public class AgentService(
             agent.PendingRebootRequestedAt, agent.LastRebootOutcome, agent.LastRebootErrorDetail, agent.LastRebootCompletedAt, agent.BootTimeUtc,
             agent.IssuingRootThumbprint, rejection?.Reason, rejection?.Timestamp, IsOffline(agent.LastAliveAt, offlineThreshold),
             agent.LastUpdateCheckAt, agent.DesiredLogLevel, agent.ActualLogLevel, agent.DesiredUpdateCheckIntervalMinutes,
-            agent.ActualUpdateCheckIntervalMinutes, agent.DesiredUpdateCheckJitterSeconds, agent.ActualUpdateCheckJitterSeconds);
+            agent.ActualUpdateCheckIntervalMinutes, agent.DesiredUpdateCheckJitterSeconds, agent.ActualUpdateCheckJitterSeconds,
+            agent.DesiredAliveIntervalMinutes, agent.ActualAliveIntervalMinutes);
     }
 
     /// <summary>
@@ -293,7 +294,7 @@ public class AgentService(
 
     public async Task<bool> UpdateSettingsAsync(
         string hostname, string initiatedBy, string desiredLogLevel, int desiredUpdateCheckIntervalMinutes,
-        int desiredUpdateCheckJitterSeconds, CancellationToken ct = default)
+        int desiredUpdateCheckJitterSeconds, int desiredAliveIntervalMinutes, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
         if (agent is null)
@@ -304,6 +305,7 @@ public class AgentService(
         agent.DesiredLogLevel = desiredLogLevel;
         agent.DesiredUpdateCheckIntervalMinutes = desiredUpdateCheckIntervalMinutes;
         agent.DesiredUpdateCheckJitterSeconds = desiredUpdateCheckJitterSeconds;
+        agent.DesiredAliveIntervalMinutes = desiredAliveIntervalMinutes;
         // Set unconditionally, even if these values happen to already match
         // what's currently Desired/Actual — see Agent.PendingSettingsPush's
         // own doc comment for why this must be set on every save, not just
@@ -315,9 +317,63 @@ public class AgentService(
 
         await auditLog.LogAsync(
             initiatedBy, "agent.settings.update",
-            $"{hostname}: LogLevel={desiredLogLevel}, UpdateCheckIntervalMinutes={desiredUpdateCheckIntervalMinutes}, UpdateCheckJitterSeconds={desiredUpdateCheckJitterSeconds}",
+            $"{hostname}: LogLevel={desiredLogLevel}, UpdateCheckIntervalMinutes={desiredUpdateCheckIntervalMinutes}, " +
+            $"UpdateCheckJitterSeconds={desiredUpdateCheckJitterSeconds}, AliveIntervalMinutes={desiredAliveIntervalMinutes}",
             ct);
 
         return true;
+    }
+
+    public async Task<BulkUpdateAgentSettingsResult> UpdateSettingsManyAsync(
+        IReadOnlyList<string> hostnames, string initiatedBy, string? desiredLogLevel, int? desiredUpdateCheckIntervalMinutes,
+        int? desiredUpdateCheckJitterSeconds, int? desiredAliveIntervalMinutes, CancellationToken ct = default)
+    {
+        var agents = await db.Agents.Where(a => hostnames.Contains(a.Hostname)).ToListAsync(ct);
+        foreach (var agent in agents)
+        {
+            // Only the fields the admin actually opted into are touched —
+            // see BulkUpdateAgentSettingsRequest's own doc comment for why
+            // this is deliberately different from the single-agent, always-
+            // full-replace overload above.
+            if (desiredLogLevel is not null)
+            {
+                agent.DesiredLogLevel = desiredLogLevel;
+            }
+
+            if (desiredUpdateCheckIntervalMinutes is not null)
+            {
+                agent.DesiredUpdateCheckIntervalMinutes = desiredUpdateCheckIntervalMinutes;
+            }
+
+            if (desiredUpdateCheckJitterSeconds is not null)
+            {
+                agent.DesiredUpdateCheckJitterSeconds = desiredUpdateCheckJitterSeconds;
+            }
+
+            if (desiredAliveIntervalMinutes is not null)
+            {
+                agent.DesiredAliveIntervalMinutes = desiredAliveIntervalMinutes;
+            }
+
+            // Same "set unconditionally" reasoning as the single-agent
+            // overload — even a partial push still needs to block an
+            // in-flight heartbeat from adopting a stale actual value back
+            // over the field(s) that were just pushed.
+            agent.PendingSettingsPush = true;
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        var updatedHostnames = agents.Select(a => a.Hostname).ToHashSet();
+        var notFound = hostnames.Where(h => !updatedHostnames.Contains(h)).ToList();
+        await auditLog.LogAsync(
+            initiatedBy, "agent.settings.update.bulk",
+            $"{string.Join(", ", updatedHostnames)}: LogLevel={desiredLogLevel ?? "(unchanged)"}, " +
+            $"UpdateCheckIntervalMinutes={desiredUpdateCheckIntervalMinutes?.ToString() ?? "(unchanged)"}, " +
+            $"UpdateCheckJitterSeconds={desiredUpdateCheckJitterSeconds?.ToString() ?? "(unchanged)"}, " +
+            $"AliveIntervalMinutes={desiredAliveIntervalMinutes?.ToString() ?? "(unchanged)"}",
+            ct);
+
+        return new BulkUpdateAgentSettingsResult(agents.Count, notFound);
     }
 }

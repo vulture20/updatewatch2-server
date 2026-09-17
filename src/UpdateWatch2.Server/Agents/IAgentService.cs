@@ -107,10 +107,10 @@ public interface IAgentService
     Task<CaRotationImpactDto> GetCaRotationImpactAsync(string? previousRootThumbprintSha256, CancellationToken ct = default);
 
     /// <summary>
-    /// Sets this one agent's current LogLevel/update-check interval/jitter
-    /// — see <see cref="Db.Entities.Agent.DesiredLogLevel"/> and its
-    /// siblings, and <see cref="UpdateAgentSettingsRequest"/>'s own doc
-    /// comment for the full-replace semantics. Also sets
+    /// Sets this one agent's current LogLevel/update-check interval/jitter/
+    /// alive-heartbeat interval — see <see cref="Db.Entities.Agent.DesiredLogLevel"/>
+    /// and its siblings, and <see cref="UpdateAgentSettingsRequest"/>'s own
+    /// doc comment for the full-replace semantics. Also sets
     /// <see cref="Db.Entities.Agent.PendingSettingsPush"/>, which is what
     /// stops a heartbeat already in flight at the moment this is called
     /// from immediately overwriting this change with the agent's stale
@@ -124,5 +124,20 @@ public interface IAgentService
     /// </summary>
     Task<bool> UpdateSettingsAsync(
         string hostname, string initiatedBy, string desiredLogLevel, int desiredUpdateCheckIntervalMinutes,
-        int desiredUpdateCheckJitterSeconds, CancellationToken ct = default);
+        int desiredUpdateCheckJitterSeconds, int desiredAliveIntervalMinutes, CancellationToken ct = default);
+
+    /// <summary>
+    /// The overview list's bulk counterpart to <see cref="UpdateSettingsAsync"/>
+    /// — see <see cref="BulkUpdateAgentSettingsRequest"/>'s own doc comment
+    /// for why every settings parameter here is independently optional
+    /// (null = leave this one untouched on every selected agent) rather than
+    /// required like the single-agent overload above. Still sets
+    /// <see cref="Db.Entities.Agent.PendingSettingsPush"/> on every found
+    /// agent unconditionally, for the same reason the single-agent overload
+    /// does — even a partial push must not let an in-flight heartbeat
+    /// overwrite it.
+    /// </summary>
+    Task<BulkUpdateAgentSettingsResult> UpdateSettingsManyAsync(
+        IReadOnlyList<string> hostnames, string initiatedBy, string? desiredLogLevel, int? desiredUpdateCheckIntervalMinutes,
+        int? desiredUpdateCheckJitterSeconds, int? desiredAliveIntervalMinutes, CancellationToken ct = default);
 }

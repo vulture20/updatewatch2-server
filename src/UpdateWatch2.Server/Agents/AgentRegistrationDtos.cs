@@ -62,18 +62,21 @@ public record AgentRegistrationOutcome(AgentRegistrationStatus Status, string? R
 /// this tick, never a confirmed false — see <see cref="AgentRegistrationService.RecordAliveAsync"/>'s
 /// handling for why that distinction is preserved through to the stored value.
 /// <see cref="ActualLogLevel"/>/<see cref="ActualUpdateCheckIntervalMinutes"/>/
-/// <see cref="ActualUpdateCheckJitterSeconds"/> are the agent's own current,
-/// actually-effective values for the three settings the server can push an
-/// override for (<see cref="Db.Entities.Agent.DesiredLogLevel"/> and its
-/// siblings) — sent every heartbeat regardless of whether an override is
-/// set, purely for admin visibility, at the user's explicit request
-/// ("Änderungen an Registry bzw. Configfile sollen wiederum am Server zu
-/// sehen sein.").
+/// <see cref="ActualUpdateCheckJitterSeconds"/>/<see cref="ActualAliveIntervalMinutes"/>
+/// are the agent's own current, actually-effective values for the settings
+/// the server can push an override for (<see cref="Db.Entities.Agent.DesiredLogLevel"/>
+/// and its siblings) — sent every heartbeat regardless of whether an
+/// override is set, purely for admin visibility, at the user's explicit
+/// request ("Änderungen an Registry bzw. Configfile sollen wiederum am
+/// Server zu sehen sein."). <see cref="ActualAliveIntervalMinutes"/> was
+/// added later than the other three (server v1.3.20) — same reasoning as
+/// <see cref="BootTimeUtc"/> above, independently nullable/optional even on
+/// an agent build new enough to send everything else.
 /// </summary>
 public record AgentAliveRequest(
     string? DnsName, string? OperatingSystem, string? IpAddress, string? AgentVersion, DateTimeOffset? BootTimeUtc = null,
     bool? RebootRequired = null, string? ActualLogLevel = null, int? ActualUpdateCheckIntervalMinutes = null,
-    int? ActualUpdateCheckJitterSeconds = null);
+    int? ActualUpdateCheckJitterSeconds = null, int? ActualAliveIntervalMinutes = null);
 
 /// <summary>
 /// Result of a recorded alive heartbeat (updatewatch2-server#10) —
@@ -113,7 +116,7 @@ public record AgentAliveRequest(
 public record AliveRecordResult(
     bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending,
     bool RebootRequested, bool PreDownloadWindowsUpdatesEnabled, string? DesiredLogLevel, int? DesiredUpdateCheckIntervalMinutes,
-    int? DesiredUpdateCheckJitterSeconds);
+    int? DesiredUpdateCheckJitterSeconds, int? DesiredAliveIntervalMinutes);
 
 /// <summary>
 /// The actual JSON shape of <c>POST /api/agents/{hostname}/alive</c>'s
@@ -147,12 +150,13 @@ public record AliveResponseDto(
     bool PreDownloadWindowsUpdatesEnabled,
     string? DesiredLogLevel,
     int? DesiredUpdateCheckIntervalMinutes,
-    int? DesiredUpdateCheckJitterSeconds)
+    int? DesiredUpdateCheckJitterSeconds,
+    int? DesiredAliveIntervalMinutes)
 {
     public static AliveResponseDto FromResult(AliveRecordResult result) => new(
         result.InstallRequested, result.InstallUpdateIds, result.UpdateAvailable, result.CertificateRotationPending,
         result.RebootRequested, result.PreDownloadWindowsUpdatesEnabled, result.DesiredLogLevel,
-        result.DesiredUpdateCheckIntervalMinutes, result.DesiredUpdateCheckJitterSeconds);
+        result.DesiredUpdateCheckIntervalMinutes, result.DesiredUpdateCheckJitterSeconds, result.DesiredAliveIntervalMinutes);
 }
 
 /// <summary>
@@ -162,17 +166,43 @@ public record AliveResponseDto(
 /// request ("LogLevel des Agents über den Server setzen... Änderungen
 /// sollen auf beiden Seiten möglich sein und direkt auf die Gegenseite
 /// gespiegelt werden. Diese Logik soll für alle (auch spätere)
-/// Einstellungen am Server für den Agent gelten."). All three fields are
+/// Einstellungen am Server für den Agent gelten."). All four fields are
 /// required — there is no longer a "clear to defer to the local value"
 /// concept: the admin UI always shows and submits the agent's actual
 /// current value, edited in place, matching <see cref="Db.Entities.Agent.DesiredLogLevel"/>'s
 /// own doc comment. A full replace, not a partial merge — matching
-/// <c>PUT /api/admin/settings</c>'s own convention, so the Settings dialog
-/// always submits all three together. See <see cref="AgentSettingsValidator"/>
-/// for the accepted value ranges.
+/// <c>PUT /api/admin/settings</c>'s own convention, so the per-agent
+/// Settings dialog always submits all four together.
+/// <see cref="DesiredAliveIntervalMinutes"/> was added later than the other
+/// three (server v1.3.20, at the user's explicit request). See
+/// <see cref="AgentSettingsValidator"/> for the accepted value ranges. Not
+/// to be confused with <see cref="BulkUpdateAgentSettingsRequest"/>, the
+/// overview list's bulk-push counterpart, whose fields are each
+/// independently optional instead.
 /// </summary>
 public record UpdateAgentSettingsRequest(
-    string DesiredLogLevel, int DesiredUpdateCheckIntervalMinutes, int DesiredUpdateCheckJitterSeconds);
+    string DesiredLogLevel, int DesiredUpdateCheckIntervalMinutes, int DesiredUpdateCheckJitterSeconds,
+    int DesiredAliveIntervalMinutes);
+
+/// <summary>
+/// Body of <c>POST /api/agents/settings</c> — the overview list's bulk
+/// counterpart to <see cref="UpdateAgentSettingsRequest"/>, at the user's
+/// explicit request ("Es fehlt außerdem die Möglichkeit Agent-Einstellungen
+/// bulk zu pushen."). Unlike the single-agent request, every settings field
+/// here is independently optional/nullable: null means "leave this setting
+/// untouched on every selected agent," letting an admin push just one
+/// setting (e.g. LogLevel=DEBUG on several agents at once for diagnosis)
+/// without being forced to also overwrite the others' individually-tuned
+/// values — confirmed as the intended design via an explicit clarifying
+/// question before implementing, rather than assumed. At least one field
+/// must be non-null (see <see cref="AgentSettingsValidator.IsValidBulkRequest"/>)
+/// — a request with every field null would be a no-op push that still sets
+/// <see cref="Db.Entities.Agent.PendingSettingsPush"/> on every selected
+/// agent for nothing.
+/// </summary>
+public record BulkUpdateAgentSettingsRequest(
+    IReadOnlyList<string> Hostnames, string? DesiredLogLevel, int? DesiredUpdateCheckIntervalMinutes,
+    int? DesiredUpdateCheckJitterSeconds, int? DesiredAliveIntervalMinutes);
 
 /// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)

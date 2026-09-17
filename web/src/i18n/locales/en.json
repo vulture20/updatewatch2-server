@@ -42,6 +42,12 @@
     "certificateRejectedIcon": "This agent presented a rejected certificate ({{reason}}) within the last 24 hours.",
     "offline": "Offline",
     "offlineIcon": "This agent hasn't sent a heartbeat within the configured offline threshold.",
+    "bulkSettings": {
+      "button": "Settings",
+      "title": "Settings for {{count}} selected agents",
+      "hint": "Only enabled settings are pushed to the selected agents; unchecked settings are left unchanged on every agent.",
+      "save": "Apply"
+    },
     "statusValues": {
       "unapproved": "Unapproved",
       "installing": "Updates",
@@ -157,6 +163,8 @@
     "pushedUpdateCheckIntervalMinutesHint": "Changes are enforced on the agent and saved to its registry/config file; a manual local change appears here automatically once the agent reports it. On a race condition, this server-side setting always wins. Last confirmed by the agent: {{actual}}.",
     "pushedUpdateCheckJitterSeconds": "Update-check jitter in seconds",
     "pushedUpdateCheckJitterSecondsHint": "Changes are enforced on the agent and saved to its registry/config file; a manual local change appears here automatically once the agent reports it. On a race condition, this server-side setting always wins. Last confirmed by the agent: {{actual}}.",
+    "pushedAliveIntervalMinutes": "Alive interval in minutes",
+    "pushedAliveIntervalMinutesHint": "Changes are enforced on the agent and saved to its registry/config file; a manual local change appears here automatically once the agent reports it. On a race condition, this server-side setting always wins. Last confirmed by the agent: {{actual}}.",
     "saveSettings": "Save settings"
   },
   "admin": {

@@ -58,17 +58,58 @@ public class AgentSettingsValidatorTests
         Assert.False(AgentSettingsValidator.IsValidUpdateCheckJitterSeconds(value));
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(5)]
+    [InlineData(1_440)]
+    public void IsValidAliveIntervalMinutes_accepts_a_value_within_range(int value)
+    {
+        Assert.True(AgentSettingsValidator.IsValidAliveIntervalMinutes(value));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(1_441)]
+    public void IsValidAliveIntervalMinutes_rejects_out_of_range_values(int value)
+    {
+        Assert.False(AgentSettingsValidator.IsValidAliveIntervalMinutes(value));
+    }
+
     [Fact]
     public void IsValid_accepts_a_request_with_every_field_within_range()
     {
-        Assert.True(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 240, 300)));
+        Assert.True(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 240, 300, 5)));
     }
 
     [Fact]
     public void IsValid_rejects_a_request_with_any_invalid_field()
     {
-        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("NOT-A-LEVEL", 240, 300)));
-        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 0, 300)));
-        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 240, -1)));
+        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("NOT-A-LEVEL", 240, 300, 5)));
+        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 0, 300, 5)));
+        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 240, -1, 5)));
+        Assert.False(AgentSettingsValidator.IsValid(new UpdateAgentSettingsRequest("DEBUG", 240, 300, 0)));
+    }
+
+    [Fact]
+    public void IsValidBulkRequest_rejects_a_request_with_every_field_null()
+    {
+        Assert.False(AgentSettingsValidator.IsValidBulkRequest(new BulkUpdateAgentSettingsRequest(["host-1"], null, null, null, null)));
+    }
+
+    [Fact]
+    public void IsValidBulkRequest_accepts_a_request_with_only_one_field_set()
+    {
+        Assert.True(AgentSettingsValidator.IsValidBulkRequest(new BulkUpdateAgentSettingsRequest(["host-1"], "DEBUG", null, null, null)));
+        Assert.True(AgentSettingsValidator.IsValidBulkRequest(new BulkUpdateAgentSettingsRequest(["host-1"], null, null, null, 5)));
+    }
+
+    [Fact]
+    public void IsValidBulkRequest_rejects_a_provided_field_that_is_out_of_range()
+    {
+        Assert.False(AgentSettingsValidator.IsValidBulkRequest(new BulkUpdateAgentSettingsRequest(["host-1"], "NOT-A-LEVEL", null, null, null)));
+        Assert.False(AgentSettingsValidator.IsValidBulkRequest(new BulkUpdateAgentSettingsRequest(["host-1"], null, 0, null, null)));
+        Assert.False(AgentSettingsValidator.IsValidBulkRequest(new BulkUpdateAgentSettingsRequest(["host-1"], null, null, -1, null)));
+        Assert.False(AgentSettingsValidator.IsValidBulkRequest(new BulkUpdateAgentSettingsRequest(["host-1"], null, null, null, 0)));
     }
 }

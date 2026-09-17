@@ -13,6 +13,7 @@ vi.mock('../api/endpoints', () => ({
     installMany: vi.fn(),
     rebootMany: vi.fn(),
     deleteMany: vi.fn(),
+    updateSettingsMany: vi.fn(),
   },
 }));
 
@@ -21,6 +22,7 @@ const mockedApproveMany = vi.mocked(agentsApi.approveMany);
 const mockedInstallMany = vi.mocked(agentsApi.installMany);
 const mockedRebootMany = vi.mocked(agentsApi.rebootMany);
 const mockedDeleteMany = vi.mocked(agentsApi.deleteMany);
+const mockedUpdateSettingsMany = vi.mocked(agentsApi.updateSettingsMany);
 
 function makeAgent(overrides: Partial<AgentListItem> & { hostname: string }): AgentListItem {
   return {
@@ -207,6 +209,46 @@ describe('AgentsListPage', () => {
     expect(screen.getByRole('button', { name: /^reboot$/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /install updates/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /^delete$/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^settings$/i })).toBeDisabled();
+  });
+
+  it('opens the bulk settings dialog and pushes only the checked field, leaving the others untouched', async () => {
+    // At the user's explicit request, confirmed via a clarifying question:
+    // the bulk dialog is a per-field opt-in, not an always-full-replace —
+    // an admin can push just LogLevel without also overwriting every
+    // selected agent's individually-tuned interval/jitter/alive-interval.
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1' }), makeAgent({ hostname: 'host-2' })]);
+    mockedUpdateSettingsMany.mockResolvedValue({ updatedCount: 2, notFoundHostnames: [] });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    await user.click(screen.getByLabelText('select host-1'));
+    await user.click(screen.getByLabelText('select host-2'));
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+
+    const dialog = screen.getByRole('dialog');
+    const saveButton = within(dialog).getByRole('button', { name: /apply|übernehmen/i });
+    expect(saveButton).toBeDisabled();
+
+    await user.click(within(dialog).getByLabelText(/LogLevel/i));
+    await user.selectOptions(within(dialog).getByRole('combobox'), 'DEBUG');
+    expect(saveButton).toBeEnabled();
+
+    await user.click(saveButton);
+
+    await waitFor(() =>
+      expect(mockedUpdateSettingsMany).toHaveBeenCalledWith({
+        hostnames: ['host-1', 'host-2'],
+        desiredLogLevel: 'DEBUG',
+        desiredUpdateCheckIntervalMinutes: undefined,
+        desiredUpdateCheckJitterSeconds: undefined,
+        desiredAliveIntervalMinutes: undefined,
+      }),
+    );
+    // Closes and clears the selection on success, same as the other bulk actions.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('shows the selected count next to the filtered/total count, not inside the bulk action buttons', async () => {

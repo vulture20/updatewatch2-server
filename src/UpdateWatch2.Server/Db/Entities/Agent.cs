@@ -255,9 +255,28 @@ public class Agent
     public int? ActualUpdateCheckJitterSeconds { get; set; }
 
     /// <summary>
+    /// The current alive-heartbeat interval (minutes) this agent should be
+    /// running with — same bidirectional-sync semantics as
+    /// <see cref="DesiredLogLevel"/>, added later (server v1.3.20, at the
+    /// user's explicit request — "Mache bitte auch die Client-Einstellungen
+    /// für den Alive-Intervall in dem Agent-Einstellungsdialog verfügbar.")
+    /// than the other three pushed settings. Live-applied on the agent side
+    /// for free, the same way <c>UpdateCheckIntervalMinutes</c> already is —
+    /// <c>HeartbeatWorker</c>'s own loop reads this value fresh right before
+    /// its next <c>Task.Delay</c>, after <c>ApplyPushedSettings</c> has
+    /// already mutated it earlier in the same tick.
+    /// </summary>
+    public int? DesiredAliveIntervalMinutes { get; set; }
+
+    /// <summary>This agent's own actual alive-heartbeat interval, self-reported every heartbeat — same reasoning as <see cref="ActualLogLevel"/>.</summary>
+    public int? ActualAliveIntervalMinutes { get; set; }
+
+    /// <summary>
     /// True from the moment an admin saves a change via the Settings dialog
-    /// (<see cref="Agents.AgentService.UpdateSettingsAsync"/>) until a later
-    /// heartbeat confirms the agent actually applied it (<c>Actual*</c>
+    /// (<see cref="Agents.AgentService.UpdateSettingsAsync"/>) or the
+    /// overview list's bulk settings dialog
+    /// (<see cref="Agents.AgentService.UpdateSettingsManyAsync"/>) until a
+    /// later heartbeat confirms the agent actually applied it (<c>Actual*</c>
     /// matching every <c>Desired*</c> field again) — at which point
     /// <c>AgentRegistrationService.RecordAliveAsync</c> clears it back to
     /// false. This is what makes "the server always wins on a race
@@ -271,8 +290,13 @@ public class Agent
     /// false (settled/converged), any future divergent <c>Actual*</c> IS
     /// adopted into <c>Desired*</c> — this is what lets a manual registry/
     /// config-file edit surface in the dialog the next time it's opened.
-    /// One shared flag for all three settings, not one per field, since
-    /// the Settings dialog always saves all three together.
+    /// One shared flag for all four settings, not one per field: the
+    /// per-agent Settings dialog always saves all four together, and even
+    /// the bulk settings dialog's per-field opt-in (server v1.3.20) doesn't
+    /// need its own per-field flag — a field the bulk push left untouched
+    /// already has <c>Desired* == Actual*</c> in steady state, so it can
+    /// never be what keeps this flag from clearing; only a field that was
+    /// actually just pushed can.
     /// </summary>
     public bool PendingSettingsPush { get; set; }
 

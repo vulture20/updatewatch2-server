@@ -125,7 +125,25 @@ public class AgentsController(IAgentService agentService, IUpdateService updateS
 
         var found = await agentService.UpdateSettingsAsync(
             hostname, initiatedBy: User.Identity!.Name!, request.DesiredLogLevel, request.DesiredUpdateCheckIntervalMinutes,
-            request.DesiredUpdateCheckJitterSeconds, ct);
+            request.DesiredUpdateCheckJitterSeconds, request.DesiredAliveIntervalMinutes, ct);
         return found ? NoContent() : NotFound();
+    }
+
+    // Bulk counterpart from the overview list's multi-select — see
+    // BulkUpdateAgentSettingsRequest's own doc comment for why this is a
+    // per-field opt-in (nullable fields) rather than the single-agent
+    // route's always-full-replace shape.
+    [HttpPost("settings")]
+    public async Task<IActionResult> UpdateSettingsMany([FromBody] BulkUpdateAgentSettingsRequest request, CancellationToken ct)
+    {
+        if (!AgentSettingsValidator.IsValidBulkRequest(request))
+        {
+            return BadRequest(new { message = "Invalid agent settings." });
+        }
+
+        var result = await agentService.UpdateSettingsManyAsync(
+            request.Hostnames, initiatedBy: User.Identity!.Name!, request.DesiredLogLevel, request.DesiredUpdateCheckIntervalMinutes,
+            request.DesiredUpdateCheckJitterSeconds, request.DesiredAliveIntervalMinutes, ct);
+        return Ok(result);
     }
 }

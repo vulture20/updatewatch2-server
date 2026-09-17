@@ -11,11 +11,17 @@ const LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'];
 const DEFAULT_LOG_LEVEL = 'INFO';
 const DEFAULT_INTERVAL_MINUTES = 240;
 const DEFAULT_JITTER_SECONDS = 300;
+const DEFAULT_ALIVE_INTERVAL_MINUTES = 5;
 
 const MIN_INTERVAL_MINUTES = 1;
 const MAX_INTERVAL_MINUTES = 10_080;
 const MIN_JITTER_SECONDS = 0;
 const MAX_JITTER_SECONDS = 3_600;
+// Deliberately tighter than MAX_INTERVAL_MINUTES above — matches the
+// server's own AgentSettingsValidator bounds, see that class's comment for
+// why the heartbeat cadence itself gets a much smaller anti-typo guard.
+const MIN_ALIVE_INTERVAL_MINUTES = 1;
+const MAX_ALIVE_INTERVAL_MINUTES = 1_440;
 
 /**
  * Per-agent settings, opened from AgentDetailPage's header via a single
@@ -37,8 +43,11 @@ const MAX_JITTER_SECONDS = 3_600;
  * hardcoded default>` — the `desired*` half is basically always populated
  * in practice, since the server auto-adopts a fresh `actual*` into it the
  * moment it first becomes known; see `Agent.DesiredLogLevel`'s doc comment,
- * server-side) and saving always submits a concrete value for all three —
- * there is no longer a way to "clear" a field back to blank. Same
+ * server-side) and saving always submits a concrete value for all four —
+ * there is no longer a way to "clear" a field back to blank (the fourth,
+ * the alive-heartbeat interval, was added later — server v1.3.20 — at the
+ * user's explicit request: "Mache bitte auch die Client-Einstellungen für
+ * den Alive-Intervall in dem Agent-Einstellungsdialog verfügbar."). Same
  * `.dialog-backdrop`/`.dialog` overlay pattern as OneTimeSecretDialog
  * (backdrop + centered box, Escape or a backdrop click closes it) — not a
  * shared hook yet, since there are only two dialogs in this app and the
@@ -72,6 +81,9 @@ export function AgentSettingsDialog({
   const [jitterSeconds, setJitterSeconds] = useState(
     (agent.desiredUpdateCheckJitterSeconds ?? agent.actualUpdateCheckJitterSeconds ?? DEFAULT_JITTER_SECONDS).toString(),
   );
+  const [aliveIntervalMinutes, setAliveIntervalMinutes] = useState(
+    (agent.desiredAliveIntervalMinutes ?? agent.actualAliveIntervalMinutes ?? DEFAULT_ALIVE_INTERVAL_MINUTES).toString(),
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +100,11 @@ export function AgentSettingsDialog({
 
   const intervalValue = Number(intervalMinutes);
   const jitterValue = Number(jitterSeconds);
+  const aliveIntervalValue = Number(aliveIntervalMinutes);
   const intervalValid = intervalMinutes !== '' && Number.isInteger(intervalValue) && intervalValue >= MIN_INTERVAL_MINUTES && intervalValue <= MAX_INTERVAL_MINUTES;
   const jitterValid = jitterSeconds !== '' && Number.isInteger(jitterValue) && jitterValue >= MIN_JITTER_SECONDS && jitterValue <= MAX_JITTER_SECONDS;
+  const aliveIntervalValid =
+    aliveIntervalMinutes !== '' && Number.isInteger(aliveIntervalValue) && aliveIntervalValue >= MIN_ALIVE_INTERVAL_MINUTES && aliveIntervalValue <= MAX_ALIVE_INTERVAL_MINUTES;
 
   const saveSettings = async () => {
     setSaving(true);
@@ -100,6 +115,7 @@ export function AgentSettingsDialog({
         desiredLogLevel: logLevel,
         desiredUpdateCheckIntervalMinutes: intervalValue,
         desiredUpdateCheckJitterSeconds: jitterValue,
+        desiredAliveIntervalMinutes: aliveIntervalValue,
       });
       setSaved(true);
     } catch (err) {
@@ -178,6 +194,20 @@ export function AgentSettingsDialog({
           </p>
         </label>
 
+        <label>
+          {t('agentDetail.pushedAliveIntervalMinutes')}
+          <input
+            type="number"
+            min={MIN_ALIVE_INTERVAL_MINUTES}
+            max={MAX_ALIVE_INTERVAL_MINUTES}
+            value={aliveIntervalMinutes}
+            onChange={(e) => setAliveIntervalMinutes(e.target.value)}
+          />
+          <p className="field-hint">
+            {t('agentDetail.pushedAliveIntervalMinutesHint', { actual: agent.actualAliveIntervalMinutes ?? '—' })}
+          </p>
+        </label>
+
         {error && (
           <p role="alert" className="login-error">
             {error}
@@ -190,7 +220,7 @@ export function AgentSettingsDialog({
               {t('admin.saved')}
             </span>
           )}
-          <button type="button" className="btn-accent" disabled={saving || !intervalValid || !jitterValid} onClick={() => void saveSettings()}>
+          <button type="button" className="btn-accent" disabled={saving || !intervalValid || !jitterValid || !aliveIntervalValid} onClick={() => void saveSettings()}>
             {t('agentDetail.saveSettings')}
           </button>
           <button type="button" onClick={onClose}>

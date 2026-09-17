@@ -113,7 +113,11 @@ public record AgentDetailDto(
     /// <summary>See <see cref="Db.Entities.Agent.DesiredUpdateCheckJitterSeconds"/>.</summary>
     int? DesiredUpdateCheckJitterSeconds,
     /// <summary>See <see cref="Db.Entities.Agent.ActualUpdateCheckJitterSeconds"/>.</summary>
-    int? ActualUpdateCheckJitterSeconds);
+    int? ActualUpdateCheckJitterSeconds,
+    /// <summary>See <see cref="Db.Entities.Agent.DesiredAliveIntervalMinutes"/> (server v1.3.20).</summary>
+    int? DesiredAliveIntervalMinutes,
+    /// <summary>See <see cref="Db.Entities.Agent.ActualAliveIntervalMinutes"/>.</summary>
+    int? ActualAliveIntervalMinutes);
 
 /// <summary>
 /// How many/which agents would stop authenticating if the CA's previous
@@ -146,6 +150,9 @@ public record BulkDeleteResult(int DeletedCount, IReadOnlyList<string> NotFoundH
 public record BulkRebootRequest(IReadOnlyList<string> Hostnames);
 
 public record BulkRebootResult(int TriggeredCount, IReadOnlyList<string> NotFoundHostnames);
+
+/// <summary>Result of <c>POST /api/agents/settings</c> — see <see cref="BulkUpdateAgentSettingsRequest"/> for the bulk-push semantics.</summary>
+public record BulkUpdateAgentSettingsResult(int UpdatedCount, IReadOnlyList<string> NotFoundHostnames);
 
 /// <summary>
 /// Result of an admin-initiated certificate re-issuance (updatewatch2-server#8).

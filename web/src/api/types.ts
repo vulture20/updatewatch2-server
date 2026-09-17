@@ -85,18 +85,44 @@ export interface AgentDetail {
   desiredUpdateCheckJitterSeconds: number | null;
   /** This agent's own actual update-check jitter, self-reported every heartbeat. */
   actualUpdateCheckJitterSeconds: number | null;
+  /** Admin-set override for the agent's alive-heartbeat interval (minutes) — same null-means-no-override semantics as desiredLogLevel. */
+  desiredAliveIntervalMinutes: number | null;
+  /** This agent's own actual alive-heartbeat interval, self-reported every heartbeat. */
+  actualAliveIntervalMinutes: number | null;
 }
 
 /**
  * Body of PUT /api/agents/{hostname}/settings — a full replace, see
- * agentsApi.updateSettings. All three fields are required: this sets the
+ * agentsApi.updateSettings. All four fields are required: this sets the
  * agent's current value for each setting (bidirectionally synced, not an
- * optional override), matching AgentDetail's own desired* fields.
+ * optional override), matching AgentDetail's own desired* fields. Not to be
+ * confused with BulkAgentSettingsUpdate, the overview list's bulk-push
+ * counterpart, whose fields are each independently optional instead.
  */
 export interface UpdateAgentSettings {
   desiredLogLevel: string;
   desiredUpdateCheckIntervalMinutes: number;
   desiredUpdateCheckJitterSeconds: number;
+  desiredAliveIntervalMinutes: number;
+}
+
+/**
+ * Body of POST /api/agents/settings — the overview list's bulk-push
+ * counterpart to UpdateAgentSettings, at the user's explicit request ("Es
+ * fehlt außerdem die Möglichkeit Agent-Einstellungen bulk zu pushen.").
+ * Every settings field is independently optional: omitted/undefined means
+ * "leave this setting untouched on every selected agent" — confirmed as the
+ * intended design via an explicit clarifying question before implementing,
+ * so an admin can push just one setting (e.g. LogLevel=DEBUG on several
+ * agents at once) without being forced to also overwrite the others'
+ * individually-tuned values.
+ */
+export interface BulkAgentSettingsUpdate {
+  hostnames: string[];
+  desiredLogLevel?: string;
+  desiredUpdateCheckIntervalMinutes?: number;
+  desiredUpdateCheckJitterSeconds?: number;
+  desiredAliveIntervalMinutes?: number;
 }
 
 /** Response of an admin-initiated certificate re-issuance (updatewatch2-server#8). */
@@ -130,6 +156,11 @@ export interface BulkInstallResult {
 
 export interface BulkRebootResult {
   triggeredCount: number;
+  notFoundHostnames: string[];
+}
+
+export interface BulkAgentSettingsResult {
+  updatedCount: number;
   notFoundHostnames: string[];
 }
 

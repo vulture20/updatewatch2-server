@@ -22,10 +22,37 @@ public static class AgentSettingsValidator
     private const int MinJitterSeconds = 0;
     private const int MaxJitterSeconds = 3_600; // one hour
 
+    // Deliberately a much tighter guard than MaxIntervalMinutes above —
+    // this is the alive-heartbeat cadence itself, not a periodic update
+    // check: install/reboot triggers, self-update offers, certificate
+    // renewal/rotation checks, and the online/offline threshold all ride
+    // this same interval, so a typo that stretches it out to (say) a week
+    // would degrade far more than just how often updates are searched for.
+    // Still just an anti-typo guard, not a policy stance on what's
+    // "reasonable" for a given deployment.
+    private const int MinAliveIntervalMinutes = 1;
+    private const int MaxAliveIntervalMinutes = 1_440; // one day
+
     public static bool IsValid(UpdateAgentSettingsRequest request) =>
         IsValidLogLevel(request.DesiredLogLevel)
         && IsValidUpdateCheckIntervalMinutes(request.DesiredUpdateCheckIntervalMinutes)
-        && IsValidUpdateCheckJitterSeconds(request.DesiredUpdateCheckJitterSeconds);
+        && IsValidUpdateCheckJitterSeconds(request.DesiredUpdateCheckJitterSeconds)
+        && IsValidAliveIntervalMinutes(request.DesiredAliveIntervalMinutes);
+
+    /// <summary>
+    /// Validates <see cref="BulkUpdateAgentSettingsRequest"/> — each field is
+    /// independently optional (null = leave untouched on every selected
+    /// agent), but at least one must be provided, and any field that IS
+    /// provided still has to pass the same per-field checks the single-agent
+    /// request above uses.
+    /// </summary>
+    public static bool IsValidBulkRequest(BulkUpdateAgentSettingsRequest request) =>
+        (request.DesiredLogLevel is not null || request.DesiredUpdateCheckIntervalMinutes is not null
+            || request.DesiredUpdateCheckJitterSeconds is not null || request.DesiredAliveIntervalMinutes is not null)
+        && (request.DesiredLogLevel is null || IsValidLogLevel(request.DesiredLogLevel))
+        && (request.DesiredUpdateCheckIntervalMinutes is null || IsValidUpdateCheckIntervalMinutes(request.DesiredUpdateCheckIntervalMinutes.Value))
+        && (request.DesiredUpdateCheckJitterSeconds is null || IsValidUpdateCheckJitterSeconds(request.DesiredUpdateCheckJitterSeconds.Value))
+        && (request.DesiredAliveIntervalMinutes is null || IsValidAliveIntervalMinutes(request.DesiredAliveIntervalMinutes.Value));
 
     public static bool IsValidLogLevel(string value) =>
         AllowedLogLevels.Contains(value, StringComparer.OrdinalIgnoreCase);
@@ -35,4 +62,7 @@ public static class AgentSettingsValidator
 
     public static bool IsValidUpdateCheckJitterSeconds(int value) =>
         value >= MinJitterSeconds && value <= MaxJitterSeconds;
+
+    public static bool IsValidAliveIntervalMinutes(int value) =>
+        value >= MinAliveIntervalMinutes && value <= MaxAliveIntervalMinutes;
 }

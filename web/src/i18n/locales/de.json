@@ -42,6 +42,12 @@
     "certificateRejectedIcon": "Dieser Agent hat innerhalb der letzten 24 Stunden ein abgelehntes Zertifikat vorgelegt ({{reason}}).",
     "offline": "Offline",
     "offlineIcon": "Dieser Agent hat innerhalb der konfigurierten Warnschwelle keinen Heartbeat gesendet.",
+    "bulkSettings": {
+      "button": "Einstellungen",
+      "title": "Einstellungen für {{count}} ausgewählte Agents",
+      "hint": "Nur aktivierte Einstellungen werden auf die ausgewählten Agents übertragen; nicht angehakte Einstellungen bleiben bei jedem Agent unverändert.",
+      "save": "Übernehmen"
+    },
     "statusValues": {
       "unapproved": "Unbestätigt",
       "installing": "Updates",
@@ -157,6 +163,8 @@
     "pushedUpdateCheckIntervalMinutesHint": "Änderungen werden auf dem Agent durchgesetzt und in dessen Registry/Configfile gespeichert; eine manuelle lokale Änderung erscheint hier automatisch, sobald der Agent sie meldet. Bei einer Racecondition gewinnt immer diese Server-Einstellung. Zuletzt vom Agent bestätigt: {{actual}}.",
     "pushedUpdateCheckJitterSeconds": "Update-Check-Jitter in Sekunden",
     "pushedUpdateCheckJitterSecondsHint": "Änderungen werden auf dem Agent durchgesetzt und in dessen Registry/Configfile gespeichert; eine manuelle lokale Änderung erscheint hier automatisch, sobald der Agent sie meldet. Bei einer Racecondition gewinnt immer diese Server-Einstellung. Zuletzt vom Agent bestätigt: {{actual}}.",
+    "pushedAliveIntervalMinutes": "Alive-Intervall in Minuten",
+    "pushedAliveIntervalMinutesHint": "Änderungen werden auf dem Agent durchgesetzt und in dessen Registry/Configfile gespeichert; eine manuelle lokale Änderung erscheint hier automatisch, sobald der Agent sie meldet. Bei einer Racecondition gewinnt immer diese Server-Einstellung. Zuletzt vom Agent bestätigt: {{actual}}.",
     "saveSettings": "Einstellungen speichern"
   },
   "admin": {

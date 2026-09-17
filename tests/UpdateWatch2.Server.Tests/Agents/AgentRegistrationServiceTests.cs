@@ -267,12 +267,14 @@ public class AgentRegistrationServiceTests : IDisposable
             "actual-settings-host",
             new AgentAliveRequest(
                 DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null,
-                ActualLogLevel: "DEBUG", ActualUpdateCheckIntervalMinutes: 120, ActualUpdateCheckJitterSeconds: 45));
+                ActualLogLevel: "DEBUG", ActualUpdateCheckIntervalMinutes: 120, ActualUpdateCheckJitterSeconds: 45,
+                ActualAliveIntervalMinutes: 10));
 
         var afterSet = await _db.Agents.SingleAsync(a => a.Hostname == "actual-settings-host");
         Assert.Equal("DEBUG", afterSet.ActualLogLevel);
         Assert.Equal(120, afterSet.ActualUpdateCheckIntervalMinutes);
         Assert.Equal(45, afterSet.ActualUpdateCheckJitterSeconds);
+        Assert.Equal(10, afterSet.ActualAliveIntervalMinutes);
 
         // An agent build predating these fields (or a tick where nothing
         // changed) sends null — must not clobber the last-known-good value.
@@ -284,6 +286,7 @@ public class AgentRegistrationServiceTests : IDisposable
         Assert.Equal("DEBUG", afterNull.ActualLogLevel);
         Assert.Equal(120, afterNull.ActualUpdateCheckIntervalMinutes);
         Assert.Equal(45, afterNull.ActualUpdateCheckJitterSeconds);
+        Assert.Equal(10, afterNull.ActualAliveIntervalMinutes);
     }
 
     [Fact]
@@ -294,6 +297,7 @@ public class AgentRegistrationServiceTests : IDisposable
         agent.DesiredLogLevel = "ERROR";
         agent.DesiredUpdateCheckIntervalMinutes = 30;
         agent.DesiredUpdateCheckJitterSeconds = 10;
+        agent.DesiredAliveIntervalMinutes = 3;
         await _db.SaveChangesAsync();
 
         var result = await _service.RecordAliveAsync("desired-settings-host", request: null);
@@ -301,6 +305,7 @@ public class AgentRegistrationServiceTests : IDisposable
         Assert.Equal("ERROR", result!.DesiredLogLevel);
         Assert.Equal(30, result.DesiredUpdateCheckIntervalMinutes);
         Assert.Equal(10, result.DesiredUpdateCheckJitterSeconds);
+        Assert.Equal(3, result.DesiredAliveIntervalMinutes);
     }
 
     [Fact]
@@ -313,6 +318,7 @@ public class AgentRegistrationServiceTests : IDisposable
         Assert.Null(result!.DesiredLogLevel);
         Assert.Null(result.DesiredUpdateCheckIntervalMinutes);
         Assert.Null(result.DesiredUpdateCheckJitterSeconds);
+        Assert.Null(result.DesiredAliveIntervalMinutes);
     }
 
     [Fact]
@@ -328,11 +334,13 @@ public class AgentRegistrationServiceTests : IDisposable
             "bootstrap-settings-host",
             new AgentAliveRequest(
                 DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null,
-                ActualLogLevel: "INFO", ActualUpdateCheckIntervalMinutes: 240, ActualUpdateCheckJitterSeconds: 300));
+                ActualLogLevel: "INFO", ActualUpdateCheckIntervalMinutes: 240, ActualUpdateCheckJitterSeconds: 300,
+                ActualAliveIntervalMinutes: 5));
 
         Assert.Equal("INFO", result!.DesiredLogLevel);
         Assert.Equal(240, result.DesiredUpdateCheckIntervalMinutes);
         Assert.Equal(300, result.DesiredUpdateCheckJitterSeconds);
+        Assert.Equal(5, result.DesiredAliveIntervalMinutes);
     }
 
     [Fact]

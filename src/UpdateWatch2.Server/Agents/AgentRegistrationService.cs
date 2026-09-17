@@ -147,20 +147,26 @@ public class AgentRegistrationService(
 
     /// <summary>
     /// Reconciles <c>Desired*</c> against the just-refreshed <c>Actual*</c>
-    /// for the three bidirectionally-synced settings (LogLevel, update-check
-    /// interval/jitter) — see <see cref="Db.Entities.Agent.PendingSettingsPush"/>'s
-    /// doc comment for the full reasoning. Two things happen here, in order:
-    /// (1) if a push is pending, check whether the agent has now caught up
-    /// (every <c>Actual*</c> matches its <c>Desired*</c>) and clear the flag
-    /// if so; (2) only when NOT pending (either never was, or just cleared
-    /// above), adopt any still-divergent <c>Actual*</c> into <c>Desired*</c> —
-    /// this is what surfaces a manual registry/config-file edit in the
-    /// Settings dialog, and what bootstraps <c>Desired*</c> from null to a
-    /// real value the very first time an agent ever reports one. Never
-    /// adopts while still pending, which is precisely what stops a
-    /// heartbeat that was already in flight before an admin's own push
-    /// arrived from immediately overwriting that push with the agent's
-    /// stale pre-push value.
+    /// for the four bidirectionally-synced settings (LogLevel, update-check
+    /// interval/jitter, alive-heartbeat interval) — see
+    /// <see cref="Db.Entities.Agent.PendingSettingsPush"/>'s doc comment for
+    /// the full reasoning. Two things happen here, in order: (1) if a push
+    /// is pending, check whether the agent has now caught up (every
+    /// <c>Actual*</c> matches its <c>Desired*</c>) and clear the flag if so;
+    /// (2) only when NOT pending (either never was, or just cleared above),
+    /// adopt any still-divergent <c>Actual*</c> into <c>Desired*</c> — this
+    /// is what surfaces a manual registry/config-file edit in the Settings
+    /// dialog, and what bootstraps <c>Desired*</c> from null to a real value
+    /// the very first time an agent ever reports one. Never adopts while
+    /// still pending, which is precisely what stops a heartbeat that was
+    /// already in flight before an admin's own push arrived from
+    /// immediately overwriting that push with the agent's stale pre-push
+    /// value. This same convergence check also covers a bulk, per-field
+    /// opt-in push (<see cref="AgentService.UpdateSettingsManyAsync"/>) with
+    /// no special-casing needed: a field the bulk push left untouched
+    /// already has <c>Desired* == Actual*</c> in steady state, so it can
+    /// never be the reason <c>converged</c> comes back false — only a field
+    /// that was actually just pushed can.
     /// </summary>
     private static void ReconcilePushedSettings(Agent agent)
     {
@@ -169,7 +175,8 @@ public class AgentRegistrationService(
             var converged =
                 agent.ActualLogLevel == agent.DesiredLogLevel
                 && agent.ActualUpdateCheckIntervalMinutes == agent.DesiredUpdateCheckIntervalMinutes
-                && agent.ActualUpdateCheckJitterSeconds == agent.DesiredUpdateCheckJitterSeconds;
+                && agent.ActualUpdateCheckJitterSeconds == agent.DesiredUpdateCheckJitterSeconds
+                && agent.ActualAliveIntervalMinutes == agent.DesiredAliveIntervalMinutes;
             if (!converged)
             {
                 return;
@@ -191,6 +198,11 @@ public class AgentRegistrationService(
         if (agent.ActualUpdateCheckJitterSeconds is not null && agent.ActualUpdateCheckJitterSeconds != agent.DesiredUpdateCheckJitterSeconds)
         {
             agent.DesiredUpdateCheckJitterSeconds = agent.ActualUpdateCheckJitterSeconds;
+        }
+
+        if (agent.ActualAliveIntervalMinutes is not null && agent.ActualAliveIntervalMinutes != agent.DesiredAliveIntervalMinutes)
+        {
+            agent.DesiredAliveIntervalMinutes = agent.ActualAliveIntervalMinutes;
         }
     }
 
@@ -226,6 +238,7 @@ public class AgentRegistrationService(
             agent.ActualLogLevel = request.ActualLogLevel ?? agent.ActualLogLevel;
             agent.ActualUpdateCheckIntervalMinutes = request.ActualUpdateCheckIntervalMinutes ?? agent.ActualUpdateCheckIntervalMinutes;
             agent.ActualUpdateCheckJitterSeconds = request.ActualUpdateCheckJitterSeconds ?? agent.ActualUpdateCheckJitterSeconds;
+            agent.ActualAliveIntervalMinutes = request.ActualAliveIntervalMinutes ?? agent.ActualAliveIntervalMinutes;
             ReconcilePushedSettings(agent);
         }
 
@@ -251,7 +264,8 @@ public class AgentRegistrationService(
         return new AliveRecordResult(
             agent.PendingInstallRequestedAt is not null, installUpdateIds, updateOffer, certificateRotationPending,
             agent.PendingRebootRequestedAt is not null, settingsStore.PreDownloadWindowsUpdatesEnabled,
-            agent.DesiredLogLevel, agent.DesiredUpdateCheckIntervalMinutes, agent.DesiredUpdateCheckJitterSeconds);
+            agent.DesiredLogLevel, agent.DesiredUpdateCheckIntervalMinutes, agent.DesiredUpdateCheckJitterSeconds,
+            agent.DesiredAliveIntervalMinutes);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)

@@ -670,13 +670,16 @@ public class AgentServiceTests : IDisposable
     {
         var hostname = await RegisterApproveAndCertifyAsync("settings-host");
 
-        var result = await _service.UpdateSettingsAsync(hostname, initiatedBy: "admin", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 60, desiredUpdateCheckJitterSeconds: 30);
+        var result = await _service.UpdateSettingsAsync(
+            hostname, initiatedBy: "admin", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 60,
+            desiredUpdateCheckJitterSeconds: 30, desiredAliveIntervalMinutes: 10);
 
         Assert.True(result);
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
         Assert.Equal("DEBUG", agent.DesiredLogLevel);
         Assert.Equal(60, agent.DesiredUpdateCheckIntervalMinutes);
         Assert.Equal(30, agent.DesiredUpdateCheckJitterSeconds);
+        Assert.Equal(10, agent.DesiredAliveIntervalMinutes);
     }
 
     [Fact]
@@ -689,19 +692,24 @@ public class AgentServiceTests : IDisposable
         // genuine local edit and immediately stomp this save.
         var hostname = await RegisterApproveAndCertifyAsync("pending-settings-host");
 
-        await _service.UpdateSettingsAsync(hostname, initiatedBy: "admin", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 60, desiredUpdateCheckJitterSeconds: 30);
+        await _service.UpdateSettingsAsync(
+            hostname, initiatedBy: "admin", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 60,
+            desiredUpdateCheckJitterSeconds: 30, desiredAliveIntervalMinutes: 10);
 
         var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
         Assert.Equal("DEBUG", agent.DesiredLogLevel);
         Assert.Equal(60, agent.DesiredUpdateCheckIntervalMinutes);
         Assert.Equal(30, agent.DesiredUpdateCheckJitterSeconds);
+        Assert.Equal(10, agent.DesiredAliveIntervalMinutes);
         Assert.True(agent.PendingSettingsPush);
     }
 
     [Fact]
     public async Task UpdateSettingsAsync_returns_false_for_an_unknown_hostname()
     {
-        var result = await _service.UpdateSettingsAsync("does-not-exist", initiatedBy: "admin", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 240, desiredUpdateCheckJitterSeconds: 300);
+        var result = await _service.UpdateSettingsAsync(
+            "does-not-exist", initiatedBy: "admin", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 240,
+            desiredUpdateCheckJitterSeconds: 300, desiredAliveIntervalMinutes: 5);
 
         Assert.False(result);
     }
@@ -711,11 +719,73 @@ public class AgentServiceTests : IDisposable
     {
         var hostname = await RegisterApproveAndCertifyAsync("audited-settings-host");
 
-        await _service.UpdateSettingsAsync(hostname, initiatedBy: "alice", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 240, desiredUpdateCheckJitterSeconds: 300);
+        await _service.UpdateSettingsAsync(
+            hostname, initiatedBy: "alice", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 240,
+            desiredUpdateCheckJitterSeconds: 300, desiredAliveIntervalMinutes: 5);
 
         var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "agent.settings.update");
         Assert.Equal("alice", entry.Actor);
         Assert.Contains(hostname, entry.Details);
         Assert.Contains("DEBUG", entry.Details);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsManyAsync_only_touches_the_fields_that_were_provided()
+    {
+        var hostname1 = await RegisterApproveAndCertifyAsync("bulk-settings-host-1");
+        var hostname2 = await RegisterApproveAndCertifyAsync("bulk-settings-host-2");
+        // A pre-existing interval both agents already have, that a
+        // LogLevel-only bulk push must leave completely untouched.
+        foreach (var hostname in new[] { hostname1, hostname2 })
+        {
+            var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+            agent.DesiredUpdateCheckIntervalMinutes = 123;
+        }
+        await _db.SaveChangesAsync();
+
+        var result = await _service.UpdateSettingsManyAsync(
+            [hostname1, hostname2], initiatedBy: "admin", desiredLogLevel: "DEBUG",
+            desiredUpdateCheckIntervalMinutes: null, desiredUpdateCheckJitterSeconds: null, desiredAliveIntervalMinutes: null);
+
+        Assert.Equal(2, result.UpdatedCount);
+        Assert.Empty(result.NotFoundHostnames);
+        foreach (var hostname in new[] { hostname1, hostname2 })
+        {
+            var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+            Assert.Equal("DEBUG", agent.DesiredLogLevel);
+            // Untouched, not reset to null/some default.
+            Assert.Equal(123, agent.DesiredUpdateCheckIntervalMinutes);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateSettingsManyAsync_marks_every_selected_agent_as_pending()
+    {
+        var hostname1 = await RegisterApproveAndCertifyAsync("bulk-pending-host-1");
+        var hostname2 = await RegisterApproveAndCertifyAsync("bulk-pending-host-2");
+
+        await _service.UpdateSettingsManyAsync(
+            [hostname1, hostname2], initiatedBy: "admin", desiredLogLevel: null,
+            desiredUpdateCheckIntervalMinutes: null, desiredUpdateCheckJitterSeconds: null, desiredAliveIntervalMinutes: 10);
+
+        foreach (var hostname in new[] { hostname1, hostname2 })
+        {
+            var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+            Assert.Equal(10, agent.DesiredAliveIntervalMinutes);
+            Assert.True(agent.PendingSettingsPush);
+        }
+    }
+
+    [Fact]
+    public async Task UpdateSettingsManyAsync_reports_hostnames_it_could_not_find()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("bulk-settings-partial-host");
+
+        var result = await _service.UpdateSettingsManyAsync(
+            [hostname, "does-not-exist"], initiatedBy: "admin", desiredLogLevel: "DEBUG",
+            desiredUpdateCheckIntervalMinutes: null, desiredUpdateCheckJitterSeconds: null, desiredAliveIntervalMinutes: null);
+
+        Assert.Equal(1, result.UpdatedCount);
+        Assert.Equal(["does-not-exist"], result.NotFoundHostnames);
     }
 }

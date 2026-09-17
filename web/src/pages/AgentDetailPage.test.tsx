@@ -70,6 +70,8 @@ const approvedAgent: AgentDetail = {
   actualUpdateCheckIntervalMinutes: null,
   desiredUpdateCheckJitterSeconds: null,
   actualUpdateCheckJitterSeconds: null,
+  desiredAliveIntervalMinutes: null,
+  actualAliveIntervalMinutes: null,
 };
 
 function renderPage() {
@@ -703,6 +705,8 @@ describe('AgentDetailPage pushed settings', () => {
       actualUpdateCheckIntervalMinutes: 15,
       desiredUpdateCheckJitterSeconds: 5,
       actualUpdateCheckJitterSeconds: 5,
+      desiredAliveIntervalMinutes: 10,
+      actualAliveIntervalMinutes: 10,
     });
     const user = userEvent.setup();
 
@@ -714,6 +718,7 @@ describe('AgentDetailPage pushed settings', () => {
     expect(screen.getByLabelText(/LogLevel/i)).toHaveValue('DEBUG');
     expect(screen.getByLabelText(/update-check interval/i)).toHaveValue(15);
     expect(screen.getByLabelText(/update-check jitter/i)).toHaveValue(5);
+    expect(screen.getByLabelText(/alive interval/i)).toHaveValue(10);
   });
 
   it('falls back to the actual value, and then a sane default, when no desired value is known yet', async () => {
@@ -730,9 +735,10 @@ describe('AgentDetailPage pushed settings', () => {
     expect(screen.getByLabelText(/LogLevel/i)).toHaveValue('INFO');
     expect(screen.getByLabelText(/update-check interval/i)).toHaveValue(240);
     expect(screen.getByLabelText(/update-check jitter/i)).toHaveValue(300);
+    expect(screen.getByLabelText(/alive interval/i)).toHaveValue(5);
   });
 
-  it('saves the edited LogLevel and interval/jitter values', async () => {
+  it('saves the edited LogLevel and interval/jitter/alive-interval values', async () => {
     mockedGet.mockResolvedValue(approvedAgent);
     mockedUpdateSettings.mockResolvedValue(undefined);
     const user = userEvent.setup();
@@ -746,6 +752,8 @@ describe('AgentDetailPage pushed settings', () => {
     await user.type(screen.getByLabelText(/update-check interval/i), '15');
     await user.clear(screen.getByLabelText(/update-check jitter/i));
     await user.type(screen.getByLabelText(/update-check jitter/i), '5');
+    await user.clear(screen.getByLabelText(/alive interval/i));
+    await user.type(screen.getByLabelText(/alive interval/i), '10');
     await user.click(screen.getByRole('button', { name: /save settings/i }));
 
     await waitFor(() =>
@@ -753,6 +761,7 @@ describe('AgentDetailPage pushed settings', () => {
         desiredLogLevel: 'DEBUG',
         desiredUpdateCheckIntervalMinutes: 15,
         desiredUpdateCheckJitterSeconds: 5,
+        desiredAliveIntervalMinutes: 10,
       }),
     );
     expect(await screen.findByRole('status')).toHaveTextContent(/saved/i);

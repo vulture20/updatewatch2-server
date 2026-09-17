@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { agentsApi } from '../api/endpoints';
-import type { AgentListItem } from '../api/types';
+import type { AgentListItem, BulkAgentSettingsUpdate } from '../api/types';
+import { AgentBulkSettingsDialog } from '../components/AgentBulkSettingsDialog';
 import { OfflineIcon } from '../components/OfflineIcon';
 import { OsIcon } from '../components/OsIcon';
 import { WarningTriangleIcon } from '../components/WarningTriangleIcon';
@@ -47,6 +48,7 @@ export function AgentsListPage() {
   const [sort, setSort] = useState<SortState<SortKey>>({ key: null, dir: 'asc' });
   const [statFilter, setStatFilter] = useState<StatFilter>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [bulkSettingsOpen, setBulkSettingsOpen] = useState(false);
   // Ref, not state: a background poll failure must not blow away an
   // already-rendered list — only the very first load failing should show
   // the hard error state. A ref survives across reload()'s closures
@@ -129,6 +131,16 @@ export function AgentsListPage() {
       return;
     }
     await agentsApi.deleteMany([...selected]);
+    setSelected(new Set());
+    reload();
+  };
+
+  // The dialog itself is the confirmation step (an admin has to explicitly
+  // check and fill in each field before Save is enabled) — no extra
+  // window.confirm on top, matching AgentSettingsDialog's own single-agent
+  // Save button.
+  const saveBulkSettings = async (update: BulkAgentSettingsUpdate) => {
+    await agentsApi.updateSettingsMany(update);
     setSelected(new Set());
     reload();
   };
@@ -357,8 +369,15 @@ export function AgentsListPage() {
               <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void deleteSelected()}>
                 {t('agents.deleteSelected')}
               </button>
+              <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => setBulkSettingsOpen(true)}>
+                {t('agents.bulkSettings.button')}
+              </button>
             </div>
           </div>
+
+          {bulkSettingsOpen && (
+            <AgentBulkSettingsDialog hostnames={[...selected]} onSave={saveBulkSettings} onClose={() => setBulkSettingsOpen(false)} />
+          )}
 
           <div className="card table-card">
             <table>

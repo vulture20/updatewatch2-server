@@ -5,6 +5,8 @@ import type {
   AgentListItem,
   AgentUpdateStatus,
   AuditLogPage,
+  BulkAgentSettingsResult,
+  BulkAgentSettingsUpdate,
   BulkApproveResult,
   BulkDeleteResult,
   BulkInstallResult,
@@ -61,11 +63,17 @@ export const agentsApi = {
     apiClient.post<BulkRebootResult>('/api/agents/reboot', { hostnames }),
   reissueCertificate: (hostname: string) =>
     apiClient.post<ReissueCertificateResult>(`/api/agents/${encodeURIComponent(hostname)}/reissue-certificate`),
-  // Full replace, not a partial merge — a field left null clears any
-  // existing override for that setting, matching PUT /api/admin/settings'
-  // own "replaces the whole object" convention.
+  // Full replace, not a partial merge — every field is required and always
+  // sent, matching PUT /api/admin/settings' own "replaces the whole
+  // object" convention. See updateSettingsMany for the overview list's
+  // per-field-optional bulk counterpart.
   updateSettings: (hostname: string, settings: UpdateAgentSettings) =>
     apiClient.put<void>(`/api/agents/${encodeURIComponent(hostname)}/settings`, settings),
+  // Only the fields present in `update` are pushed — see
+  // BulkAgentSettingsUpdate's own doc comment for why this is deliberately
+  // different from updateSettings' always-full-replace shape.
+  updateSettingsMany: (update: BulkAgentSettingsUpdate) =>
+    apiClient.post<BulkAgentSettingsResult>('/api/agents/settings', update),
   delete: (hostname: string) => apiClient.delete<void>(`/api/agents/${encodeURIComponent(hostname)}`),
   deleteMany: (hostnames: string[]) =>
     apiClient.post<BulkDeleteResult>('/api/agents/delete', { hostnames }),
