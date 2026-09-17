@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.17] - 2026-09-17
+
+### Fixed
+
+- **`AgentSettingsDialog` could overflow a short browser viewport with no way to scroll to the hidden content, making the Save button unreachable, reported by the user directly** ("Wenn der Einstellungs-Dialog des Clients nicht auf den Bildschirm passt, sind manche Einstellungen nicht sichtbar und es kann nicht gespeichert werden."). The shared `.dialog` class (used by both `AgentSettingsDialog` and `OneTimeSecretDialog`) had no height cap at all — once the Settings dialog grew a real form (Reissue/Delete plus three fields, each with its own hint text, server v1.3.14/v1.3.16), a short viewport could no longer fit the whole box, and the centered dialog simply overflowed past the top/bottom of the screen with nothing to scroll. Fixed with `max-height: min(600px, calc(100vh - 2 * var(--space-4)))` plus `overflow-y: auto` on `.dialog` — the box now caps its own height and scrolls its content internally instead of overflowing the viewport, benefiting both dialogs that use this class. Not visually verified in a real browser this session (no browser automation available in this sandbox) — this is a standard, well-established CSS pattern for a height-capped scrollable modal, but worth a real visual check on an actual small viewport before fully trusting it.
+
 ## [1.3.16] - 2026-09-17
 
 ### Fixed

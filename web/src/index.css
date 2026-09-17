@@ -781,6 +781,13 @@ tbody tr:hover {
 
 .dialog {
   width: min(440px, 100%);
+  /* AgentSettingsDialog can genuinely exceed a short viewport's height
+     (Reissue/Delete plus three form fields, each with its own hint) —
+     without a height cap the box just overflowed past the top/bottom of
+     the screen with nothing to scroll, making the Save button
+     unreachable. Reported by the user directly. */
+  max-height: min(600px, calc(100vh - 2 * var(--space-4)));
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
