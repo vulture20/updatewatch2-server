@@ -795,6 +795,34 @@ tbody tr:hover {
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-lg);
+  /* A default OS/browser scrollbar looked like a foreign body against
+     Nocturne's own surface ("Jetzt wirkt er wie ein Fremdkörper",
+     reported by the user directly) — themed instead of left as-is.
+     Firefox reads scrollbar-width/-color; Chromium/WebKit ignore those
+     and need the ::-webkit-scrollbar family below — both are required,
+     neither engine honors the other's mechanism. The thumb reuses the
+     exact tint --color-divider is itself built from (text color at low
+     opacity) rather than the static --color-neutral-* palette, which
+     isn't redefined under the light theme and would look wrong there. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-divider) transparent;
+}
+
+.dialog::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dialog::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dialog::-webkit-scrollbar-thumb {
+  background: var(--color-divider);
+  border-radius: var(--radius-md);
+}
+
+.dialog::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-text) 30%, transparent);
 }
 
 .dialog-title {

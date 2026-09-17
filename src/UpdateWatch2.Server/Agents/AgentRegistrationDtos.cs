@@ -116,6 +116,46 @@ public record AliveRecordResult(
     int? DesiredUpdateCheckJitterSeconds);
 
 /// <summary>
+/// The actual JSON shape of <c>POST /api/agents/{hostname}/alive</c>'s
+/// response body — kept as an explicit, named, independently testable type
+/// rather than the inline anonymous object <see cref="Api.Controllers.AgentProtocolController.Alive"/>
+/// used to build by hand. Found by a user report ("Änderungen werden
+/// aktuell nicht in die Registry geschrieben. Egal, was ausgewählt oder
+/// eingetragen wird."): that anonymous object listed each field out
+/// individually, and when <see cref="DesiredLogLevel"/>/its siblings were
+/// added to <see cref="AliveRecordResult"/> (server v1.3.14), nobody also
+/// added them to that list — <c>Ok(result)</c> would have serialized the
+/// whole record automatically and caught this, but the anonymous object's
+/// own field-by-field shape silently drops anything not explicitly named
+/// in it, with no compiler warning and no failing test (this codebase has
+/// no automated coverage of this controller's actual response body at
+/// all — <c>WebApplicationFactory</c>'s in-memory <c>TestServer</c> can't
+/// present a client certificate to reach the success path in the first
+/// place, see <c>UpdatesEndpointTests</c>' own doc comment on the same
+/// limitation). <see cref="AgentUpdateAvailable"/> is deliberately renamed
+/// from <see cref="AliveRecordResult.UpdateAvailable"/> — must keep
+/// matching the agent-side <c>AliveResult.AgentUpdateAvailable</c> field
+/// name exactly, which is why this can't just be <c>Ok(result)</c> even
+/// now.
+/// </summary>
+public record AliveResponseDto(
+    bool InstallRequested,
+    IReadOnlyList<string>? InstallUpdateIds,
+    AgentUpdateOffer? AgentUpdateAvailable,
+    bool CertificateRotationPending,
+    bool RebootRequested,
+    bool PreDownloadWindowsUpdatesEnabled,
+    string? DesiredLogLevel,
+    int? DesiredUpdateCheckIntervalMinutes,
+    int? DesiredUpdateCheckJitterSeconds)
+{
+    public static AliveResponseDto FromResult(AliveRecordResult result) => new(
+        result.InstallRequested, result.InstallUpdateIds, result.UpdateAvailable, result.CertificateRotationPending,
+        result.RebootRequested, result.PreDownloadWindowsUpdatesEnabled, result.DesiredLogLevel,
+        result.DesiredUpdateCheckIntervalMinutes, result.DesiredUpdateCheckJitterSeconds);
+}
+
+/// <summary>
 /// Body of <c>PUT /api/agents/{hostname}/settings</c> — an admin's way to
 /// set the current value for one or more of the settings the server keeps
 /// bidirectionally synced with a specific agent, at the user's explicit

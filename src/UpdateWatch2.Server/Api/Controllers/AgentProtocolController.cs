@@ -83,17 +83,13 @@ public class AgentProtocolController(
         // pending Windows updates ahead of an install trigger; an agent
         // build that predates it just never sees the field, equivalent to
         // "disabled".
+        // AliveResponseDto.FromResult, not a hand-built anonymous object —
+        // see that type's own doc comment for the real bug this replaced
+        // (a field silently missing from the JSON response, found by a
+        // user report).
         return result is null
             ? NotFound()
-            : Ok(new
-            {
-                installRequested = result.InstallRequested,
-                installUpdateIds = result.InstallUpdateIds,
-                agentUpdateAvailable = result.UpdateAvailable,
-                certificateRotationPending = result.CertificateRotationPending,
-                rebootRequested = result.RebootRequested,
-                preDownloadWindowsUpdatesEnabled = result.PreDownloadWindowsUpdatesEnabled,
-            });
+            : Ok(AliveResponseDto.FromResult(result));
     }
 
     // Distinct from Register: this is how an already-certified agent gets a
