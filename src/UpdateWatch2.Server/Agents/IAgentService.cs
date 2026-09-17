@@ -61,6 +61,9 @@ public interface IAgentService
     /// </summary>
     Task<bool> DeleteAsync(string hostname, string initiatedBy, CancellationToken ct = default);
 
+    /// <summary>Deletes several agents at once (bulk deletion from the overview list) — see <see cref="DeleteAsync"/> for what each individual deletion does and why it's immediate/irreversible.</summary>
+    Task<BulkDeleteResult> DeleteManyAsync(IReadOnlyList<string> hostnames, string initiatedBy, CancellationToken ct = default);
+
     /// <summary>
     /// Remote-triggers a reboot of the agent's own machine — not just the
     /// agent's own service process, and not an update install (see
@@ -74,6 +77,9 @@ public interface IAgentService
     /// sibling call. Returns false if no agent with that hostname exists.
     /// </summary>
     Task<bool> TriggerRebootAsync(string hostname, string triggeredBy, CancellationToken ct = default);
+
+    /// <summary>Reboots several agents' machines at once (bulk reboot from the overview list) — see <see cref="TriggerRebootAsync"/> for the single-agent delivery mechanism this reuses.</summary>
+    Task<BulkRebootResult> TriggerRebootManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, CancellationToken ct = default);
 
     /// <summary>
     /// The agent's acknowledgement that it acted on a pending reboot

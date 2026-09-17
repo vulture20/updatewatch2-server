@@ -92,6 +92,32 @@ export function AgentsListPage() {
     reload();
   };
 
+  // No confirmation dialog, matching AgentDetailPage's own single-agent
+  // triggerInstall — installing is not a destructive action.
+  const installSelected = async () => {
+    await agentsApi.installMany([...selected]);
+    setSelected(new Set());
+    reload();
+  };
+
+  const rebootSelected = async () => {
+    if (!window.confirm(t('agents.bulkRebootConfirm', { count: selected.size }))) {
+      return;
+    }
+    await agentsApi.rebootMany([...selected]);
+    setSelected(new Set());
+    reload();
+  };
+
+  const deleteSelected = async () => {
+    if (!window.confirm(t('agents.bulkDeleteConfirm', { count: selected.size }))) {
+      return;
+    }
+    await agentsApi.deleteMany([...selected]);
+    setSelected(new Set());
+    reload();
+  };
+
   const clearFilters = () => {
     setStatFilter(null);
     setFilters(DEFAULT_FILTERS);
@@ -289,9 +315,20 @@ export function AgentsListPage() {
 
           <div className="list-toolbar">
             <span className="text-muted">{t('agents.filteredCount', { filtered: filteredAndSorted.length, total: agents.length })}</span>
-            <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void approveSelected()}>
-              {t('agents.approveSelected')} ({selected.size})
-            </button>
+            <div className="detail-header-actions">
+              <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void approveSelected()}>
+                {t('agents.approveSelected')} ({selected.size})
+              </button>
+              <button type="button" disabled={selected.size === 0} onClick={() => void rebootSelected()}>
+                {t('agents.rebootSelected')} ({selected.size})
+              </button>
+              <button type="button" disabled={selected.size === 0} onClick={() => void installSelected()}>
+                {t('agents.installSelected')} ({selected.size})
+              </button>
+              <button type="button" disabled={selected.size === 0} onClick={() => void deleteSelected()}>
+                {t('agents.deleteSelected')} ({selected.size})
+              </button>
+            </div>
           </div>
 
           <div className="card table-card">

@@ -6,6 +6,9 @@ import type {
   AgentUpdateStatus,
   AuditLogPage,
   BulkApproveResult,
+  BulkDeleteResult,
+  BulkInstallResult,
+  BulkRebootResult,
   CaRotationStatus,
   CertificateRejectionStatus,
   LoginResponse,
@@ -43,14 +46,23 @@ export const agentsApi = {
   // installs everything currently pending, the original behavior.
   triggerInstall: (hostname: string, updateItemIds?: number[]) =>
     apiClient.post<void>(`/api/agents/${encodeURIComponent(hostname)}/install`, updateItemIds ? { updateItemIds } : undefined),
+  // Always installs everything pending for each named agent — there is no
+  // bulk equivalent of triggerInstall's per-agent updateItemIds selection
+  // (see BulkInstallRequest's own doc comment, server-side, for why).
+  installMany: (hostnames: string[]) =>
+    apiClient.post<BulkInstallResult>('/api/agents/install', { hostnames }),
   // Reboots the agent's own machine — not just its service process, and
   // not the OS-update install pipeline. Fire-and-forget, delivered on the
   // agent's next alive heartbeat, mirroring triggerInstall exactly.
   triggerReboot: (hostname: string) =>
     apiClient.post<void>(`/api/agents/${encodeURIComponent(hostname)}/reboot`),
+  rebootMany: (hostnames: string[]) =>
+    apiClient.post<BulkRebootResult>('/api/agents/reboot', { hostnames }),
   reissueCertificate: (hostname: string) =>
     apiClient.post<ReissueCertificateResult>(`/api/agents/${encodeURIComponent(hostname)}/reissue-certificate`),
   delete: (hostname: string) => apiClient.delete<void>(`/api/agents/${encodeURIComponent(hostname)}`),
+  deleteMany: (hostnames: string[]) =>
+    apiClient.post<BulkDeleteResult>('/api/agents/delete', { hostnames }),
 };
 
 export const versionApi = {

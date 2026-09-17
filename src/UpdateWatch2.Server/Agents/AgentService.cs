@@ -195,6 +195,20 @@ public class AgentService(
         return true;
     }
 
+    public async Task<BulkDeleteResult> DeleteManyAsync(IReadOnlyList<string> hostnames, string initiatedBy, CancellationToken ct = default)
+    {
+        var agents = await db.Agents.Where(a => hostnames.Contains(a.Hostname)).ToListAsync(ct);
+        var deletedHostnames = agents.Select(a => a.Hostname).ToList();
+
+        db.Agents.RemoveRange(agents);
+        await db.SaveChangesAsync(ct);
+
+        var notFound = hostnames.Where(h => !deletedHostnames.Contains(h)).ToList();
+        await auditLog.LogAsync(initiatedBy, "agent.delete.bulk", string.Join(", ", deletedHostnames), ct);
+
+        return new BulkDeleteResult(agents.Count, notFound);
+    }
+
     public async Task<bool> TriggerRebootAsync(string hostname, string triggeredBy, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
@@ -211,6 +225,24 @@ public class AgentService(
         await db.SaveChangesAsync(ct);
         await auditLog.LogAsync(triggeredBy, "agent.reboot.trigger", hostname, ct);
         return true;
+    }
+
+    public async Task<BulkRebootResult> TriggerRebootManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, CancellationToken ct = default)
+    {
+        var agents = await db.Agents.Where(a => hostnames.Contains(a.Hostname)).ToListAsync(ct);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var agent in agents)
+        {
+            agent.PendingRebootRequestedAt = now;
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        var triggeredHostnames = agents.Select(a => a.Hostname).ToHashSet();
+        var notFound = hostnames.Where(h => !triggeredHostnames.Contains(h)).ToList();
+        await auditLog.LogAsync(triggeredBy, "agent.reboot.trigger.bulk", string.Join(", ", triggeredHostnames), ct);
+
+        return new BulkRebootResult(agents.Count, notFound);
     }
 
     public async Task<bool> AcknowledgeRebootAsync(string hostname, RebootOutcome outcome, string? errorDetail, CancellationToken ct = default)

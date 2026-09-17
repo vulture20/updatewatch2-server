@@ -97,6 +97,51 @@ public class UpdateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task TriggerInstallManyAsync_sets_a_pending_install_request_for_every_named_agent()
+    {
+        _db.Agents.AddRange(
+            new Agent { Hostname = "bulk-install-host-1", Approved = true },
+            new Agent { Hostname = "bulk-install-host-2", Approved = true });
+        await _db.SaveChangesAsync();
+
+        var result = await _service.TriggerInstallManyAsync(["bulk-install-host-1", "bulk-install-host-2", "does-not-exist"], triggeredBy: "admin");
+
+        Assert.Equal(2, result.TriggeredCount);
+        Assert.Equal(["does-not-exist"], result.NotFoundHostnames);
+        Assert.NotNull((await _db.Agents.SingleAsync(a => a.Hostname == "bulk-install-host-1")).PendingInstallRequestedAt);
+        Assert.NotNull((await _db.Agents.SingleAsync(a => a.Hostname == "bulk-install-host-2")).PendingInstallRequestedAt);
+    }
+
+    [Fact]
+    public async Task TriggerInstallManyAsync_always_installs_everything_pending_even_if_a_stale_selection_was_left_from_before()
+    {
+        var agent = new Agent { Hostname = "bulk-install-clears-selection-host", Approved = true, PendingInstallUpdateIds = """["KB1"]""" };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+
+        await _service.TriggerInstallManyAsync(["bulk-install-clears-selection-host"], triggeredBy: "admin");
+
+        var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "bulk-install-clears-selection-host");
+        Assert.Null(reloaded.PendingInstallUpdateIds);
+    }
+
+    [Fact]
+    public async Task TriggerInstallManyAsync_writes_a_single_audit_log_entry_listing_every_triggered_hostname()
+    {
+        _db.Agents.AddRange(
+            new Agent { Hostname = "audited-bulk-install-1", Approved = true },
+            new Agent { Hostname = "audited-bulk-install-2", Approved = true });
+        await _db.SaveChangesAsync();
+
+        await _service.TriggerInstallManyAsync(["audited-bulk-install-1", "audited-bulk-install-2"], triggeredBy: "alice");
+
+        var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "updates.install.trigger.bulk");
+        Assert.Equal("alice", entry.Actor);
+        Assert.Contains("audited-bulk-install-1", entry.Details);
+        Assert.Contains("audited-bulk-install-2", entry.Details);
+    }
+
+    [Fact]
     public async Task AcknowledgeInstallAsync_clears_the_selected_update_ids_too()
     {
         var agent = new Agent

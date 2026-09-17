@@ -127,6 +127,14 @@ public record BulkApproveRequest(IReadOnlyList<string> Hostnames);
 
 public record BulkApproveResult(int ApprovedCount, IReadOnlyList<string> NotFoundHostnames);
 
+public record BulkDeleteRequest(IReadOnlyList<string> Hostnames);
+
+public record BulkDeleteResult(int DeletedCount, IReadOnlyList<string> NotFoundHostnames);
+
+public record BulkRebootRequest(IReadOnlyList<string> Hostnames);
+
+public record BulkRebootResult(int TriggeredCount, IReadOnlyList<string> NotFoundHostnames);
+
 /// <summary>
 /// Result of an admin-initiated certificate re-issuance (updatewatch2-server#8).
 /// <see cref="RegistrationToken"/> is the raw, one-shot registration token —

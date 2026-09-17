@@ -177,6 +177,27 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
         return true;
     }
 
+    public async Task<BulkInstallResult> TriggerInstallManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, CancellationToken ct = default)
+    {
+        var agents = await db.Agents.Where(a => hostnames.Contains(a.Hostname)).ToListAsync(ct);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var agent in agents)
+        {
+            // Always "everything pending" — see BulkInstallRequest's doc
+            // comment for why a cross-agent selection isn't offered.
+            agent.PendingInstallUpdateIds = null;
+            agent.PendingInstallRequestedAt = now;
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        var triggeredHostnames = agents.Select(a => a.Hostname).ToHashSet();
+        var notFound = hostnames.Where(h => !triggeredHostnames.Contains(h)).ToList();
+        await auditLog.LogAsync(triggeredBy, "updates.install.trigger.bulk", string.Join(", ", triggeredHostnames), ct);
+
+        return new BulkInstallResult(agents.Count, notFound);
+    }
+
     public async Task<bool> AcknowledgeInstallAsync(string hostname, InstallOutcome outcome, string? errorDetail, CancellationToken ct = default)
     {
         var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);

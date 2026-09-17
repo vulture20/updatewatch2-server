@@ -23,6 +23,19 @@ public record ReportedUpdate(string Title, string? PackageId, string? Descriptio
 public record TriggerInstallRequest(IReadOnlyList<int>? UpdateItemIds);
 
 /// <summary>
+/// Body of <c>POST /api/agents/install</c> — bulk install from the overview
+/// list's multi-select, alongside the existing bulk-approve/bulk-delete/
+/// bulk-reboot actions. Always installs everything currently pending for
+/// each named agent, matching a bare (no-selection) single-agent trigger —
+/// there is no cross-agent equivalent of <see cref="TriggerInstallRequest.UpdateItemIds"/>,
+/// since that selection is inherently per-agent (server-only UpdateItem
+/// primary keys, meaningless across different agents' own update lists).
+/// </summary>
+public record BulkInstallRequest(IReadOnlyList<string> Hostnames);
+
+public record BulkInstallResult(int TriggeredCount, IReadOnlyList<string> NotFoundHostnames);
+
+/// <summary>
 /// How a remote-triggered install (updatewatch2-server#10) went, as
 /// self-reported by the agent once it has acted on the request — not to be
 /// confused with <c>ReportUpdatesRequest.RebootRequired</c>, which is an

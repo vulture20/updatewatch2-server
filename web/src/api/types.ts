@@ -94,6 +94,21 @@ export interface BulkApproveResult {
   notFoundHostnames: string[];
 }
 
+export interface BulkDeleteResult {
+  deletedCount: number;
+  notFoundHostnames: string[];
+}
+
+export interface BulkInstallResult {
+  triggeredCount: number;
+  notFoundHostnames: string[];
+}
+
+export interface BulkRebootResult {
+  triggeredCount: number;
+  notFoundHostnames: string[];
+}
+
 export interface VersionInfo {
   server: string;
   protocol: string;

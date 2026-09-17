@@ -10,11 +10,17 @@ vi.mock('../api/endpoints', () => ({
   agentsApi: {
     list: vi.fn(),
     approveMany: vi.fn(),
+    installMany: vi.fn(),
+    rebootMany: vi.fn(),
+    deleteMany: vi.fn(),
   },
 }));
 
 const mockedList = vi.mocked(agentsApi.list);
 const mockedApproveMany = vi.mocked(agentsApi.approveMany);
+const mockedInstallMany = vi.mocked(agentsApi.installMany);
+const mockedRebootMany = vi.mocked(agentsApi.rebootMany);
+const mockedDeleteMany = vi.mocked(agentsApi.deleteMany);
 
 function makeAgent(overrides: Partial<AgentListItem> & { hostname: string }): AgentListItem {
   return {
@@ -43,6 +49,10 @@ describe('AgentsListPage', () => {
   beforeEach(() => {
     mockedList.mockReset();
     mockedApproveMany.mockReset();
+    mockedInstallMany.mockReset();
+    mockedRebootMany.mockReset();
+    mockedDeleteMany.mockReset();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   it('renders the agents returned by the API', async () => {
@@ -126,6 +136,77 @@ describe('AgentsListPage', () => {
 
     await waitFor(() => expect(mockedApproveMany).toHaveBeenCalledWith(['host-1']));
     expect(mockedList).toHaveBeenCalledTimes(2); // initial load + reload after approve
+  });
+
+  it('installs updates for the selected agents with no confirmation dialog', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1' })]);
+    mockedInstallMany.mockResolvedValue({ triggeredCount: 1, notFoundHostnames: [] });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    await user.click(screen.getByLabelText('select host-1'));
+    await user.click(screen.getByRole('button', { name: /install updates/i }));
+
+    await waitFor(() => expect(mockedInstallMany).toHaveBeenCalledWith(['host-1']));
+    expect(window.confirm).not.toHaveBeenCalled();
+  });
+
+  it('reboots the selected agents after confirming', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1' })]);
+    mockedRebootMany.mockResolvedValue({ triggeredCount: 1, notFoundHostnames: [] });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    await user.click(screen.getByLabelText('select host-1'));
+    await user.click(screen.getByRole('button', { name: /reboot selected/i }));
+
+    await waitFor(() => expect(mockedRebootMany).toHaveBeenCalledWith(['host-1']));
+    expect(window.confirm).toHaveBeenCalled();
+  });
+
+  it('does not reboot the selected agents when the confirmation dialog is declined', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1' })]);
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    await user.click(screen.getByLabelText('select host-1'));
+    await user.click(screen.getByRole('button', { name: /reboot selected/i }));
+
+    expect(mockedRebootMany).not.toHaveBeenCalled();
+  });
+
+  it('deletes the selected agents after confirming', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1' })]);
+    mockedDeleteMany.mockResolvedValue({ deletedCount: 1, notFoundHostnames: [] });
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    await user.click(screen.getByLabelText('select host-1'));
+    await user.click(screen.getByRole('button', { name: /delete selected/i }));
+
+    await waitFor(() => expect(mockedDeleteMany).toHaveBeenCalledWith(['host-1']));
+    expect(window.confirm).toHaveBeenCalled();
+  });
+
+  it('disables the bulk action buttons until at least one agent is selected', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1' })]);
+
+    renderPage();
+    await screen.findByText('host-1');
+
+    expect(screen.getByRole('button', { name: /approve selected/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /reboot selected/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /install updates/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /delete selected/i })).toBeDisabled();
   });
 
   it('polls the list periodically, so a state change from elsewhere shows up without a manual reload', async () => {

@@ -253,6 +253,61 @@ public class AgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteManyAsync_removes_every_named_agent_and_reports_which_hostnames_were_not_found()
+    {
+        var host1 = await RegisterApproveAndCertifyAsync("bulk-delete-host-1");
+        var host2 = await RegisterApproveAndCertifyAsync("bulk-delete-host-2");
+
+        var result = await _service.DeleteManyAsync([host1, host2, "does-not-exist"], initiatedBy: "admin");
+
+        Assert.Equal(2, result.DeletedCount);
+        Assert.Equal(["does-not-exist"], result.NotFoundHostnames);
+        Assert.False(await _db.Agents.AnyAsync(a => a.Hostname == host1 || a.Hostname == host2));
+    }
+
+    [Fact]
+    public async Task DeleteManyAsync_writes_a_single_audit_log_entry_listing_every_deleted_hostname()
+    {
+        var host1 = await RegisterApproveAndCertifyAsync("audited-bulk-delete-1");
+        var host2 = await RegisterApproveAndCertifyAsync("audited-bulk-delete-2");
+
+        await _service.DeleteManyAsync([host1, host2], initiatedBy: "alice");
+
+        var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "agent.delete.bulk");
+        Assert.Equal("alice", entry.Actor);
+        Assert.Contains(host1, entry.Details);
+        Assert.Contains(host2, entry.Details);
+    }
+
+    [Fact]
+    public async Task TriggerRebootManyAsync_sets_the_pending_reboot_timestamp_for_every_named_agent()
+    {
+        var host1 = await RegisterApproveAndCertifyAsync("bulk-reboot-host-1");
+        var host2 = await RegisterApproveAndCertifyAsync("bulk-reboot-host-2");
+
+        var result = await _service.TriggerRebootManyAsync([host1, host2, "does-not-exist"], triggeredBy: "admin");
+
+        Assert.Equal(2, result.TriggeredCount);
+        Assert.Equal(["does-not-exist"], result.NotFoundHostnames);
+        Assert.NotNull((await _db.Agents.SingleAsync(a => a.Hostname == host1)).PendingRebootRequestedAt);
+        Assert.NotNull((await _db.Agents.SingleAsync(a => a.Hostname == host2)).PendingRebootRequestedAt);
+    }
+
+    [Fact]
+    public async Task TriggerRebootManyAsync_writes_a_single_audit_log_entry_listing_every_triggered_hostname()
+    {
+        var host1 = await RegisterApproveAndCertifyAsync("audited-bulk-reboot-1");
+        var host2 = await RegisterApproveAndCertifyAsync("audited-bulk-reboot-2");
+
+        await _service.TriggerRebootManyAsync([host1, host2], triggeredBy: "alice");
+
+        var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "agent.reboot.trigger.bulk");
+        Assert.Equal("alice", entry.Actor);
+        Assert.Contains(host1, entry.Details);
+        Assert.Contains(host2, entry.Details);
+    }
+
+    [Fact]
     public async Task A_deleted_hostname_starts_over_as_a_brand_new_unapproved_agent_on_re_registration()
     {
         var hostname = await RegisterApproveAndCertifyAsync("re-registering-host");

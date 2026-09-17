@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UpdateWatch2.Server.Agents;
+using UpdateWatch2.Server.Updates;
 
 namespace UpdateWatch2.Server.Api.Controllers;
 
@@ -9,11 +10,18 @@ namespace UpdateWatch2.Server.Api.Controllers;
 /// session (see AuthController). Agent self-registration isn't implemented
 /// yet — that will be a separate, mutual-TLS-authenticated endpoint, see
 /// updatewatch2-server#3, not a route on this admin-facing controller.
+/// Bulk actions from the overview list's multi-select (approve/delete/
+/// install/reboot) all live here as sibling <c>POST api/agents/&lt;verb&gt;</c>
+/// routes, alongside their existing single-agent <c>{hostname}/&lt;verb&gt;</c>
+/// counterparts — <see cref="IUpdateService"/> is injected in addition to
+/// <see cref="IAgentService"/> purely for <see cref="InstallMany"/>, since
+/// install itself (single or bulk) is otherwise owned by UpdatesController/
+/// IUpdateService, not this controller.
 /// </summary>
 [ApiController]
 [Route("api/agents")]
 [Authorize]
-public class AgentsController(IAgentService agentService) : ControllerBase
+public class AgentsController(IAgentService agentService, IUpdateService updateService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken ct) =>
@@ -78,5 +86,28 @@ public class AgentsController(IAgentService agentService) : ControllerBase
     {
         var deleted = await agentService.DeleteAsync(hostname, initiatedBy: User.Identity!.Name!, ct);
         return deleted ? NoContent() : NotFound();
+    }
+
+    [HttpPost("delete")]
+    public async Task<IActionResult> DeleteMany([FromBody] BulkDeleteRequest request, CancellationToken ct)
+    {
+        var result = await agentService.DeleteManyAsync(request.Hostnames, initiatedBy: User.Identity!.Name!, ct);
+        return Ok(result);
+    }
+
+    // Delegates to IUpdateService, not IAgentService — see this
+    // controller's own doc comment for why.
+    [HttpPost("install")]
+    public async Task<IActionResult> InstallMany([FromBody] BulkInstallRequest request, CancellationToken ct)
+    {
+        var result = await updateService.TriggerInstallManyAsync(request.Hostnames, triggeredBy: User.Identity!.Name!, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("reboot")]
+    public async Task<IActionResult> RebootMany([FromBody] BulkRebootRequest request, CancellationToken ct)
+    {
+        var result = await agentService.TriggerRebootManyAsync(request.Hostnames, triggeredBy: User.Identity!.Name!, ct);
+        return Ok(result);
     }
 }

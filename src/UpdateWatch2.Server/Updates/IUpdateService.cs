@@ -31,6 +31,16 @@ public interface IUpdateService
     Task<bool> TriggerInstallAsync(string hostname, string triggeredBy, IReadOnlyList<int>? updateItemIds, CancellationToken ct = default);
 
     /// <summary>
+    /// Triggers installation of everything currently pending for several
+    /// agents at once (bulk install from the overview list) — see
+    /// <see cref="TriggerInstallAsync"/> for the single-agent delivery
+    /// mechanism this reuses. Always installs everything pending per agent;
+    /// there is no cross-agent equivalent of that method's <c>updateItemIds</c>
+    /// selection (see <see cref="BulkInstallRequest"/>'s doc comment for why).
+    /// </summary>
+    Task<BulkInstallResult> TriggerInstallManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, CancellationToken ct = default);
+
+    /// <summary>
     /// The agent's acknowledgement that it acted on a pending install
     /// request — clears <see cref="Db.Entities.Agent.PendingInstallRequestedAt"/>
     /// regardless of <paramref name="outcome"/> (a failure doesn't retry
