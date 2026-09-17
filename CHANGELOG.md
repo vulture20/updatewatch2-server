@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.13] - 2026-09-17
+
+### Changed
+
+- **`AgentDetailPage`'s "Zertifikat neu ausstellen"/"Reissue certificate" header button is now a "Einstellungen"/"Settings" button that opens a new overlay dialog, at the user's explicit request ("Kannst du in den Agent-Details den Button 'Zertifikat neu ausstellen' durch 'Einstellungen' ersetzen und beim Klick auf 'Einstellungen' ein Fenster öffnen... dort den Button 'Zertifikat neu ausstellen' mit einer kleinen Erklärung wieder einbauen... auch den Button 'Agent löschen' verschieben. Ebenfalls mit einer kleinen Erklärung.").** New `components/AgentSettingsDialog.tsx` reuses the `.dialog-backdrop`/`.dialog` overlay pattern `OneTimeSecretDialog` already established (backdrop/Escape to close) — this app's second modal, still no shared library or hook, since the Escape-handling effect is only a few lines. Both "Zertifikat neu ausstellen" and "Agent löschen" moved out of the header's own button row into this dialog, each now with a short explanatory sentence (`.field-hint`) describing what it does and when to use it. The "Settings" button itself is always shown, regardless of approval status — unlike the old reissue button (approved agents only), since Delete must stay reachable for an unapproved agent too, and it's now the dialog's only entry point; inside the dialog, the reissue section itself still only renders for an approved agent. Confirming a reissue closes the settings dialog first, rather than stacking it underneath the existing one-time-token dialog. Purely a web-side restructuring — no new/changed API endpoint, no protocol/schema bump. This dialog is deliberately meant to grow: the user's own framing ("Hier sollen später auch weitere Einstellungen wie der Alive-Intervall konfigurierbar sein") marks it as the future home for a per-agent settings surface, not just these two relocated actions — nothing beyond Reissue/Delete is implemented yet.
+
 ## [1.3.12] - 2026-09-17
 
 ### Added

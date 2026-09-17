@@ -133,7 +133,9 @@
       "UnknownAgent": "Zertifikat passt nicht zu diesem Agent",
       "AgentNotApproved": "Agent nicht bestätigt"
     },
+    "settings": "Einstellungen",
     "reissueCertificate": "Zertifikat neu ausstellen",
+    "reissueCertificateHint": "Erstellt ein neues, einmaliges Registrierungstoken und macht das aktuelle Zertifikat des Agenten sofort ungültig. Nur nötig, wenn das Zertifikat verloren gegangen, beschädigt oder kompromittiert ist.",
     "reissueConfirm": "Dadurch wird das aktuelle Zertifikat des Agenten sofort ungültig. Fortfahren?",
     "reissueTokenTitle": "Einmaliges Registrierungstoken",
     "reissueTokenBody": "Kopieren Sie dieses Token jetzt und tragen Sie es in die lokale Konfiguration des Agenten ein. Es wird nicht erneut angezeigt.",
@@ -141,6 +143,7 @@
     "copied": "Kopiert",
     "close": "Schließen",
     "delete": "Agent löschen",
+    "deleteHint": "Entfernt diesen Agent dauerhaft, inklusive seines Update-Verlaufs. Er kann sich danach nur wieder verbinden, indem er sich als neuer, nicht bestätigter Agent komplett neu registriert. Dies kann nicht rückgängig gemacht werden.",
     "deleteConfirm": "\"{{hostname}}\" endgültig löschen? Sein Zertifikat wird sofort nicht mehr akzeptiert, sein Update-Verlauf wird entfernt, und er kann sich nur wieder verbinden, indem er sich als neuer, nicht bestätigter Agent komplett neu registriert. Dies kann nicht rückgängig gemacht werden."
   },
   "admin": {

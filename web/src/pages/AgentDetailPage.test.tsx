@@ -166,16 +166,39 @@ describe('AgentDetailPage certificate re-issuance', () => {
     expect(screen.queryByText('Last certificate rejection')).not.toBeInTheDocument();
   });
 
-  it('shows the reissue button only for an approved agent', async () => {
+  it('opens the settings dialog and shows the reissue button only for an approved agent', async () => {
     mockedGet.mockResolvedValue({ ...approvedAgent, approved: false });
+    const user = userEvent.setup();
 
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /reissue certificate/i })).not.toBeInTheDocument();
+    // Delete stays available regardless of approval status.
+    expect(screen.getByRole('button', { name: /delete agent/i })).toBeInTheDocument();
   });
 
-  it('reissues a certificate, shows the one-time token, and reloads on close', async () => {
+  it('shows both reissue and delete actions for an approved agent, and closes via the Close button', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+
+    expect(screen.getByRole('button', { name: /reissue certificate/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /delete agent/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^close$/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('reissues a certificate from the settings dialog, shows the one-time token, and reloads on close', async () => {
     mockedGet.mockResolvedValue(approvedAgent);
     mockedReissueCertificate.mockResolvedValue({ registrationToken: 'fresh-token-value' });
     const user = userEvent.setup();
@@ -183,9 +206,13 @@ describe('AgentDetailPage certificate re-issuance', () => {
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
     await user.click(screen.getByRole('button', { name: /reissue certificate/i }));
 
     expect(window.confirm).toHaveBeenCalled();
+    // The settings dialog closes before the one-time-token dialog shows,
+    // rather than stacking two overlays.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(mockedReissueCertificate).toHaveBeenCalledWith('host-1'));
     expect(await screen.findByText('fresh-token-value')).toBeInTheDocument();
     // A real overlay dialog now, not an inline banner.
@@ -197,7 +224,7 @@ describe('AgentDetailPage certificate re-issuance', () => {
     await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(2)); // initial load + reload after close
   });
 
-  it('does not call the API when the confirmation is declined', async () => {
+  it('does not call the API when the reissue confirmation is declined', async () => {
     mockedGet.mockResolvedValue(approvedAgent);
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     const user = userEvent.setup();
@@ -205,9 +232,12 @@ describe('AgentDetailPage certificate re-issuance', () => {
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
     await user.click(screen.getByRole('button', { name: /reissue certificate/i }));
 
     expect(mockedReissueCertificate).not.toHaveBeenCalled();
+    // Declining the confirm() doesn't close the settings dialog itself.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
 
@@ -600,7 +630,7 @@ describe('AgentDetailPage deletion', () => {
     vi.restoreAllMocks();
   });
 
-  it('deletes the agent after confirmation and navigates back to the agents list', async () => {
+  it('deletes the agent from the settings dialog after confirmation and navigates back to the agents list', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockedDelete.mockResolvedValue(undefined);
     const user = userEvent.setup();
@@ -608,6 +638,7 @@ describe('AgentDetailPage deletion', () => {
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
     await user.click(screen.getByRole('button', { name: /delete agent/i }));
 
     expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('host-1'));
@@ -622,6 +653,7 @@ describe('AgentDetailPage deletion', () => {
     renderPage();
 
     await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
     await user.click(screen.getByRole('button', { name: /delete agent/i }));
 
     expect(mockedDelete).not.toHaveBeenCalled();

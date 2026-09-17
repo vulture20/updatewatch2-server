@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
+import { AgentSettingsDialog } from '../components/AgentSettingsDialog';
 import { OneTimeSecretDialog } from '../components/OneTimeSecretDialog';
 import { OfflineIcon } from '../components/OfflineIcon';
 import { WarningTriangleIcon } from '../components/WarningTriangleIcon';
@@ -24,6 +25,7 @@ export function AgentDetailPage() {
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [reissuedToken, setReissuedToken] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [updatesSort, setUpdatesSort] = useState<SortState<UpdateSortKey>>({ key: null, dir: 'asc' });
   // Which updates an admin has explicitly unchecked, to install only some
   // while sparing others — tracked as the deselected set, not the
@@ -144,6 +146,9 @@ export function AgentDetailPage() {
     if (!agent || !window.confirm(t('agentDetail.reissueConfirm'))) {
       return;
     }
+    // Closed before the OneTimeSecretDialog shows the token, rather than
+    // stacking two dialogs at once.
+    setSettingsOpen(false);
     void agentsApi.reissueCertificate(agent.hostname).then((result) => {
       setReissuedToken(result.registrationToken);
       reload();
@@ -197,11 +202,9 @@ export function AgentDetailPage() {
               {t('agentDetail.approve')}
             </button>
           )}
-          {agent.approved && (
-            <button type="button" onClick={reissueCertificate}>
-              {t('agentDetail.reissueCertificate')}
-            </button>
-          )}
+          <button type="button" onClick={() => setSettingsOpen(true)}>
+            {t('agentDetail.settings')}
+          </button>
           {agent.approved && (
             <button type="button" disabled={Boolean(agent.pendingRebootRequestedAt)} onClick={triggerReboot}>
               {agent.pendingRebootRequestedAt ? t('agentDetail.rebootPending') : t('agentDetail.triggerReboot')}
@@ -216,11 +219,22 @@ export function AgentDetailPage() {
               ? t('agentDetail.installPending')
               : t('agentDetail.triggerInstall', { count: selectedUpdateIds.length })}
           </button>
-          <button type="button" onClick={deleteAgent}>
-            {t('agentDetail.delete')}
-          </button>
         </div>
       </div>
+
+      {settingsOpen && (
+        <AgentSettingsDialog
+          title={t('agentDetail.settings')}
+          reissueLabel={t('agentDetail.reissueCertificate')}
+          reissueHint={t('agentDetail.reissueCertificateHint')}
+          onReissueCertificate={agent.approved ? reissueCertificate : undefined}
+          deleteLabel={t('agentDetail.delete')}
+          deleteHint={t('agentDetail.deleteHint')}
+          onDelete={deleteAgent}
+          closeLabel={t('agentDetail.close')}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
 
       {agent.lastCertificateRejectionReason && (
         <div role="alert" className="banner banner-accent">

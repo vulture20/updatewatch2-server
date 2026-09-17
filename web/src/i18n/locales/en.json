@@ -133,7 +133,9 @@
       "UnknownAgent": "Certificate doesn't match this agent",
       "AgentNotApproved": "Agent not approved"
     },
+    "settings": "Settings",
     "reissueCertificate": "Reissue certificate",
+    "reissueCertificateHint": "Generates a fresh, one-time registration token and immediately invalidates the agent's current certificate. Only needed if the certificate was lost, damaged, or compromised.",
     "reissueConfirm": "This immediately invalidates the agent's current certificate. Continue?",
     "reissueTokenTitle": "One-time registration token",
     "reissueTokenBody": "Copy this token now and place it into the agent's local configuration. It will not be shown again.",
@@ -141,6 +143,7 @@
     "copied": "Copied",
     "close": "Close",
     "delete": "Delete agent",
+    "deleteHint": "Permanently removes this agent, including its update history. It can only reconnect afterward by registering again from scratch as a new, unapproved agent. This cannot be undone.",
     "deleteConfirm": "Permanently delete \"{{hostname}}\"? Its certificate stops being accepted immediately, its update history is removed, and it can only reconnect by registering again from scratch as a new, unapproved agent. This cannot be undone."
   },
   "admin": {
