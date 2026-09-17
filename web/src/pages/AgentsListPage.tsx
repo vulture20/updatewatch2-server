@@ -86,6 +86,21 @@ export function AgentsListPage() {
     });
   };
 
+  // Selects/deselects every currently visible (filtered) row, not the
+  // whole fleet — matches AgentDetailPage's own selectAllUpdates behavior
+  // for its (also potentially filtered-down) updates table.
+  const toggleSelectAll = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        filteredAndSorted.forEach((a) => next.delete(a.hostname));
+      } else {
+        filteredAndSorted.forEach((a) => next.add(a.hostname));
+      }
+      return next;
+    });
+  };
+
   const approveSelected = async () => {
     await agentsApi.approveMany([...selected]);
     setSelected(new Set());
@@ -173,6 +188,9 @@ export function AgentsListPage() {
       lastSeen: (a) => a.lastAliveAt ?? '',
     });
   }, [agents, filters, statFilter, sort]);
+
+  const allVisibleSelected = filteredAndSorted.length > 0 && filteredAndSorted.every((a) => selected.has(a.hostname));
+  const someVisibleSelected = filteredAndSorted.some((a) => selected.has(a.hostname));
 
   const hasActiveFilters =
     statFilter !== null || Object.entries(filters).some(([key, value]) => value !== DEFAULT_FILTERS[key as keyof Filters]);
@@ -319,13 +337,13 @@ export function AgentsListPage() {
               <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void approveSelected()}>
                 {t('agents.approveSelected')} ({selected.size})
               </button>
-              <button type="button" disabled={selected.size === 0} onClick={() => void rebootSelected()}>
+              <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void rebootSelected()}>
                 {t('agents.rebootSelected')} ({selected.size})
               </button>
-              <button type="button" disabled={selected.size === 0} onClick={() => void installSelected()}>
+              <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void installSelected()}>
                 {t('agents.installSelected')} ({selected.size})
               </button>
-              <button type="button" disabled={selected.size === 0} onClick={() => void deleteSelected()}>
+              <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void deleteSelected()}>
                 {t('agents.deleteSelected')} ({selected.size})
               </button>
             </div>
@@ -335,7 +353,19 @@ export function AgentsListPage() {
             <table>
               <thead>
                 <tr>
-                  <th aria-label={t('agents.selectColumn')} />
+                  <th aria-label={t('agents.selectColumn')}>
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      ref={(el) => {
+                        if (el) {
+                          el.indeterminate = !allVisibleSelected && someVisibleSelected;
+                        }
+                      }}
+                      onChange={toggleSelectAll}
+                      aria-label={t('agents.selectAll')}
+                    />
+                  </th>
                   <th>
                     <button type="button" {...sortHeaderProps('hostname')}>
                       {t('agents.hostname')} <span className="sort-arrow">{sortArrow('hostname')}</span>

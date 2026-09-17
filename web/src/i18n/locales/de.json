@@ -32,6 +32,7 @@
     "loading": "Agents werden geladen…",
     "loadError": "Laden der Agents fehlgeschlagen.",
     "selectColumn": "Auswählen",
+    "selectAll": "Alle auswählen",
     "yes": "Ja",
     "no": "Nein",
     "status": "Status",

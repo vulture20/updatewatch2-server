@@ -32,6 +32,7 @@
     "loading": "Loading agents…",
     "loadError": "Failed to load agents.",
     "selectColumn": "Select",
+    "selectAll": "Select all",
     "yes": "Yes",
     "no": "No",
     "status": "Status",

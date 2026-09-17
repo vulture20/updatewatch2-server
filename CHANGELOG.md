@@ -12,6 +12,16 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.12] - 2026-09-17
+
+### Added
+
+- **A "select all" checkbox in the agent overview table's header selects/deselects every currently visible (filtered) row at once, at the user's explicit request ("Es fehlt noch ein Feld um alle Zeilen in der Agents-Übersicht auszuwählen.").** Mirrors `AgentDetailPage`'s own existing `selectAllUpdates` behavior for its updates table: acting only on `filteredAndSorted` (the rows an active filter is currently showing), not the whole fleet, so narrowing the list first and then selecting all only touches what's visible — a subsequently cleared filter leaves a previously-hidden row's own selection state untouched. Shows an indeterminate (dash) state when some but not all visible rows are selected, matching standard checkbox convention.
+
+### Changed
+
+- **The three new bulk-action buttons added in v1.3.11 (Reboot/Install/Delete) now use the same accent-outline styling as "Auswahl bestätigen"/"Approve selected", at the user's explicit request ("Die neuen Buttons in der Agent-Übersicht sehen anders als der Button 'Auswahl bestätigen' aus. Bitte an 'Auswahl bestätigen' angleichen.").** All four bulk-action buttons in `AgentsListPage`'s toolbar now share `.btn-accent` — a deliberate exception to Nocturne's own general "`.btn-accent` reserved for the single highest-intent action on a page" framing (see CLAUDE.md's design-system paragraph), scoped specifically to this one row of mutually-exclusive bulk actions on a multi-select, not a change to that framing anywhere else in the app (Login's Sign in, a single-agent Approve, etc. are unaffected).
+
 ## [1.3.11] - 2026-09-17
 
 ### Added

@@ -209,6 +209,45 @@ describe('AgentsListPage', () => {
     expect(screen.getByRole('button', { name: /delete selected/i })).toBeDisabled();
   });
 
+  it('selects and deselects every visible row via the header checkbox', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1' }), makeAgent({ hostname: 'host-2' })]);
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText('host-1');
+
+    const selectAll = screen.getByLabelText('Select all');
+    await user.click(selectAll);
+
+    expect(screen.getByLabelText('select host-1')).toBeChecked();
+    expect(screen.getByLabelText('select host-2')).toBeChecked();
+    expect(screen.getByRole('button', { name: /approve selected/i })).toHaveTextContent('(2)');
+
+    await user.click(selectAll);
+
+    expect(screen.getByLabelText('select host-1')).not.toBeChecked();
+    expect(screen.getByLabelText('select host-2')).not.toBeChecked();
+  });
+
+  it('only selects the currently filtered rows via the header checkbox, leaving hidden rows untouched', async () => {
+    mockedList.mockResolvedValue([
+      makeAgent({ hostname: 'win-host', operatingSystem: 'Windows Server 2022' }),
+      makeAgent({ hostname: 'linux-host', operatingSystem: 'Ubuntu 22.04 LTS' }),
+    ]);
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText('win-host');
+
+    await user.selectOptions(screen.getByLabelText('OS type'), 'linux');
+    await user.click(screen.getByLabelText('Select all'));
+
+    expect(screen.getByLabelText('select linux-host')).toBeChecked();
+
+    await user.click(screen.getByRole('button', { name: /clear filters/i }));
+    expect(screen.getByLabelText('select win-host')).not.toBeChecked();
+  });
+
   it('polls the list periodically, so a state change from elsewhere shows up without a manual reload', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
