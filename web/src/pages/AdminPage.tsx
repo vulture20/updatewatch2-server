@@ -864,13 +864,6 @@ export function AdminPage() {
           <button type="button" className="btn-accent" disabled={!newFilterName || !newFilterPattern} onClick={addUpdateFilter}>
             {t('admin.updateFilters.add')}
           </button>
-
-          <div className="tab-save-row tab-save-row-divided">
-            <button type="submit" className="btn-accent" disabled={saving}>
-              {t('admin.save')}
-            </button>
-            {savedMessage && <span className="saved-message" role="status">{t('admin.saved')}</span>}
-          </div>
           </div>
         </div>
 

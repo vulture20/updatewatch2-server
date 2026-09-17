@@ -209,6 +209,24 @@ describe('AgentsListPage', () => {
     expect(screen.getByRole('button', { name: /delete selected/i })).toBeDisabled();
   });
 
+  it('shows the selected count next to the filtered/total count, not inside the bulk action buttons', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1' }), makeAgent({ hostname: 'host-2' })]);
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText('host-1');
+
+    expect(screen.queryByText(/^\d+ selected$/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve selected' })).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText('select host-1'));
+
+    expect(screen.getByText('2 of 2 agents')).toBeInTheDocument();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+    // The button label itself stays fixed, no count appended.
+    expect(screen.getByRole('button', { name: 'Approve selected' })).toBeInTheDocument();
+  });
+
   it('selects and deselects every visible row via the header checkbox', async () => {
     mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1' }), makeAgent({ hostname: 'host-2' })]);
     const user = userEvent.setup();
@@ -221,7 +239,7 @@ describe('AgentsListPage', () => {
 
     expect(screen.getByLabelText('select host-1')).toBeChecked();
     expect(screen.getByLabelText('select host-2')).toBeChecked();
-    expect(screen.getByRole('button', { name: /approve selected/i })).toHaveTextContent('(2)');
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
 
     await user.click(selectAll);
 

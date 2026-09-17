@@ -12,6 +12,17 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.15] - 2026-09-17
+
+### Fixed
+
+- **`AgentDetailPage`'s "Uptime" field used the plural unit form even for a count of exactly one ("seit 1 Tagen"/"1 days" — the plural string was used unconditionally, `{{count}}` never actually chosen between forms), reported by the user directly.** `agentDetail.uptimeSince.{minute,hour,day,month,year}` now use real i18next plural keys (`_one`/`_other`) instead of one fixed string per unit — `t()`'s existing `{ count: elapsed.value }` call already resolves to the correct form automatically once the suffixed keys exist, no code change needed beyond the locale files. `formatRelativeTime`/`AgentsListPage`'s "last seen" column were already safe (backed by `Intl.RelativeTimeFormat`, which pluralizes correctly on its own) — this was specifically an `agentDetail.uptimeSince` bug, not a codebase-wide one; a full audit of every other `{{count}}` interpolation in both locale files found the rest all use this project's existing, deliberate "(s)"-suffix convention for ambiguous-count English/German sentences (e.g. "Agent(s) haben...", "ausgewählte(n) Agent(s)"), which is a stylistic compromise, not a grammar error, and was left unchanged.
+
+### Changed
+
+- **The agent overview's bulk-action buttons no longer show the selected count inline (e.g. "Approve selected (3)") — that count now appears once, next to the filtered/total agent count, at the user's explicit request** ("die Anzahl der markierten Einträge aus den Buttons herausgezogen und als zusätzliche Angabe neben der (angezeigten) Anzahl der Agents platziert"). `AgentsListPage`'s toolbar now reads e.g. "2 of 2 agents · 3 selected" (the "· N selected" part only rendered once at least one row is selected), and all four bulk buttons (Approve/Reboot/Install/Delete) keep a fixed label.
+- **Removed the "Save" button at the bottom of Administration → Update filters — it wasn't necessary and only caused confusion, at the user's explicit request** ("Ist der Speichern-Button bei den Filtern überhaupt nötig? Falls nicht, sollte er entfernt werden, weil er nur unnötig verwirrt."). Investigation confirmed the button genuinely did nothing useful there: every field on that tab (add/edit/delete a filter) already persists immediately via its own direct API call, and `UpdateFilter`/`UpsertUpdateFilter` are a wholly separate REST resource from `AdminSettingsDto` — the removed button was `type="submit"` on the same shared `<form>` every other tab's real "Save" button submits, so clicking it on this tab actually re-submitted the unrelated general admin settings (already saved) and showed a "Saved" confirmation that had nothing to do with whatever filter action the admin had just taken. The per-row inline "Save"/"Cancel" buttons shown while editing one filter are unaffected — those are the button that actually persists a filter edit.
+
 ## [1.3.14] - 2026-09-17
 
 ### Added

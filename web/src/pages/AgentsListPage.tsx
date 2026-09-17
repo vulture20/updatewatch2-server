@@ -332,19 +332,30 @@ export function AgentsListPage() {
           </div>
 
           <div className="list-toolbar">
-            <span className="text-muted">{t('agents.filteredCount', { filtered: filteredAndSorted.length, total: agents.length })}</span>
+            <span>
+              <span className="text-muted">{t('agents.filteredCount', { filtered: filteredAndSorted.length, total: agents.length })}</span>
+              {selected.size > 0 && (
+                <>
+                  <span className="text-muted" aria-hidden="true">
+                    {' '}
+                    ·{' '}
+                  </span>
+                  <span className="text-muted">{t('agents.selectedCount', { count: selected.size })}</span>
+                </>
+              )}
+            </span>
             <div className="detail-header-actions">
               <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void approveSelected()}>
-                {t('agents.approveSelected')} ({selected.size})
+                {t('agents.approveSelected')}
               </button>
               <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void rebootSelected()}>
-                {t('agents.rebootSelected')} ({selected.size})
+                {t('agents.rebootSelected')}
               </button>
               <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void installSelected()}>
-                {t('agents.installSelected')} ({selected.size})
+                {t('agents.installSelected')}
               </button>
               <button type="button" className="btn-accent" disabled={selected.size === 0} onClick={() => void deleteSelected()}>
-                {t('agents.deleteSelected')} ({selected.size})
+                {t('agents.deleteSelected')}
               </button>
             </div>
           </div>

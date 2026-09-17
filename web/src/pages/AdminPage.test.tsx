@@ -976,6 +976,20 @@ describe('AdminPage update filters', () => {
     expect(await screen.findByText('No filters defined.')).toBeInTheDocument();
   });
 
+  it('has no generic "Save" button — every filter action (add/edit/delete) already persists immediately on its own', async () => {
+    // Removed at the user's explicit request ("Ist der Speichern-Button
+    // bei den Filtern überhaupt nötig?") — this tab's fields were never
+    // part of the shared AdminSettings form that button submits, so
+    // clicking it did something entirely unrelated to what an admin had
+    // just done here, which only confused rather than helped.
+    const user = userEvent.setup();
+
+    await openUpdateFiltersTab(user);
+    await screen.findByText('No filters defined.');
+
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+  });
+
   it('adds a new filter and reloads the list', async () => {
     mockedCreateUpdateFilter.mockResolvedValue({ id: 2, name: 'Edge', pattern: 'Microsoft Edge', createdAt: '2026-01-01T00:00:00Z' });
     const user = userEvent.setup();

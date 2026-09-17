@@ -459,6 +459,23 @@ describe('AgentDetailPage uptime', () => {
 
     vi.useRealTimers();
   });
+
+  it('uses the singular unit form for exactly one day, not the plural', async () => {
+    // Regression test: "1 Tagen"/"1 days" (the plural form used
+    // unconditionally, count ignored) was reported by the user directly —
+    // uptimeSince now uses real i18next plural keys (_one/_other) instead
+    // of one fixed string per unit.
+    vi.useFakeTimers({ shouldAdvanceTime: true }).setSystemTime(new Date('2026-01-03T00:00:00Z'));
+    mockedGet.mockResolvedValue({ ...approvedAgent, bootTimeUtc: '2026-01-02T00:00:00Z' });
+
+    renderPage();
+
+    await screen.findByText('Uptime');
+    expect(screen.getByText('Uptime').nextElementSibling).toHaveTextContent('1 day');
+    expect(screen.getByText('Uptime').nextElementSibling).not.toHaveTextContent('1 days');
+
+    vi.useRealTimers();
+  });
 });
 
 // Schaffe eine Möglichkeit nur bestimmte Updates zu installieren und
