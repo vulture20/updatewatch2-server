@@ -26,7 +26,7 @@ Begleit-Repository: [updatewatch2-agent](https://github.com/vulture20/updatewatc
 
 ### 🖥️ Geräteverwaltung
 - Agents werden über den Hostnamen identifiziert; Übersichtsliste plus Detailansicht je Agent (Betriebssystem, IP, Version, letzte Meldung, Zertifikatsstatus, ausstehende Updates).
-- Einen oder mehrere Agents gleichzeitig freigeben; eine Installation aus der Ferne auslösen; einen ausgemusterten oder versehentlich registrierten Agent endgültig löschen.
+- Einen oder mehrere Agents gleichzeitig freigeben; eine Installation aus der Ferne auslösen (optional beschränkt auf einzelne ausstehende Updates) oder einen vollständigen Neustart der Maschine anstoßen; einen ausgemusterten oder versehentlich registrierten Agent endgültig löschen.
 - Die Installation von Updates löst nie selbst einen Neustart aus — "Neustart erforderlich" wird immer getrennt gemeldet und entschieden.
 
 ### 📦 Update-Verteilung & Agent-Auto-Update

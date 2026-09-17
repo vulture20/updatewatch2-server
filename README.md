@@ -26,7 +26,7 @@ Companion repository: [updatewatch2-agent](https://github.com/vulture20/updatewa
 
 ### 🖥️ Fleet management
 - Agents identified by hostname; overview list plus a detail view per agent (OS, IP, version, last-alive, certificate status, pending updates).
-- Approve one or many agents at once; remotely trigger an install; permanently delete a decommissioned or mistaken registration.
+- Approve one or many agents at once; remotely trigger an install (optionally scoped to just some of the pending updates) or a full machine reboot; permanently delete a decommissioned or mistaken registration.
 - Update installation never triggers a reboot itself — "reboot required" is always reported and decided on separately.
 
 ### 📦 Update distribution & agent auto-update
