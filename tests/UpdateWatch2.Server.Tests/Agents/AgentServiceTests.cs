@@ -664,4 +664,53 @@ public class AgentServiceTests : IDisposable
 
         Assert.True(detail!.IsOffline);
     }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_sets_the_desired_override_fields()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("settings-host");
+
+        var result = await _service.UpdateSettingsAsync(hostname, initiatedBy: "admin", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 60, desiredUpdateCheckJitterSeconds: 30);
+
+        Assert.True(result);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        Assert.Equal("DEBUG", agent.DesiredLogLevel);
+        Assert.Equal(60, agent.DesiredUpdateCheckIntervalMinutes);
+        Assert.Equal(30, agent.DesiredUpdateCheckJitterSeconds);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_clears_a_previously_set_override_when_given_null()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("clear-settings-host");
+        await _service.UpdateSettingsAsync(hostname, initiatedBy: "admin", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: 60, desiredUpdateCheckJitterSeconds: 30);
+
+        await _service.UpdateSettingsAsync(hostname, initiatedBy: "admin", desiredLogLevel: null, desiredUpdateCheckIntervalMinutes: null, desiredUpdateCheckJitterSeconds: null);
+
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        Assert.Null(agent.DesiredLogLevel);
+        Assert.Null(agent.DesiredUpdateCheckIntervalMinutes);
+        Assert.Null(agent.DesiredUpdateCheckJitterSeconds);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_returns_false_for_an_unknown_hostname()
+    {
+        var result = await _service.UpdateSettingsAsync("does-not-exist", initiatedBy: "admin", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: null, desiredUpdateCheckJitterSeconds: null);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task UpdateSettingsAsync_writes_an_audit_log_entry_with_the_initiating_admin_as_actor()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("audited-settings-host");
+
+        await _service.UpdateSettingsAsync(hostname, initiatedBy: "alice", desiredLogLevel: "DEBUG", desiredUpdateCheckIntervalMinutes: null, desiredUpdateCheckJitterSeconds: null);
+
+        var entry = await _db.AuditLogEntries.SingleAsync(e => e.Action == "agent.settings.update");
+        Assert.Equal("alice", entry.Actor);
+        Assert.Contains(hostname, entry.Details);
+        Assert.Contains("DEBUG", entry.Details);
+    }
 }

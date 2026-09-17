@@ -144,7 +144,15 @@
     "close": "Close",
     "delete": "Delete agent",
     "deleteHint": "Permanently removes this agent, including its update history. It can only reconnect afterward by registering again from scratch as a new, unapproved agent. This cannot be undone.",
-    "deleteConfirm": "Permanently delete \"{{hostname}}\"? Its certificate stops being accepted immediately, its update history is removed, and it can only reconnect by registering again from scratch as a new, unapproved agent. This cannot be undone."
+    "deleteConfirm": "Permanently delete \"{{hostname}}\"? Its certificate stops being accepted immediately, its update history is removed, and it can only reconnect by registering again from scratch as a new, unapproved agent. This cannot be undone.",
+    "noOverride": "(no override)",
+    "pushedLogLevel": "LogLevel (server override)",
+    "pushedLogLevelHint": "Enforced on every heartbeat, even overwriting a manually changed registry/config file. Leave blank to let the agent's own local setting apply again. Currently on the agent: {{actual}}.",
+    "pushedUpdateCheckIntervalMinutes": "Update-check interval in minutes (server override)",
+    "pushedUpdateCheckIntervalMinutesHint": "Enforced on every heartbeat, even overwriting a manually changed registry/config file. Leave blank to let the agent's own local setting apply again. Currently on the agent: {{actual}}.",
+    "pushedUpdateCheckJitterSeconds": "Update-check jitter in seconds (server override)",
+    "pushedUpdateCheckJitterSecondsHint": "Enforced on every heartbeat, even overwriting a manually changed registry/config file. Leave blank to let the agent's own local setting apply again. Currently on the agent: {{actual}}.",
+    "saveSettings": "Save settings"
   },
   "admin": {
     "title": "Settings",

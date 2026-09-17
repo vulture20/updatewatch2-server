@@ -110,4 +110,22 @@ public class AgentsController(IAgentService agentService, IUpdateService updateS
         var result = await agentService.TriggerRebootManyAsync(request.Hostnames, triggeredBy: User.Identity!.Name!, ct);
         return Ok(result);
     }
+
+    // Full replace, not a partial merge — see UpdateAgentSettingsRequest's
+    // own doc comment. Delivery is the agent's own alive-heartbeat poll,
+    // exactly like Reboot/InstallMany above — no separate ack needed, see
+    // IAgentService.UpdateSettingsAsync's doc comment for why.
+    [HttpPut("{hostname}/settings")]
+    public async Task<IActionResult> UpdateSettings(string hostname, [FromBody] UpdateAgentSettingsRequest request, CancellationToken ct)
+    {
+        if (!AgentSettingsValidator.IsValid(request))
+        {
+            return BadRequest(new { message = "Invalid agent settings." });
+        }
+
+        var found = await agentService.UpdateSettingsAsync(
+            hostname, initiatedBy: User.Identity!.Name!, request.DesiredLogLevel, request.DesiredUpdateCheckIntervalMinutes,
+            request.DesiredUpdateCheckJitterSeconds, ct);
+        return found ? NoContent() : NotFound();
+    }
 }

@@ -6,7 +6,7 @@ import { OneTimeSecretDialog } from '../components/OneTimeSecretDialog';
 import { OfflineIcon } from '../components/OfflineIcon';
 import { WarningTriangleIcon } from '../components/WarningTriangleIcon';
 import { agentsApi } from '../api/endpoints';
-import type { AgentDetail, UpdateItem } from '../api/types';
+import type { AgentDetail, UpdateAgentSettings, UpdateItem } from '../api/types';
 import { sortBy, toggleSort, type SortState } from '../utils/sorting';
 import { elapsedSince } from '../utils/relativeTime';
 
@@ -162,6 +162,14 @@ export function AgentDetailPage() {
     void agentsApi.delete(agent.hostname).then(() => navigate('/agents'));
   };
 
+  const saveAgentSettings = async (settings: UpdateAgentSettings) => {
+    if (!agent) {
+      return;
+    }
+    await agentsApi.updateSettings(agent.hostname, settings);
+    reload();
+  };
+
   if (notFound) {
     return <p role="alert">{t('agentDetail.notFound')}</p>;
   }
@@ -224,14 +232,10 @@ export function AgentDetailPage() {
 
       {settingsOpen && (
         <AgentSettingsDialog
-          title={t('agentDetail.settings')}
-          reissueLabel={t('agentDetail.reissueCertificate')}
-          reissueHint={t('agentDetail.reissueCertificateHint')}
+          agent={agent}
           onReissueCertificate={agent.approved ? reissueCertificate : undefined}
-          deleteLabel={t('agentDetail.delete')}
-          deleteHint={t('agentDetail.deleteHint')}
           onDelete={deleteAgent}
-          closeLabel={t('agentDetail.close')}
+          onSaveSettings={saveAgentSettings}
           onClose={() => setSettingsOpen(false)}
         />
       )}

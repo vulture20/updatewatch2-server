@@ -214,6 +214,38 @@ public class Agent
     public DateTimeOffset? LastUpdateCheckAt { get; set; }
 
     /// <summary>
+    /// An admin-set LogLevel override for this one agent (DEBUG/INFO/WARNING/ERROR),
+    /// pushed down on every heartbeat and enforced unconditionally whenever
+    /// non-null — this is what implements CLAUDE.md's "server always wins
+    /// on conflict" rule for pushed agent settings, at the user's explicit
+    /// request. Null means no override: the agent's own local registry/config
+    /// file value decides, and nothing here overwrites it. Distinct from
+    /// <see cref="Admin.AdminSettings.LogLevel"/>, which only ever controls
+    /// this server's own ASP.NET Core logging.
+    /// </summary>
+    public string? DesiredLogLevel { get; set; }
+
+    /// <summary>
+    /// The agent's own actual, currently-effective LogLevel, self-reported
+    /// on every heartbeat — display-only, lets an admin see what's really
+    /// running even with no <see cref="DesiredLogLevel"/> override set (e.g.
+    /// after a manual registry/config-file edit).
+    /// </summary>
+    public string? ActualLogLevel { get; set; }
+
+    /// <summary>Admin-set override for <c>AgentOptions.UpdateCheckIntervalMinutes</c> — same null-means-no-override/server-always-wins semantics as <see cref="DesiredLogLevel"/>.</summary>
+    public int? DesiredUpdateCheckIntervalMinutes { get; set; }
+
+    /// <summary>The agent's own actual update-check interval, self-reported every heartbeat — same reasoning as <see cref="ActualLogLevel"/>.</summary>
+    public int? ActualUpdateCheckIntervalMinutes { get; set; }
+
+    /// <summary>Admin-set override for <c>AgentOptions.UpdateCheckJitterSeconds</c> — same null-means-no-override/server-always-wins semantics as <see cref="DesiredLogLevel"/>.</summary>
+    public int? DesiredUpdateCheckJitterSeconds { get; set; }
+
+    /// <summary>The agent's own actual update-check jitter, self-reported every heartbeat — same reasoning as <see cref="ActualLogLevel"/>.</summary>
+    public int? ActualUpdateCheckJitterSeconds { get; set; }
+
+    /// <summary>
     /// Internal bookkeeping for <see cref="Notifications.AgentOfflineNotificationWorker"/>
     /// only — NOT what the admin UI's offline icon/filter reflects (that's
     /// always computed live from <see cref="LastAliveAt"/> against the

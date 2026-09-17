@@ -144,7 +144,15 @@
     "close": "Schließen",
     "delete": "Agent löschen",
     "deleteHint": "Entfernt diesen Agent dauerhaft, inklusive seines Update-Verlaufs. Er kann sich danach nur wieder verbinden, indem er sich als neuer, nicht bestätigter Agent komplett neu registriert. Dies kann nicht rückgängig gemacht werden.",
-    "deleteConfirm": "\"{{hostname}}\" endgültig löschen? Sein Zertifikat wird sofort nicht mehr akzeptiert, sein Update-Verlauf wird entfernt, und er kann sich nur wieder verbinden, indem er sich als neuer, nicht bestätigter Agent komplett neu registriert. Dies kann nicht rückgängig gemacht werden."
+    "deleteConfirm": "\"{{hostname}}\" endgültig löschen? Sein Zertifikat wird sofort nicht mehr akzeptiert, sein Update-Verlauf wird entfernt, und er kann sich nur wieder verbinden, indem er sich als neuer, nicht bestätigter Agent komplett neu registriert. Dies kann nicht rückgängig gemacht werden.",
+    "noOverride": "(kein Override)",
+    "pushedLogLevel": "LogLevel (vom Server vorgegeben)",
+    "pushedLogLevelHint": "Wird bei jedem Heartbeat erzwungen, auch gegenüber einer manuell geänderten Registry/Configfile. Leer lassen, um die lokale Einstellung des Agents wieder gelten zu lassen. Aktuell auf dem Agent: {{actual}}.",
+    "pushedUpdateCheckIntervalMinutes": "Update-Check-Intervall in Minuten (vom Server vorgegeben)",
+    "pushedUpdateCheckIntervalMinutesHint": "Wird bei jedem Heartbeat erzwungen, auch gegenüber einer manuell geänderten Registry/Configfile. Leer lassen, um die lokale Einstellung des Agents wieder gelten zu lassen. Aktuell auf dem Agent: {{actual}}.",
+    "pushedUpdateCheckJitterSeconds": "Update-Check-Jitter in Sekunden (vom Server vorgegeben)",
+    "pushedUpdateCheckJitterSecondsHint": "Wird bei jedem Heartbeat erzwungen, auch gegenüber einer manuell geänderten Registry/Configfile. Leer lassen, um die lokale Einstellung des Agents wieder gelten zu lassen. Aktuell auf dem Agent: {{actual}}.",
+    "saveSettings": "Einstellungen speichern"
   },
   "admin": {
     "title": "Einstellungen",

@@ -16,6 +16,7 @@ import type {
   ReissueCertificateResult,
   SmtpHealthStatus,
   UpdateAdminSettings,
+  UpdateAgentSettings,
   UpdateFilter,
   UpdateItem,
   UpsertUpdateFilter,
@@ -60,6 +61,11 @@ export const agentsApi = {
     apiClient.post<BulkRebootResult>('/api/agents/reboot', { hostnames }),
   reissueCertificate: (hostname: string) =>
     apiClient.post<ReissueCertificateResult>(`/api/agents/${encodeURIComponent(hostname)}/reissue-certificate`),
+  // Full replace, not a partial merge — a field left null clears any
+  // existing override for that setting, matching PUT /api/admin/settings'
+  // own "replaces the whole object" convention.
+  updateSettings: (hostname: string, settings: UpdateAgentSettings) =>
+    apiClient.put<void>(`/api/agents/${encodeURIComponent(hostname)}/settings`, settings),
   delete: (hostname: string) => apiClient.delete<void>(`/api/agents/${encodeURIComponent(hostname)}`),
   deleteMany: (hostnames: string[]) =>
     apiClient.post<BulkDeleteResult>('/api/agents/delete', { hostnames }),

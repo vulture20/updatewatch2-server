@@ -7,5 +7,5 @@ namespace UpdateWatch2.Server.Db;
 /// </summary>
 public static class SchemaVersion
 {
-    public const string Current = "1.1.2";
+    public const string Current = "1.1.3";
 }

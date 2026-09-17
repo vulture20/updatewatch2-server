@@ -15,6 +15,7 @@ vi.mock('../api/endpoints', () => ({
     triggerReboot: vi.fn(),
     reissueCertificate: vi.fn(),
     delete: vi.fn(),
+    updateSettings: vi.fn(),
   },
 }));
 
@@ -24,6 +25,7 @@ const mockedReissueCertificate = vi.mocked(agentsApi.reissueCertificate);
 const mockedTriggerInstall = vi.mocked(agentsApi.triggerInstall);
 const mockedTriggerReboot = vi.mocked(agentsApi.triggerReboot);
 const mockedDelete = vi.mocked(agentsApi.delete);
+const mockedUpdateSettings = vi.mocked(agentsApi.updateSettings);
 
 const pendingUpdate: UpdateItem = {
   id: 1,
@@ -62,6 +64,12 @@ const approvedAgent: AgentDetail = {
   lastCertificateRejectionAt: null,
   isOffline: false,
   lastUpdateCheckAt: null,
+  desiredLogLevel: null,
+  actualLogLevel: null,
+  desiredUpdateCheckIntervalMinutes: null,
+  actualUpdateCheckIntervalMinutes: null,
+  desiredUpdateCheckJitterSeconds: null,
+  actualUpdateCheckJitterSeconds: null,
 };
 
 function renderPage() {
@@ -658,5 +666,81 @@ describe('AgentDetailPage deletion', () => {
 
     expect(mockedDelete).not.toHaveBeenCalled();
     expect(screen.getByRole('heading', { name: 'host-1' })).toBeInTheDocument();
+  });
+});
+
+describe('AgentDetailPage pushed settings', () => {
+  beforeEach(() => {
+    mockedGet.mockReset();
+    mockedUpdates.mockReset();
+    mockedUpdateSettings.mockReset();
+    mockedUpdates.mockResolvedValue([]);
+  });
+
+  it('saves the entered LogLevel and interval/jitter overrides', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+    mockedUpdateSettings.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+    await user.selectOptions(screen.getByLabelText(/LogLevel/i), 'DEBUG');
+    await user.type(screen.getByLabelText(/update-check interval/i), '15');
+    await user.type(screen.getByLabelText(/update-check jitter/i), '5');
+    await user.click(screen.getByRole('button', { name: /save settings/i }));
+
+    await waitFor(() =>
+      expect(mockedUpdateSettings).toHaveBeenCalledWith('host-1', {
+        desiredLogLevel: 'DEBUG',
+        desiredUpdateCheckIntervalMinutes: 15,
+        desiredUpdateCheckJitterSeconds: 5,
+      }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(/saved/i);
+  });
+
+  it('saves null for every field left blank, clearing any existing override', async () => {
+    mockedGet.mockResolvedValue({
+      ...approvedAgent,
+      desiredLogLevel: 'DEBUG',
+      desiredUpdateCheckIntervalMinutes: 15,
+      desiredUpdateCheckJitterSeconds: 5,
+    });
+    mockedUpdateSettings.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+    await user.selectOptions(screen.getByLabelText(/LogLevel/i), '');
+    await user.clear(screen.getByLabelText(/update-check interval/i));
+    await user.clear(screen.getByLabelText(/update-check jitter/i));
+    await user.click(screen.getByRole('button', { name: /save settings/i }));
+
+    await waitFor(() =>
+      expect(mockedUpdateSettings).toHaveBeenCalledWith('host-1', {
+        desiredLogLevel: null,
+        desiredUpdateCheckIntervalMinutes: null,
+        desiredUpdateCheckJitterSeconds: null,
+      }),
+    );
+  });
+
+  it('shows an error message when saving fails, without closing the dialog', async () => {
+    mockedGet.mockResolvedValue(approvedAgent);
+    mockedUpdateSettings.mockRejectedValue(new Error('boom'));
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'host-1' });
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+    await user.click(screen.getByRole('button', { name: /save settings/i }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

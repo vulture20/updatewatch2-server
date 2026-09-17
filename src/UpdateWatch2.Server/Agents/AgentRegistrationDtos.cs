@@ -61,10 +61,19 @@ public record AgentRegistrationOutcome(AgentRegistrationStatus Status, string? R
 /// stattfinden."). Null means the agent's own check failed or hasn't run
 /// this tick, never a confirmed false — see <see cref="AgentRegistrationService.RecordAliveAsync"/>'s
 /// handling for why that distinction is preserved through to the stored value.
+/// <see cref="ActualLogLevel"/>/<see cref="ActualUpdateCheckIntervalMinutes"/>/
+/// <see cref="ActualUpdateCheckJitterSeconds"/> are the agent's own current,
+/// actually-effective values for the three settings the server can push an
+/// override for (<see cref="Db.Entities.Agent.DesiredLogLevel"/> and its
+/// siblings) — sent every heartbeat regardless of whether an override is
+/// set, purely for admin visibility, at the user's explicit request
+/// ("Änderungen an Registry bzw. Configfile sollen wiederum am Server zu
+/// sehen sein.").
 /// </summary>
 public record AgentAliveRequest(
     string? DnsName, string? OperatingSystem, string? IpAddress, string? AgentVersion, DateTimeOffset? BootTimeUtc = null,
-    bool? RebootRequired = null);
+    bool? RebootRequired = null, string? ActualLogLevel = null, int? ActualUpdateCheckIntervalMinutes = null,
+    int? ActualUpdateCheckJitterSeconds = null);
 
 /// <summary>
 /// Result of a recorded alive heartbeat (updatewatch2-server#10) —
@@ -91,10 +100,35 @@ public record AgentAliveRequest(
 /// mirroring <see cref="InstallRequested"/> exactly — true whenever
 /// <c>Agent.PendingRebootRequestedAt</c> is set, cleared once the agent
 /// acknowledges via <c>POST .../reboot-ack</c>.
+/// <see cref="DesiredLogLevel"/>/<see cref="DesiredUpdateCheckIntervalMinutes"/>/
+/// <see cref="DesiredUpdateCheckJitterSeconds"/> mirror the identically-named
+/// <c>Agent</c> columns directly — null means no admin override for that
+/// setting, in which case the agent's own local registry/config file value
+/// stays authoritative. Non-null is enforced unconditionally by the agent on
+/// every heartbeat that reports a differing actual value, which is what
+/// implements "the server always wins on conflict" (CLAUDE.md, at the
+/// user's explicit request) — no separate timestamp-based conflict
+/// resolution needed.
 /// </summary>
 public record AliveRecordResult(
     bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending,
-    bool RebootRequested, bool PreDownloadWindowsUpdatesEnabled);
+    bool RebootRequested, bool PreDownloadWindowsUpdatesEnabled, string? DesiredLogLevel, int? DesiredUpdateCheckIntervalMinutes,
+    int? DesiredUpdateCheckJitterSeconds);
+
+/// <summary>
+/// Body of <c>PUT /api/agents/{hostname}/settings</c> — an admin's way to
+/// set (or clear, by sending null) a per-agent override for one or more of
+/// the settings the server can push to a specific agent, at the user's
+/// explicit request ("LogLevel des Agents über den Server setzen... Diese
+/// Logik soll für alle (auch spätere) Einstellungen am Server für den Agent
+/// gelten."). A full replace, not a partial merge — matching
+/// <c>PUT /api/admin/settings</c>'s own convention — so a field's absence
+/// from the caller's JSON (defaulting to null) genuinely means "no
+/// override", not "leave whatever was there before". See
+/// <see cref="AgentSettingsValidator"/> for the accepted value ranges.
+/// </summary>
+public record UpdateAgentSettingsRequest(
+    string? DesiredLogLevel, int? DesiredUpdateCheckIntervalMinutes, int? DesiredUpdateCheckJitterSeconds);
 
 /// <summary>
 /// Result of <c>POST /api/agents/{hostname}/renew</c> (updatewatch2-server#7)

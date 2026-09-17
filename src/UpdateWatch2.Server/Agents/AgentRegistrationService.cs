@@ -174,6 +174,9 @@ public class AgentRegistrationService(
             agent.AgentVersion = AgentMetadataValidator.Clamp(request.AgentVersion, AgentMetadataValidator.MaxAgentVersionLength) ?? agent.AgentVersion;
             agent.BootTimeUtc = request.BootTimeUtc ?? agent.BootTimeUtc;
             agent.RebootRequired = request.RebootRequired ?? agent.RebootRequired;
+            agent.ActualLogLevel = request.ActualLogLevel ?? agent.ActualLogLevel;
+            agent.ActualUpdateCheckIntervalMinutes = request.ActualUpdateCheckIntervalMinutes ?? agent.ActualUpdateCheckIntervalMinutes;
+            agent.ActualUpdateCheckJitterSeconds = request.ActualUpdateCheckJitterSeconds ?? agent.ActualUpdateCheckJitterSeconds;
         }
 
         await db.SaveChangesAsync(ct);
@@ -197,7 +200,8 @@ public class AgentRegistrationService(
 
         return new AliveRecordResult(
             agent.PendingInstallRequestedAt is not null, installUpdateIds, updateOffer, certificateRotationPending,
-            agent.PendingRebootRequestedAt is not null, settingsStore.PreDownloadWindowsUpdatesEnabled);
+            agent.PendingRebootRequestedAt is not null, settingsStore.PreDownloadWindowsUpdatesEnabled,
+            agent.DesiredLogLevel, agent.DesiredUpdateCheckIntervalMinutes, agent.DesiredUpdateCheckJitterSeconds);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)

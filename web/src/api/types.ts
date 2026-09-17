@@ -73,6 +73,25 @@ export interface AgentDetail {
   isOffline: boolean;
   /** When this agent last reported the result of an update check — distinct from lastAliveAt, which moves on the much shorter, separate heartbeat cadence. */
   lastUpdateCheckAt: string | null;
+  /** Admin-set LogLevel override, pushed to and enforced by the agent every heartbeat — null means no override, the agent's own local registry/config file value decides. Edited in the Settings dialog. */
+  desiredLogLevel: string | null;
+  /** This agent's own actual, currently-effective LogLevel, self-reported every heartbeat — shown for visibility even with no override set. */
+  actualLogLevel: string | null;
+  /** Admin-set override for the agent's update-check interval (minutes) — same null-means-no-override semantics as desiredLogLevel. */
+  desiredUpdateCheckIntervalMinutes: number | null;
+  /** This agent's own actual update-check interval, self-reported every heartbeat. */
+  actualUpdateCheckIntervalMinutes: number | null;
+  /** Admin-set override for the agent's update-check jitter (seconds) — same null-means-no-override semantics as desiredLogLevel. */
+  desiredUpdateCheckJitterSeconds: number | null;
+  /** This agent's own actual update-check jitter, self-reported every heartbeat. */
+  actualUpdateCheckJitterSeconds: number | null;
+}
+
+/** Body of PUT /api/agents/{hostname}/settings — a full replace, see agentsApi.updateSettings. */
+export interface UpdateAgentSettings {
+  desiredLogLevel: string | null;
+  desiredUpdateCheckIntervalMinutes: number | null;
+  desiredUpdateCheckJitterSeconds: number | null;
 }
 
 /** Response of an admin-initiated certificate re-issuance (updatewatch2-server#8). */

@@ -259,6 +259,63 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAliveAsync_updates_the_actual_pushed_setting_fields_and_leaves_them_unchanged_when_null()
+    {
+        await _service.RegisterAsync("actual-settings-host", BareRequest);
+
+        await _service.RecordAliveAsync(
+            "actual-settings-host",
+            new AgentAliveRequest(
+                DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null,
+                ActualLogLevel: "DEBUG", ActualUpdateCheckIntervalMinutes: 120, ActualUpdateCheckJitterSeconds: 45));
+
+        var afterSet = await _db.Agents.SingleAsync(a => a.Hostname == "actual-settings-host");
+        Assert.Equal("DEBUG", afterSet.ActualLogLevel);
+        Assert.Equal(120, afterSet.ActualUpdateCheckIntervalMinutes);
+        Assert.Equal(45, afterSet.ActualUpdateCheckJitterSeconds);
+
+        // An agent build predating these fields (or a tick where nothing
+        // changed) sends null — must not clobber the last-known-good value.
+        await _service.RecordAliveAsync(
+            "actual-settings-host",
+            new AgentAliveRequest(DnsName: null, OperatingSystem: null, IpAddress: null, AgentVersion: null));
+
+        var afterNull = await _db.Agents.SingleAsync(a => a.Hostname == "actual-settings-host");
+        Assert.Equal("DEBUG", afterNull.ActualLogLevel);
+        Assert.Equal(120, afterNull.ActualUpdateCheckIntervalMinutes);
+        Assert.Equal(45, afterNull.ActualUpdateCheckJitterSeconds);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_surfaces_the_desired_setting_overrides_in_the_result()
+    {
+        await _service.RegisterAsync("desired-settings-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "desired-settings-host");
+        agent.DesiredLogLevel = "ERROR";
+        agent.DesiredUpdateCheckIntervalMinutes = 30;
+        agent.DesiredUpdateCheckJitterSeconds = 10;
+        await _db.SaveChangesAsync();
+
+        var result = await _service.RecordAliveAsync("desired-settings-host", request: null);
+
+        Assert.Equal("ERROR", result!.DesiredLogLevel);
+        Assert.Equal(30, result.DesiredUpdateCheckIntervalMinutes);
+        Assert.Equal(10, result.DesiredUpdateCheckJitterSeconds);
+    }
+
+    [Fact]
+    public async Task RecordAliveAsync_surfaces_null_desired_settings_when_no_override_is_set()
+    {
+        await _service.RegisterAsync("no-override-host", BareRequest);
+
+        var result = await _service.RecordAliveAsync("no-override-host", request: null);
+
+        Assert.Null(result!.DesiredLogLevel);
+        Assert.Null(result.DesiredUpdateCheckIntervalMinutes);
+        Assert.Null(result.DesiredUpdateCheckJitterSeconds);
+    }
+
+    [Fact]
     public async Task RecordAliveAsync_surfaces_whatever_IAgentUpdateService_offers_for_this_agents_reported_version()
     {
         await _service.RegisterAsync("update-offer-host", BareRequest with { AgentVersion = "0.9.0" });

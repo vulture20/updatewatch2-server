@@ -101,7 +101,19 @@ public record AgentDetailDto(
     /// <summary>Same as <see cref="AgentListItemDto.IsOffline"/> — shown next to the hostname on the detail page's Identity card.</summary>
     bool IsOffline,
     /// <summary>Same as <see cref="Db.Entities.Agent.LastUpdateCheckAt"/> — shown on the detail page's Identity card, at the user's explicit request.</summary>
-    DateTimeOffset? LastUpdateCheckAt);
+    DateTimeOffset? LastUpdateCheckAt,
+    /// <summary>See <see cref="Db.Entities.Agent.DesiredLogLevel"/> — shown/editable in the Settings dialog.</summary>
+    string? DesiredLogLevel,
+    /// <summary>See <see cref="Db.Entities.Agent.ActualLogLevel"/>.</summary>
+    string? ActualLogLevel,
+    /// <summary>See <see cref="Db.Entities.Agent.DesiredUpdateCheckIntervalMinutes"/>.</summary>
+    int? DesiredUpdateCheckIntervalMinutes,
+    /// <summary>See <see cref="Db.Entities.Agent.ActualUpdateCheckIntervalMinutes"/>.</summary>
+    int? ActualUpdateCheckIntervalMinutes,
+    /// <summary>See <see cref="Db.Entities.Agent.DesiredUpdateCheckJitterSeconds"/>.</summary>
+    int? DesiredUpdateCheckJitterSeconds,
+    /// <summary>See <see cref="Db.Entities.Agent.ActualUpdateCheckJitterSeconds"/>.</summary>
+    int? ActualUpdateCheckJitterSeconds);
 
 /// <summary>
 /// How many/which agents would stop authenticating if the CA's previous

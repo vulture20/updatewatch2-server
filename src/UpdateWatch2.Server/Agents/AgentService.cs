@@ -58,7 +58,8 @@ public class AgentService(
             agent.PendingInstallRequestedAt, agent.LastInstallOutcome, agent.LastInstallErrorDetail, agent.LastInstallCompletedAt,
             agent.PendingRebootRequestedAt, agent.LastRebootOutcome, agent.LastRebootErrorDetail, agent.LastRebootCompletedAt, agent.BootTimeUtc,
             agent.IssuingRootThumbprint, rejection?.Reason, rejection?.Timestamp, IsOffline(agent.LastAliveAt, offlineThreshold),
-            agent.LastUpdateCheckAt);
+            agent.LastUpdateCheckAt, agent.DesiredLogLevel, agent.ActualLogLevel, agent.DesiredUpdateCheckIntervalMinutes,
+            agent.ActualUpdateCheckIntervalMinutes, agent.DesiredUpdateCheckJitterSeconds, agent.ActualUpdateCheckJitterSeconds);
     }
 
     /// <summary>
@@ -288,5 +289,28 @@ public class AgentService(
             .CountAsync(a => a.ClientCertificateThumbprint != null && a.IssuingRootThumbprint == null, ct);
 
         return new CaRotationImpactDto(count, hostnames, unknownRootCount);
+    }
+
+    public async Task<bool> UpdateSettingsAsync(
+        string hostname, string initiatedBy, string? desiredLogLevel, int? desiredUpdateCheckIntervalMinutes,
+        int? desiredUpdateCheckJitterSeconds, CancellationToken ct = default)
+    {
+        var agent = await db.Agents.SingleOrDefaultAsync(a => a.Hostname == hostname, ct);
+        if (agent is null)
+        {
+            return false;
+        }
+
+        agent.DesiredLogLevel = desiredLogLevel;
+        agent.DesiredUpdateCheckIntervalMinutes = desiredUpdateCheckIntervalMinutes;
+        agent.DesiredUpdateCheckJitterSeconds = desiredUpdateCheckJitterSeconds;
+        await db.SaveChangesAsync(ct);
+
+        await auditLog.LogAsync(
+            initiatedBy, "agent.settings.update",
+            $"{hostname}: LogLevel={desiredLogLevel ?? "(none)"}, UpdateCheckIntervalMinutes={desiredUpdateCheckIntervalMinutes?.ToString() ?? "(none)"}, UpdateCheckJitterSeconds={desiredUpdateCheckJitterSeconds?.ToString() ?? "(none)"}",
+            ct);
+
+        return true;
     }
 }
