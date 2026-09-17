@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.21] - 2026-09-17
+
+### Added
+
+- **Pre-downloading pending updates is now implemented for Linux too, alongside the existing Windows toggle — at the user's explicit request** ("Setze den Pre-Download auch für Linux um. Füge dazu unter Einstellungen eine weitere Checkbox unter 'Windows-Updates vorab herunterladen' hinzu und gestalte es dort analog zur Windows-Variante."), protocol `1.5.0`, DB schema `1.1.6`. A new `AdminSettings.PreDownloadLinuxUpdatesEnabled` (default true) is a genuinely independent fleet-wide toggle, not derived from the Windows one — a fleet can run either OS, both, or neither, and an admin may want pre-downloading on one platform without the other. **UI layout was a deliberate clarifying question, not assumed**: asked whether the new Linux checkbox should live in its own card mirroring the Windows one, or share the existing card (renamed OS-neutral); the user chose the shared card. `AdminPage`'s "Pre-download Windows updates" card is now "Pre-download updates" (`admin.preDownloadUpdates.*`, replacing `admin.preDownloadWindowsUpdates.*`) with two independent checkboxes, "Proactively download pending Windows updates" and "Proactively download pending Linux updates", each submitting its own field. Every heartbeat's `alive` response now carries both `preDownloadWindowsUpdatesEnabled` and `preDownloadLinuxUpdatesEnabled` regardless of the requesting agent's own platform — the same "extra field, simply unused on the other platform" pattern the original Windows-only field already established for a Linux agent, just now symmetric in both directions.
+
 ## [1.3.20] - 2026-09-17
 
 ### Added

@@ -123,5 +123,8 @@ public class AdminSettings
     /// <summary>See <see cref="Admin.IAdminSettingsStore.PreDownloadWindowsUpdatesEnabled"/>'s doc comment. Default true.</summary>
     public bool PreDownloadWindowsUpdatesEnabled { get; set; } = true;
 
+    /// <summary>See <see cref="Admin.IAdminSettingsStore.PreDownloadLinuxUpdatesEnabled"/>'s doc comment. Default true.</summary>
+    public bool PreDownloadLinuxUpdatesEnabled { get; set; } = true;
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

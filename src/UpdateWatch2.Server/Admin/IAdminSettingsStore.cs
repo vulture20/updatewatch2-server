@@ -60,11 +60,25 @@ public interface IAdminSettingsStore
     /// trigger time. Surfaced to the agent as an additive field on the
     /// <c>alive</c> heartbeat response (<c>UpdateCheck.IPreDownloadPolicyState</c>
     /// agent-side) — there is no per-agent override, this is a single
-    /// fleet-wide toggle. Default true; Windows-only today (a Linux agent
-    /// receives the same field but its <c>IUpdateChecker.PreDownloadAsync</c>
-    /// is currently a no-op).
+    /// fleet-wide toggle. Default true.
     /// </summary>
     bool PreDownloadWindowsUpdatesEnabled { get; }
+
+    /// <summary>
+    /// Same idea as <see cref="PreDownloadWindowsUpdatesEnabled"/>, for a
+    /// Linux agent's apt/dnf package manager (server v1.3.21/agent v1.0.16,
+    /// at the user's explicit request — "Setze den Pre-Download auch für
+    /// Linux um."). A genuinely independent toggle, not a re-derivation of
+    /// the Windows one: a fleet can run either OS, both, or neither, and an
+    /// admin may want pre-downloading on one platform without the other.
+    /// Surfaced to the agent as its own additive <c>alive</c>-response
+    /// field; a Windows agent receives it too but its
+    /// <c>IUpdateChecker.PreDownloadAsync</c> ignores it (only reads the
+    /// Windows flag), the same "extra field, irrelevant to this platform,
+    /// simply unused" pattern already established for the Windows flag on
+    /// a Linux agent. Default true.
+    /// </summary>
+    bool PreDownloadLinuxUpdatesEnabled { get; }
 
     /// <summary>Loads the persisted row into the cache, seeding one from appsettings.json's defaults if none exists yet. Call once at startup.</summary>
     Task InitializeAsync(CancellationToken ct = default);

@@ -29,7 +29,8 @@ public class AliveResponseDtoTests
         var result = new AliveRecordResult(
             InstallRequested: true, InstallUpdateIds: ["KB1"], UpdateAvailable: offer, CertificateRotationPending: true,
             RebootRequested: true, PreDownloadWindowsUpdatesEnabled: true, DesiredLogLevel: "DEBUG",
-            DesiredUpdateCheckIntervalMinutes: 15, DesiredUpdateCheckJitterSeconds: 5, DesiredAliveIntervalMinutes: 10);
+            DesiredUpdateCheckIntervalMinutes: 15, DesiredUpdateCheckJitterSeconds: 5, DesiredAliveIntervalMinutes: 10,
+            PreDownloadLinuxUpdatesEnabled: true);
 
         var dto = AliveResponseDto.FromResult(result);
 
@@ -43,6 +44,7 @@ public class AliveResponseDtoTests
         Assert.Equal(15, dto.DesiredUpdateCheckIntervalMinutes);
         Assert.Equal(5, dto.DesiredUpdateCheckJitterSeconds);
         Assert.Equal(10, dto.DesiredAliveIntervalMinutes);
+        Assert.True(dto.PreDownloadLinuxUpdatesEnabled);
     }
 
     [Fact]
@@ -51,7 +53,8 @@ public class AliveResponseDtoTests
         var result = new AliveRecordResult(
             InstallRequested: false, InstallUpdateIds: null, UpdateAvailable: null, CertificateRotationPending: false,
             RebootRequested: false, PreDownloadWindowsUpdatesEnabled: false, DesiredLogLevel: "DEBUG",
-            DesiredUpdateCheckIntervalMinutes: 15, DesiredUpdateCheckJitterSeconds: 5, DesiredAliveIntervalMinutes: 10);
+            DesiredUpdateCheckIntervalMinutes: 15, DesiredUpdateCheckJitterSeconds: 5, DesiredAliveIntervalMinutes: 10,
+            PreDownloadLinuxUpdatesEnabled: true);
         var dto = AliveResponseDto.FromResult(result);
 
         // Matches ASP.NET Core's own default MVC JSON options
@@ -64,6 +67,7 @@ public class AliveResponseDtoTests
         Assert.Contains("\"desiredUpdateCheckIntervalMinutes\":15", json);
         Assert.Contains("\"desiredUpdateCheckJitterSeconds\":5", json);
         Assert.Contains("\"desiredAliveIntervalMinutes\":10", json);
+        Assert.Contains("\"preDownloadLinuxUpdatesEnabled\":true", json);
         Assert.Contains("\"agentUpdateAvailable\"", json);
         Assert.DoesNotContain("\"updateAvailable\"", json);
     }

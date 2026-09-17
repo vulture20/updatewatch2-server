@@ -43,7 +43,8 @@ public class AdminSettingsDiffFormatterTests
         AgentOfflineThresholdMinutes: 15,
         AgentOfflineNotificationEnabled: true,
         AgentOnlineRecoveryNotificationEnabled: true,
-        PreDownloadWindowsUpdatesEnabled: true);
+        PreDownloadWindowsUpdatesEnabled: true,
+        PreDownloadLinuxUpdatesEnabled: true);
 
     [Fact]
     public void Returns_null_when_nothing_changed()

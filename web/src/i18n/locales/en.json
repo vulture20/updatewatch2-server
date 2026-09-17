@@ -278,10 +278,11 @@
       "thresholdMinutes": "Offline threshold (minutes)",
       "thresholdMinutesHint": "How long since an agent's last heartbeat before it's marked offline in the agent list/detail view. Takes effect immediately, no restart needed."
     },
-    "preDownloadWindowsUpdates": {
-      "title": "Pre-download Windows updates",
-      "hint": "Lets a Windows agent download pending Windows Updates ahead of an actual install trigger, so an install applies from local cache instead of downloading at trigger time. Windows-only for now; a Linux agent ignores this setting. Takes effect on the agent's next heartbeat, no restart needed.",
-      "enabled": "Proactively download pending Windows updates"
+    "preDownloadUpdates": {
+      "title": "Pre-download updates",
+      "hint": "Lets an agent download pending updates ahead of an actual install trigger, so an install applies from local cache/package cache instead of downloading at trigger time. Windows and Linux are switched independently. Takes effect on the agent's next heartbeat, no restart needed.",
+      "windowsEnabled": "Proactively download pending Windows updates",
+      "linuxEnabled": "Proactively download pending Linux updates"
     },
     "agentCertificateValidityDays": "Agent certificate validity (days)",
     "agentCertificateValidityDaysHint": "Applies to newly issued or renewed agent certificates only, not retroactively to already-issued ones. Each CA root's own lifetime is fixed and isn't configurable — rotate it below instead once it's due.",

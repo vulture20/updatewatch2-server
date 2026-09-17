@@ -236,6 +236,24 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RecordAliveAsync_surfaces_the_live_PreDownloadLinuxUpdatesEnabled_setting()
+    {
+        // A genuinely independent toggle from the Windows one above — both
+        // are surfaced on every heartbeat regardless of platform, and each
+        // agent only acts on the one relevant to it.
+        await _service.RegisterAsync("linux-pre-download-host", BareRequest);
+
+        _settingsStore.PreDownloadLinuxUpdatesEnabled = false;
+        var disabled = await _service.RecordAliveAsync("linux-pre-download-host", request: null);
+
+        _settingsStore.PreDownloadLinuxUpdatesEnabled = true;
+        var enabled = await _service.RecordAliveAsync("linux-pre-download-host", request: null);
+
+        Assert.False(disabled!.PreDownloadLinuxUpdatesEnabled);
+        Assert.True(enabled!.PreDownloadLinuxUpdatesEnabled);
+    }
+
+    [Fact]
     public async Task RecordAliveAsync_updates_RebootRequired_when_reported_and_leaves_it_unchanged_when_null()
     {
         await _service.RegisterAsync("reboot-check-host", BareRequest);

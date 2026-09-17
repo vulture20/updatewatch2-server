@@ -111,12 +111,17 @@ public record AgentAliveRequest(
 /// every heartbeat that reports a differing actual value, which is what
 /// implements "the server always wins on conflict" (CLAUDE.md, at the
 /// user's explicit request) — no separate timestamp-based conflict
-/// resolution needed.
+/// resolution needed. <see cref="PreDownloadLinuxUpdatesEnabled"/> is the
+/// Linux counterpart to <see cref="PreDownloadWindowsUpdatesEnabled"/>
+/// (server v1.3.21/agent v1.0.16) — a genuinely independent fleet-wide
+/// toggle, not derived from the Windows one; every agent receives both
+/// fields regardless of its own platform, and only acts on the one that
+/// applies to it.
 /// </summary>
 public record AliveRecordResult(
     bool InstallRequested, IReadOnlyList<string>? InstallUpdateIds, AgentUpdateOffer? UpdateAvailable, bool CertificateRotationPending,
     bool RebootRequested, bool PreDownloadWindowsUpdatesEnabled, string? DesiredLogLevel, int? DesiredUpdateCheckIntervalMinutes,
-    int? DesiredUpdateCheckJitterSeconds, int? DesiredAliveIntervalMinutes);
+    int? DesiredUpdateCheckJitterSeconds, int? DesiredAliveIntervalMinutes, bool PreDownloadLinuxUpdatesEnabled);
 
 /// <summary>
 /// The actual JSON shape of <c>POST /api/agents/{hostname}/alive</c>'s
@@ -151,12 +156,14 @@ public record AliveResponseDto(
     string? DesiredLogLevel,
     int? DesiredUpdateCheckIntervalMinutes,
     int? DesiredUpdateCheckJitterSeconds,
-    int? DesiredAliveIntervalMinutes)
+    int? DesiredAliveIntervalMinutes,
+    bool PreDownloadLinuxUpdatesEnabled)
 {
     public static AliveResponseDto FromResult(AliveRecordResult result) => new(
         result.InstallRequested, result.InstallUpdateIds, result.UpdateAvailable, result.CertificateRotationPending,
         result.RebootRequested, result.PreDownloadWindowsUpdatesEnabled, result.DesiredLogLevel,
-        result.DesiredUpdateCheckIntervalMinutes, result.DesiredUpdateCheckJitterSeconds, result.DesiredAliveIntervalMinutes);
+        result.DesiredUpdateCheckIntervalMinutes, result.DesiredUpdateCheckJitterSeconds, result.DesiredAliveIntervalMinutes,
+        result.PreDownloadLinuxUpdatesEnabled);
 }
 
 /// <summary>

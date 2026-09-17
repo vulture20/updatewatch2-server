@@ -76,6 +76,7 @@ const baseSettings = {
   agentOfflineNotificationEnabled: true,
   agentOnlineRecoveryNotificationEnabled: true,
   preDownloadWindowsUpdatesEnabled: true,
+  preDownloadLinuxUpdatesEnabled: true,
 };
 
 // Renders both siblings the way App.tsx actually does — SmtpWarningBanner

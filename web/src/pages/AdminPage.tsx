@@ -349,15 +349,23 @@ export function AdminPage() {
           </div>
 
           <div className="card">
-            <span className="card-kicker">{t('admin.preDownloadWindowsUpdates.title')}</span>
-            <p className="card-body">{t('admin.preDownloadWindowsUpdates.hint')}</p>
+            <span className="card-kicker">{t('admin.preDownloadUpdates.title')}</span>
+            <p className="card-body">{t('admin.preDownloadUpdates.hint')}</p>
             <label>
               <input
                 type="checkbox"
                 checked={form.preDownloadWindowsUpdatesEnabled}
                 onChange={(e) => update('preDownloadWindowsUpdatesEnabled', e.target.checked)}
               />
-              {t('admin.preDownloadWindowsUpdates.enabled')}
+              {t('admin.preDownloadUpdates.windowsEnabled')}
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.preDownloadLinuxUpdatesEnabled}
+                onChange={(e) => update('preDownloadLinuxUpdatesEnabled', e.target.checked)}
+              />
+              {t('admin.preDownloadUpdates.linuxEnabled')}
             </label>
           </div>
 

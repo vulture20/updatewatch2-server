@@ -265,7 +265,7 @@ public class AgentRegistrationService(
             agent.PendingInstallRequestedAt is not null, installUpdateIds, updateOffer, certificateRotationPending,
             agent.PendingRebootRequestedAt is not null, settingsStore.PreDownloadWindowsUpdatesEnabled,
             agent.DesiredLogLevel, agent.DesiredUpdateCheckIntervalMinutes, agent.DesiredUpdateCheckJitterSeconds,
-            agent.DesiredAliveIntervalMinutes);
+            agent.DesiredAliveIntervalMinutes, settingsStore.PreDownloadLinuxUpdatesEnabled);
     }
 
     public async Task<RenewCertificateResult> RenewCertificateAsync(string hostname, CancellationToken ct = default)

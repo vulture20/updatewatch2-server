@@ -265,8 +265,10 @@ export interface AdminSettings {
   agentOfflineNotificationEnabled: boolean;
   /** Independent on/off switch for the "agent back online" email. Default true. */
   agentOnlineRecoveryNotificationEnabled: boolean;
-  /** Whether a Windows agent should proactively download pending Windows Updates ahead of an install trigger — surfaced to agents via the alive heartbeat response. Windows-only today. Default true. */
+  /** Whether a Windows agent should proactively download pending Windows Updates ahead of an install trigger — surfaced to agents via the alive heartbeat response. Default true. */
   preDownloadWindowsUpdatesEnabled: boolean;
+  /** Same idea as preDownloadWindowsUpdatesEnabled, for a Linux agent's apt/dnf package manager — a genuinely independent toggle, not derived from the Windows one. Default true. */
+  preDownloadLinuxUpdatesEnabled: boolean;
 }
 
 /**

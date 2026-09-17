@@ -44,4 +44,5 @@ public record AdminSettingsDto(
     int AgentOfflineThresholdMinutes,
     bool AgentOfflineNotificationEnabled,
     bool AgentOnlineRecoveryNotificationEnabled,
-    bool PreDownloadWindowsUpdatesEnabled);
+    bool PreDownloadWindowsUpdatesEnabled,
+    bool PreDownloadLinuxUpdatesEnabled);

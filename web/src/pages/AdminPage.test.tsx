@@ -127,6 +127,7 @@ const baseSettings = {
   agentOfflineNotificationEnabled: true,
   agentOnlineRecoveryNotificationEnabled: true,
   preDownloadWindowsUpdatesEnabled: true,
+  preDownloadLinuxUpdatesEnabled: true,
 };
 
 describe('AdminPage', () => {
@@ -532,7 +533,7 @@ describe('AdminPage', () => {
     );
   });
 
-  it('submits the pre-download Windows updates checkbox', async () => {
+  it('submits the pre-download Windows updates checkbox independently of the Linux one', async () => {
     mockedUpdateSettings.mockResolvedValue({ ...baseSettings, preDownloadWindowsUpdatesEnabled: false });
     const user = userEvent.setup();
 
@@ -548,7 +549,27 @@ describe('AdminPage', () => {
 
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ preDownloadWindowsUpdatesEnabled: false }),
+      expect.objectContaining({ preDownloadWindowsUpdatesEnabled: false, preDownloadLinuxUpdatesEnabled: true }),
+    );
+  });
+
+  it('submits the pre-download Linux updates checkbox independently of the Windows one', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, preDownloadLinuxUpdatesEnabled: false });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.click(screen.getByLabelText('Proactively download pending Linux updates'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ preDownloadWindowsUpdatesEnabled: true, preDownloadLinuxUpdatesEnabled: false }),
     );
   });
 
