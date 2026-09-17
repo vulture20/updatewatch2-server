@@ -33,6 +33,7 @@ flowchart TB
         VacWorker["Db/DatabaseVacuumWorker"]
         ThreshWorker["Notifications/UpdateThresholdNotificationWorker"]
         OfflineWorker["Notifications/AgentOfflineNotificationWorker"]
+        SmtpHealthWorker["Notifications/SmtpHealthCheckWorker"]
     end
 
     DB[("Db/AppDbContext — SQLite")]
@@ -61,6 +62,7 @@ flowchart TB
     VacWorker --> DB
     ThreshWorker --> AdminSettings
     OfflineWorker --> AdminSettings
+    SmtpHealthWorker --> AdminSettings
 
     Agent(("An agent, over mTLS")) -->|register / alive / renew| AgentProto
     Agent -->|report updates / install-ack / reboot-ack| UpdatesCtl
@@ -151,8 +153,13 @@ surfaced):
 6. **`Notifications/AgentOfflineNotificationWorker`** — the
    went-offline / back-online email notification, edge-triggered per
    agent against the admin-configured offline threshold.
+7. **`Notifications/SmtpHealthCheckWorker`** — refreshes `ISmtpHealthCache`
+   from `IEmailNotificationService.IsHealthyAsync`'s live TCP probe every
+   5 minutes (not admin-configurable), so `GET /api/admin/notifications/smtp-health`
+   — what the web `SmtpWarningBanner` actually polls — never itself
+   performs that probe on every page load (`updatewatch2-server#12`).
 
-All six follow the same shape: a check immediately on startup, then every
+All seven follow the same shape: a check immediately on startup, then every
 fixed or admin-configured interval, re-reading live settings from
 `IAdminSettingsStore` on every tick rather than capturing them once.
 
