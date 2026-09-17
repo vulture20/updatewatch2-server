@@ -961,6 +961,30 @@ export function AdminPage() {
                 )}
             </>
           )}
+
+          <div className="card">
+            <span className="card-kicker">{t('admin.info.about.title')}</span>
+            <dl>
+              <dt className="text-muted">{t('admin.info.about.author')}</dt>
+              <dd>{t('admin.info.about.authorValue')}</dd>
+              <dt className="text-muted">{t('admin.info.about.license')}</dt>
+              <dd>
+                <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer">
+                  {t('admin.info.about.licenseValue')}
+                </a>
+              </dd>
+              <dt className="text-muted">{t('admin.info.about.repositories')}</dt>
+              <dd>
+                <a href="https://github.com/vulture20/updatewatch2-server" target="_blank" rel="noreferrer">
+                  {t('admin.info.about.serverRepo')}
+                </a>
+                {' · '}
+                <a href="https://github.com/vulture20/updatewatch2-agent" target="_blank" rel="noreferrer">
+                  {t('admin.info.about.agentRepo')}
+                </a>
+              </dd>
+            </dl>
+          </div>
         </div>
           </div>
         </div>

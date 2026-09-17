@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.22] - 2026-09-17
+
+### Added
+
+- **The Info tab gained an "About UpdateWatch2" card at the very bottom, with the author, license, and links to both GitHub repositories — at the user's explicit request** ("Weitere Table in den Einstellungen unter Info ganz unten mit einem Hinweis auf den Autoren und die Lizenz. Außerdem ein Link zu beiden GitHub-Repositories."). Follows the exact same `.card`/`<dl>` layout the existing certificate cards on this tab already use — Author (Thorsten Schröpel), License (AGPL-3.0-or-later, linking to the canonical gnu.org license text), and GitHub Repositories (Server/Agent, each linking to its own `github.com/vulture20/updatewatch2-{server,agent}` repository) — matching this project's own README "License" section and the copyright line already embedded in both `.csproj` files. Purely a static informational addition — no new API field, no settings to persist.
+
 ## [1.3.21] - 2026-09-17
 
 ### Added

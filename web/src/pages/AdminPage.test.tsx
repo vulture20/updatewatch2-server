@@ -944,6 +944,33 @@ describe('AdminPage CA root rotation (updatewatch2-server#6)', () => {
     expect(screen.queryByText('CA root (previous, still trusted)')).not.toBeInTheDocument();
     expect(screen.queryByText('CA root (prepared, not yet active)')).not.toBeInTheDocument();
   });
+
+  it('shows an author/license card with links to both GitHub repositories at the bottom of the Info tab', async () => {
+    mockedGetCaStatus.mockResolvedValue(baseCaStatus);
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+    await user.click(screen.getByRole('tab', { name: 'Info' }));
+
+    expect(await screen.findByText('About UpdateWatch2')).toBeInTheDocument();
+    expect(screen.getByText('Thorsten Schröpel')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'AGPL-3.0-or-later' })).toHaveAttribute(
+      'href',
+      'https://www.gnu.org/licenses/agpl-3.0.html',
+    );
+    expect(screen.getByRole('link', { name: 'Server' })).toHaveAttribute(
+      'href',
+      'https://github.com/vulture20/updatewatch2-server',
+    );
+    expect(screen.getByRole('link', { name: 'Agent' })).toHaveAttribute(
+      'href',
+      'https://github.com/vulture20/updatewatch2-agent',
+    );
+  });
 });
 
 describe('AdminPage update filters', () => {

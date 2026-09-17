@@ -184,6 +184,16 @@
         "thumbprint": "Thumbprint (SHA-256)",
         "issued": "Issued",
         "expires": "Expires"
+      },
+      "about": {
+        "title": "About UpdateWatch2",
+        "author": "Author",
+        "authorValue": "Thorsten Schröpel",
+        "license": "License",
+        "licenseValue": "AGPL-3.0-or-later",
+        "repositories": "GitHub repositories",
+        "serverRepo": "Server",
+        "agentRepo": "Agent"
       }
     },
     "tabs": {

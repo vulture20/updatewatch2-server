@@ -184,6 +184,16 @@
         "thumbprint": "Fingerabdruck (SHA-256)",
         "issued": "Ausgestellt",
         "expires": "Gültig bis"
+      },
+      "about": {
+        "title": "Über UpdateWatch2",
+        "author": "Autor",
+        "authorValue": "Thorsten Schröpel",
+        "license": "Lizenz",
+        "licenseValue": "AGPL-3.0-or-later",
+        "repositories": "GitHub-Repositories",
+        "serverRepo": "Server",
+        "agentRepo": "Agent"
       }
     },
     "tabs": {
