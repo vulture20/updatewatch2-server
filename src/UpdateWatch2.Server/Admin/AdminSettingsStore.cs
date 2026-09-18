@@ -376,6 +376,19 @@ public class AdminSettingsStore(
         if (configuration is not null && LogLevelMapper.IsValid(row.LogLevel))
         {
             configuration["Logging:LogLevel:Default"] = LogLevelMapper.ToConfigurationValue(row.LogLevel);
+
+            // Keeps Microsoft.Extensions.Http's own automatic HTTP-client
+            // logging on the GitHub release client (log-level-audit.md
+            // rows 176–179/244–245) in sync with a live LogLevel change,
+            // the same "no restart required" bar the Default write above
+            // already holds itself to — see
+            // LogLevelMapper.ToHttpClientLoggingCategoryValue's doc
+            // comment for why this needs its own explicit write rather
+            // than following Default on its own.
+            var httpClientLoggingLevel = LogLevelMapper.ToHttpClientLoggingCategoryValue(row.LogLevel);
+            configuration[$"Logging:LogLevel:{LogLevelMapper.GitHubReleaseClientLogicalHandlerCategory}"] = httpClientLoggingLevel;
+            configuration[$"Logging:LogLevel:{LogLevelMapper.GitHubReleaseClientClientHandlerCategory}"] = httpClientLoggingLevel;
+
             if (configuration is IConfigurationRoot root)
             {
                 root.Reload();

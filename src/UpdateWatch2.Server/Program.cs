@@ -54,6 +54,15 @@ var effectiveLogLevel = logLevelEnv ?? TryReadPersistedLogLevel(
 if (effectiveLogLevel is not null && LogLevelMapper.IsValid(effectiveLogLevel))
 {
     builder.Configuration["Logging:LogLevel:Default"] = LogLevelMapper.ToConfigurationValue(effectiveLogLevel);
+
+    // Demotes Microsoft.Extensions.Http's own automatic HTTP-client
+    // logging on the GitHub release client (log-level-audit.md rows
+    // 176–179/244–245) to Debug-only visibility — see
+    // LogLevelMapper.ToHttpClientLoggingCategoryValue's doc comment for
+    // why a plain Default write alone can't do this.
+    var httpClientLoggingLevel = LogLevelMapper.ToHttpClientLoggingCategoryValue(effectiveLogLevel);
+    builder.Configuration[$"Logging:LogLevel:{LogLevelMapper.GitHubReleaseClientLogicalHandlerCategory}"] = httpClientLoggingLevel;
+    builder.Configuration[$"Logging:LogLevel:{LogLevelMapper.GitHubReleaseClientClientHandlerCategory}"] = httpClientLoggingLevel;
 }
 
 builder.Services.AddControllers();
