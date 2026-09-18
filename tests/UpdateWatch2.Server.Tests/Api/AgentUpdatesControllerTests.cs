@@ -133,6 +133,38 @@ public class AgentUpdatesControllerTests : IClassFixture<WebApplicationFactory<P
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// Regression coverage: before <c>AgentUpdatesController.Upload</c>'s
+    /// duplicate check was keyed by (kind, architecture) instead of kind
+    /// alone (updatewatch2-agent#22/#23), uploading both architectures of
+    /// the same kind in one request — a normal, expected admin workflow
+    /// once every release started publishing two per kind — was wrongly
+    /// rejected as a "duplicate" of itself.
+    /// </summary>
+    [Fact]
+    public async Task Upload_accepts_both_architectures_of_the_same_kind_in_one_request()
+    {
+        using var response = await _client.PostAsync(
+            "/api/admin/agent-update-status/upload",
+            MakeUploadForm(
+                ("UpdateWatch2Agent-Setup-0.13.0-x64.exe", "exe-x64-bytes"),
+                ("UpdateWatch2Agent-Setup-0.13.0-arm64.exe", "exe-arm64-bytes")));
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Upload_rejects_two_files_of_the_exact_same_kind_and_architecture()
+    {
+        using var response = await _client.PostAsync(
+            "/api/admin/agent-update-status/upload",
+            MakeUploadForm(
+                ("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes-1"),
+                ("updatewatch2-agent_0.13.0_amd64.deb", "deb-bytes-2")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     [Fact]
     public async Task Upload_extracts_the_version_from_the_filename_and_it_becomes_the_new_status()
     {

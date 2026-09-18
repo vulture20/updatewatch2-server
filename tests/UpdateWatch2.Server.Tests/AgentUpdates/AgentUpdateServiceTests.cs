@@ -24,6 +24,20 @@ public class AgentUpdateServiceTests : IDisposable
             new GitHubReleaseAsset("updatewatch2-agent-0.11.0-1.x86_64.rpm", "https://github.com/example/releases/download/v0.11.0/updatewatch2-agent-0.11.0-1.x86_64.rpm", 3000),
         ]);
 
+    // A real release since updatewatch2-agent#22/#23 always carries all six
+    // kind/architecture combinations, not just the three x64/amd64/x86_64
+    // ones above.
+    private static readonly GitHubRelease SampleMultiArchRelease = SampleRelease with
+    {
+        Assets =
+        [
+            .. SampleRelease.Assets,
+            new GitHubReleaseAsset("UpdateWatch2Agent-Setup-0.11.0-arm64.exe", "https://github.com/example/releases/download/v0.11.0/UpdateWatch2Agent-Setup-0.11.0-arm64.exe", 1100),
+            new GitHubReleaseAsset("updatewatch2-agent_0.11.0_arm64.deb", "https://github.com/example/releases/download/v0.11.0/updatewatch2-agent_0.11.0_arm64.deb", 2100),
+            new GitHubReleaseAsset("updatewatch2-agent-0.11.0-1.aarch64.rpm", "https://github.com/example/releases/download/v0.11.0/updatewatch2-agent-0.11.0-1.aarch64.rpm", 3100),
+        ],
+    };
+
     public AgentUpdateServiceTests()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={_dbPath}").Options;
@@ -85,12 +99,53 @@ public class AgentUpdateServiceTests : IDisposable
         Assert.Equal("0.11.0", state.LatestVersion);
         Assert.NotNull(state.CheckedAt);
         Assert.Null(state.LastError);
-        Assert.Equal("UpdateWatch2Agent-Setup-0.11.0-x64.exe", state.WindowsInstallerFileName);
-        Assert.Equal("updatewatch2-agent_0.11.0_amd64.deb", state.LinuxDebFileName);
-        Assert.Equal("updatewatch2-agent-0.11.0-1.x86_64.rpm", state.LinuxRpmFileName);
-        Assert.NotNull(state.WindowsInstallerSha256);
+        Assert.Equal("UpdateWatch2Agent-Setup-0.11.0-x64.exe", state.WindowsInstallerX64FileName);
+        Assert.Equal("updatewatch2-agent_0.11.0_amd64.deb", state.LinuxDebX64FileName);
+        Assert.Equal("updatewatch2-agent-0.11.0-1.x86_64.rpm", state.LinuxRpmX64FileName);
+        Assert.NotNull(state.WindowsInstallerX64Sha256);
 
         Assert.True(File.Exists(Path.Combine(_storageDirectory, "UpdateWatch2Agent-Setup-0.11.0-x64.exe")));
+    }
+
+    /// <summary>
+    /// Regression coverage for the real bug this whole arch-aware slot
+    /// scheme was added to fix — found by a direct user question asking
+    /// whether self-update had been considered at all for the new
+    /// multi-arch releases (it hadn't, at the time): before
+    /// <see cref="AgentUpdateAssetClassifier"/> became architecture-aware,
+    /// both the x64 and arm64 asset of a given kind classified identically,
+    /// so whichever one <see cref="AgentUpdateService.DownloadAssetsAsync"/>
+    /// (called via <see cref="AgentUpdateService.CheckForUpdatesAsync"/>)
+    /// processed second silently overwrote the first in the single slot
+    /// that kind used to have — an arm64 agent could be offered an x64
+    /// installer, or vice versa, with nothing surfacing the mismatch
+    /// anywhere. This asserts both architectures of every kind survive a
+    /// single release download side by side.
+    /// </summary>
+    [Fact]
+    public async Task CheckForUpdatesAsync_keeps_both_architectures_of_every_kind_separate_not_overwriting_each_other()
+    {
+        _gitHub.Release = SampleMultiArchRelease;
+
+        var outcome = await _service.CheckForUpdatesAsync();
+
+        Assert.Equal(AgentUpdateCheckOutcome.Downloaded, outcome);
+        var state = await _db.AgentUpdateStates.SingleAsync();
+        Assert.Equal("UpdateWatch2Agent-Setup-0.11.0-x64.exe", state.WindowsInstallerX64FileName);
+        Assert.Equal("UpdateWatch2Agent-Setup-0.11.0-arm64.exe", state.WindowsInstallerArm64FileName);
+        Assert.Equal("updatewatch2-agent_0.11.0_amd64.deb", state.LinuxDebX64FileName);
+        Assert.Equal("updatewatch2-agent_0.11.0_arm64.deb", state.LinuxDebArm64FileName);
+        Assert.Equal("updatewatch2-agent-0.11.0-1.x86_64.rpm", state.LinuxRpmX64FileName);
+        Assert.Equal("updatewatch2-agent-0.11.0-1.aarch64.rpm", state.LinuxRpmArm64FileName);
+
+        var offer = await _service.GetOfferForAsync("0.9.0");
+        Assert.NotNull(offer);
+        Assert.Equal("/api/agent/updates/UpdateWatch2Agent-Setup-0.11.0-x64.exe", offer!.WindowsInstallerX64!.DownloadUrl);
+        Assert.Equal("/api/agent/updates/UpdateWatch2Agent-Setup-0.11.0-arm64.exe", offer.WindowsInstallerArm64!.DownloadUrl);
+        Assert.Equal("/api/agent/updates/updatewatch2-agent_0.11.0_amd64.deb", offer.LinuxDebX64!.DownloadUrl);
+        Assert.Equal("/api/agent/updates/updatewatch2-agent_0.11.0_arm64.deb", offer.LinuxDebArm64!.DownloadUrl);
+        Assert.Equal("/api/agent/updates/updatewatch2-agent-0.11.0-1.x86_64.rpm", offer.LinuxRpmX64!.DownloadUrl);
+        Assert.Equal("/api/agent/updates/updatewatch2-agent-0.11.0-1.aarch64.rpm", offer.LinuxRpmArm64!.DownloadUrl);
     }
 
     [Fact]
@@ -114,8 +169,8 @@ public class AgentUpdateServiceTests : IDisposable
 
         Assert.Equal(AgentUpdateCheckOutcome.Downloaded, outcome);
         var state = await _db.AgentUpdateStates.SingleAsync();
-        Assert.Null(state.WindowsInstallerFileName);
-        Assert.Equal("updatewatch2-agent_0.11.0_amd64.deb", state.LinuxDebFileName);
+        Assert.Null(state.WindowsInstallerX64FileName);
+        Assert.Equal("updatewatch2-agent_0.11.0_amd64.deb", state.LinuxDebX64FileName);
 
         // The traversal target must never have been written anywhere,
         // including outside the storage directory.
@@ -268,9 +323,9 @@ public class AgentUpdateServiceTests : IDisposable
 
         Assert.NotNull(offer);
         Assert.Equal("0.11.0", offer!.Version);
-        Assert.Equal("/api/agent/updates/UpdateWatch2Agent-Setup-0.11.0-x64.exe", offer.WindowsInstaller!.DownloadUrl);
-        Assert.Equal("/api/agent/updates/updatewatch2-agent_0.11.0_amd64.deb", offer.LinuxDeb!.DownloadUrl);
-        Assert.Equal("/api/agent/updates/updatewatch2-agent-0.11.0-1.x86_64.rpm", offer.LinuxRpm!.DownloadUrl);
+        Assert.Equal("/api/agent/updates/UpdateWatch2Agent-Setup-0.11.0-x64.exe", offer.WindowsInstallerX64!.DownloadUrl);
+        Assert.Equal("/api/agent/updates/updatewatch2-agent_0.11.0_amd64.deb", offer.LinuxDebX64!.DownloadUrl);
+        Assert.Equal("/api/agent/updates/updatewatch2-agent-0.11.0-1.x86_64.rpm", offer.LinuxRpmX64!.DownloadUrl);
     }
 
     [Fact]
@@ -335,10 +390,10 @@ public class AgentUpdateServiceTests : IDisposable
         Assert.Equal("0.13.0", state.LatestVersion);
         Assert.True(state.ManuallyUploaded);
         Assert.Null(state.LastError);
-        Assert.Equal("UpdateWatch2Agent-Setup-0.13.0-x64.exe", state.WindowsInstallerFileName);
-        Assert.Equal("updatewatch2-agent_0.13.0_amd64.deb", state.LinuxDebFileName);
-        Assert.Null(state.LinuxRpmFileName);
-        Assert.Equal(Sha256Of("exe-bytes"), state.WindowsInstallerSha256);
+        Assert.Equal("UpdateWatch2Agent-Setup-0.13.0-x64.exe", state.WindowsInstallerX64FileName);
+        Assert.Equal("updatewatch2-agent_0.13.0_amd64.deb", state.LinuxDebX64FileName);
+        Assert.Null(state.LinuxRpmX64FileName);
+        Assert.Equal(Sha256Of("exe-bytes"), state.WindowsInstallerX64Sha256);
         Assert.True(File.Exists(Path.Combine(_storageDirectory, "UpdateWatch2Agent-Setup-0.13.0-x64.exe")));
     }
 
@@ -351,7 +406,7 @@ public class AgentUpdateServiceTests : IDisposable
 
         Assert.NotNull(offer);
         Assert.Equal("0.13.0", offer!.Version);
-        Assert.Equal("/api/agent/updates/updatewatch2-agent_0.13.0_amd64.deb", offer.LinuxDeb!.DownloadUrl);
+        Assert.Equal("/api/agent/updates/updatewatch2-agent_0.13.0_amd64.deb", offer.LinuxDebX64!.DownloadUrl);
     }
 
     [Fact]
@@ -371,8 +426,8 @@ public class AgentUpdateServiceTests : IDisposable
 
         var state = await _db.AgentUpdateStates.SingleAsync();
         Assert.Equal("0.14.0", state.LatestVersion);
-        Assert.Null(state.WindowsInstallerFileName);
-        Assert.Equal("updatewatch2-agent_0.14.0_amd64.deb", state.LinuxDebFileName);
+        Assert.Null(state.WindowsInstallerX64FileName);
+        Assert.Equal("updatewatch2-agent_0.14.0_amd64.deb", state.LinuxDebX64FileName);
         Assert.False(File.Exists(Path.Combine(_storageDirectory, "UpdateWatch2Agent-Setup-0.13.0-x64.exe")));
         Assert.False(File.Exists(Path.Combine(_storageDirectory, "updatewatch2-agent_0.13.0_amd64.deb")));
     }
@@ -392,8 +447,8 @@ public class AgentUpdateServiceTests : IDisposable
         await _service.UploadAssetsAsync("0.13.0", [MakeUpload("updatewatch2-agent_0.13.0_amd64.deb", "deb-v2")]);
 
         var state = await _db.AgentUpdateStates.SingleAsync();
-        Assert.Equal("UpdateWatch2Agent-Setup-0.13.0-x64.exe", state.WindowsInstallerFileName);
-        Assert.Equal(Sha256Of("deb-v2"), state.LinuxDebSha256);
+        Assert.Equal("UpdateWatch2Agent-Setup-0.13.0-x64.exe", state.WindowsInstallerX64FileName);
+        Assert.Equal(Sha256Of("deb-v2"), state.LinuxDebX64Sha256);
         Assert.True(File.Exists(Path.Combine(_storageDirectory, "UpdateWatch2Agent-Setup-0.13.0-x64.exe")));
     }
 

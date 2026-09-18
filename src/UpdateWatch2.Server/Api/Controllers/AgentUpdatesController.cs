@@ -21,12 +21,14 @@ namespace UpdateWatch2.Server.Api.Controllers;
 [Authorize]
 public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAuditLogService auditLog) : ControllerBase
 {
-    // 200 MB — comfortably above all three current platform assets
-    // combined (~95 MB today) with headroom for future growth. Must be a
-    // class-level const, not a local one inside Upload, since it's
-    // referenced from that method's own attributes below (attribute
-    // arguments are resolved independently of the method body).
-    private const long MaxUploadBytes = 200_000_000;
+    // 400 MB — doubled from the original 200 MB (updatewatch2-agent#22/#23)
+    // once every release started publishing two architectures per kind
+    // instead of one, comfortably above all six current platform assets
+    // combined with headroom for future growth. Must be a class-level
+    // const, not a local one inside Upload, since it's referenced from
+    // that method's own attributes below (attribute arguments are resolved
+    // independently of the method body).
+    private const long MaxUploadBytes = 400_000_000;
 
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken ct) => Ok(await agentUpdateService.GetStatusAsync(ct));
@@ -54,9 +56,10 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
     /// <summary>
     /// The escape hatch for a server that deliberately has no internet
     /// access (CLAUDE.md's "Agent auto-update" bullet) — an admin uploads
-    /// the release assets (any of <c>.exe</c>/<c>.deb</c>/<c>.rpm</c>,
-    /// one of each at most) directly instead of this server ever needing
-    /// to reach GitHub. Feeds the exact same <c>AgentUpdateState</c> row
+    /// the release assets (any of <c>.exe</c>/<c>.deb</c>/<c>.rpm</c>, each
+    /// with an x64/arm64 architecture suffix, one of each of the six
+    /// kind/architecture combinations at most) directly instead of this
+    /// server ever needing to reach GitHub. Feeds the exact same <c>AgentUpdateState</c> row
     /// <see cref="AgentUpdateCheckWorker"/>'s GitHub downloads do, so the
     /// result is offered to agents identically either way.
     ///
@@ -98,19 +101,27 @@ public class AgentUpdatesController(IAgentUpdateService agentUpdateService, IAud
         }
         else
         {
-            var seenKinds = new HashSet<AgentUpdateAssetKind>();
+            // Keyed by the full (kind, architecture) pair, not kind alone —
+            // uploading both the x64 and arm64 file of the same kind (e.g.
+            // both Windows installers) in one request is the normal,
+            // expected case since updatewatch2-agent#22/#23 (a HashSet keyed
+            // by kind alone would have wrongly rejected the second one as a
+            // "duplicate"); two files that genuinely classify to the exact
+            // same (kind, architecture) pair are still rejected.
+            var seenAssets = new HashSet<(AgentUpdateAssetKind Kind, AgentUpdateAssetArch Arch)>();
             foreach (var file in files)
             {
-                var kind = AgentUpdateAssetClassifier.Classify(file.FileName);
-                if (kind is null)
+                var classified = AgentUpdateAssetClassifier.Classify(file.FileName);
+                if (classified is null)
                 {
-                    errors.Add(new ApiErrorItem(ApiErrorCode.UnrecognizedAssetFile, $"'{file.FileName}' is not a recognized agent release asset (.exe, .deb, or .rpm).", file.FileName));
+                    errors.Add(new ApiErrorItem(ApiErrorCode.UnrecognizedAssetFile, $"'{file.FileName}' is not a recognized agent release asset (.exe, .deb, or .rpm, each with an x64/arm64 or amd64/arm64 or x86_64/aarch64 architecture suffix).", file.FileName));
                     continue;
                 }
 
-                if (!seenKinds.Add(kind.Value))
+                if (!seenAssets.Add(classified.Value))
                 {
-                    errors.Add(new ApiErrorItem(ApiErrorCode.DuplicateAssetKind, $"More than one {kind} file was uploaded in the same request.", kind.Value.ToString()));
+                    var (kind, arch) = classified.Value;
+                    errors.Add(new ApiErrorItem(ApiErrorCode.DuplicateAssetKind, $"More than one {kind} ({arch}) file was uploaded in the same request.", $"{kind} ({arch})"));
                     continue;
                 }
 

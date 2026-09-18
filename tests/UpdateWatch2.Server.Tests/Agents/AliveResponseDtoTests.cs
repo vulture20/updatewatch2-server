@@ -25,7 +25,7 @@ public class AliveResponseDtoTests
     [Fact]
     public void FromResult_maps_every_field_including_the_deliberate_UpdateAvailable_rename()
     {
-        var offer = new AgentUpdateOffer("1.2.3", null, null, null);
+        var offer = new AgentUpdateOffer("1.2.3", null, null, null, null, null, null);
         var result = new AliveRecordResult(
             InstallRequested: true, InstallUpdateIds: ["KB1"], UpdateAvailable: offer, CertificateRotationPending: true,
             RebootRequested: true, PreDownloadWindowsUpdatesEnabled: true, DesiredLogLevel: "DEBUG",

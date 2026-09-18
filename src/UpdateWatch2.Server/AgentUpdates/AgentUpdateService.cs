@@ -138,12 +138,17 @@ public class AgentUpdateService(
     /// describes it (a separate Docker volume — see CLAUDE.md).
     /// </summary>
     private static bool HasAnyAsset(AgentUpdateState state) =>
-        state.WindowsInstallerFileName is not null || state.LinuxDebFileName is not null || state.LinuxRpmFileName is not null;
+        state.WindowsInstallerX64FileName is not null || state.WindowsInstallerArm64FileName is not null
+        || state.LinuxDebX64FileName is not null || state.LinuxDebArm64FileName is not null
+        || state.LinuxRpmX64FileName is not null || state.LinuxRpmArm64FileName is not null;
 
     private bool AssetsPresentOnDisk(AgentUpdateState state) =>
-        IsPresentOrNotExpected(state.WindowsInstallerFileName)
-        && IsPresentOrNotExpected(state.LinuxDebFileName)
-        && IsPresentOrNotExpected(state.LinuxRpmFileName);
+        IsPresentOrNotExpected(state.WindowsInstallerX64FileName)
+        && IsPresentOrNotExpected(state.WindowsInstallerArm64FileName)
+        && IsPresentOrNotExpected(state.LinuxDebX64FileName)
+        && IsPresentOrNotExpected(state.LinuxDebArm64FileName)
+        && IsPresentOrNotExpected(state.LinuxRpmX64FileName)
+        && IsPresentOrNotExpected(state.LinuxRpmArm64FileName);
 
     private bool IsPresentOrNotExpected(string? fileName) =>
         fileName is null || File.Exists(Path.Combine(storage.Path, fileName));
@@ -163,9 +168,12 @@ public class AgentUpdateService(
 
         return new AgentUpdateOffer(
             state.LatestVersion,
-            ToAssetOffer(state.WindowsInstallerFileName, state.WindowsInstallerSha256, state.WindowsInstallerSizeBytes),
-            ToAssetOffer(state.LinuxDebFileName, state.LinuxDebSha256, state.LinuxDebSizeBytes),
-            ToAssetOffer(state.LinuxRpmFileName, state.LinuxRpmSha256, state.LinuxRpmSizeBytes));
+            ToAssetOffer(state.WindowsInstallerX64FileName, state.WindowsInstallerX64Sha256, state.WindowsInstallerX64SizeBytes),
+            ToAssetOffer(state.WindowsInstallerArm64FileName, state.WindowsInstallerArm64Sha256, state.WindowsInstallerArm64SizeBytes),
+            ToAssetOffer(state.LinuxDebX64FileName, state.LinuxDebX64Sha256, state.LinuxDebX64SizeBytes),
+            ToAssetOffer(state.LinuxDebArm64FileName, state.LinuxDebArm64Sha256, state.LinuxDebArm64SizeBytes),
+            ToAssetOffer(state.LinuxRpmX64FileName, state.LinuxRpmX64Sha256, state.LinuxRpmX64SizeBytes),
+            ToAssetOffer(state.LinuxRpmArm64FileName, state.LinuxRpmArm64Sha256, state.LinuxRpmArm64SizeBytes));
     }
 
     public async Task<AgentUpdateStatusDto> GetStatusAsync(CancellationToken ct = default)
@@ -182,9 +190,12 @@ public class AgentUpdateService(
             return null;
         }
 
-        var isKnown = string.Equals(fileName, state.WindowsInstallerFileName, StringComparison.Ordinal)
-            || string.Equals(fileName, state.LinuxDebFileName, StringComparison.Ordinal)
-            || string.Equals(fileName, state.LinuxRpmFileName, StringComparison.Ordinal);
+        var isKnown = string.Equals(fileName, state.WindowsInstallerX64FileName, StringComparison.Ordinal)
+            || string.Equals(fileName, state.WindowsInstallerArm64FileName, StringComparison.Ordinal)
+            || string.Equals(fileName, state.LinuxDebX64FileName, StringComparison.Ordinal)
+            || string.Equals(fileName, state.LinuxDebArm64FileName, StringComparison.Ordinal)
+            || string.Equals(fileName, state.LinuxRpmX64FileName, StringComparison.Ordinal)
+            || string.Equals(fileName, state.LinuxRpmArm64FileName, StringComparison.Ordinal);
         if (!isKnown)
         {
             return null;
@@ -223,8 +234,8 @@ public class AgentUpdateService(
 
         foreach (var file in files)
         {
-            var kind = AgentUpdateAssetClassifier.Classify(file.FileName);
-            if (kind is null)
+            var classified = AgentUpdateAssetClassifier.Classify(file.FileName);
+            if (classified is null)
             {
                 // Defense in depth — AgentUpdatesController already
                 // rejects an unrecognized extension with 400 before this
@@ -232,6 +243,8 @@ public class AgentUpdateService(
                 // that validation.
                 continue;
             }
+
+            var (kind, arch) = classified.Value;
 
             // Never trust a client-supplied filename as-is — strip any
             // directory component before it's combined into a path or
@@ -243,9 +256,9 @@ public class AgentUpdateService(
                 continue;
             }
 
-            var previousFileName = GetAssetSlotFileName(state, kind.Value);
+            var previousFileName = GetAssetSlotFileName(state, kind, arch);
             var (sha256, size) = await SaveUploadedFileAsync(file.Content, safeFileName, ct);
-            SetAssetSlot(state, kind.Value, safeFileName, sha256, size);
+            SetAssetSlot(state, kind, arch, safeFileName, sha256, size);
 
             if (previousFileName is not null && !string.Equals(previousFileName, safeFileName, StringComparison.Ordinal))
             {
@@ -321,15 +334,17 @@ public class AgentUpdateService(
 
         foreach (var asset in assets)
         {
-            var kind = AgentUpdateAssetClassifier.Classify(asset.Name);
-            if (kind is null)
+            var classified = AgentUpdateAssetClassifier.Classify(asset.Name);
+            if (classified is null)
             {
                 // Anything else (e.g. a checksums.txt an admin manually
-                // attached) is deliberately ignored — only the three known
-                // package kinds this project's own release pipeline
-                // publishes are ever offered to an agent.
+                // attached) is deliberately ignored — only the six known
+                // kind/architecture combinations this project's own release
+                // pipeline publishes are ever offered to an agent.
                 continue;
             }
+
+            var (kind, arch) = classified.Value;
 
             // Never trust a GitHub-reported asset name as-is — strip any
             // directory component before it's combined into a path or
@@ -349,7 +364,7 @@ public class AgentUpdateService(
             }
 
             var (sha256, size) = await DownloadOneAsync(asset, safeName, ct);
-            SetAssetSlot(state, kind.Value, safeName, sha256, size);
+            SetAssetSlot(state, kind, arch, safeName, sha256, size);
         }
     }
 
@@ -358,44 +373,71 @@ public class AgentUpdateService(
 
     private static void ClearAllAssetSlots(AgentUpdateState state)
     {
-        state.WindowsInstallerFileName = null;
-        state.WindowsInstallerSha256 = null;
-        state.WindowsInstallerSizeBytes = null;
-        state.LinuxDebFileName = null;
-        state.LinuxDebSha256 = null;
-        state.LinuxDebSizeBytes = null;
-        state.LinuxRpmFileName = null;
-        state.LinuxRpmSha256 = null;
-        state.LinuxRpmSizeBytes = null;
+        state.WindowsInstallerX64FileName = null;
+        state.WindowsInstallerX64Sha256 = null;
+        state.WindowsInstallerX64SizeBytes = null;
+        state.WindowsInstallerArm64FileName = null;
+        state.WindowsInstallerArm64Sha256 = null;
+        state.WindowsInstallerArm64SizeBytes = null;
+        state.LinuxDebX64FileName = null;
+        state.LinuxDebX64Sha256 = null;
+        state.LinuxDebX64SizeBytes = null;
+        state.LinuxDebArm64FileName = null;
+        state.LinuxDebArm64Sha256 = null;
+        state.LinuxDebArm64SizeBytes = null;
+        state.LinuxRpmX64FileName = null;
+        state.LinuxRpmX64Sha256 = null;
+        state.LinuxRpmX64SizeBytes = null;
+        state.LinuxRpmArm64FileName = null;
+        state.LinuxRpmArm64Sha256 = null;
+        state.LinuxRpmArm64SizeBytes = null;
     }
 
-    private static void SetAssetSlot(AgentUpdateState state, AgentUpdateAssetKind kind, string fileName, string sha256, long sizeBytes)
+    private static void SetAssetSlot(AgentUpdateState state, AgentUpdateAssetKind kind, AgentUpdateAssetArch arch, string fileName, string sha256, long sizeBytes)
     {
-        switch (kind)
+        switch (kind, arch)
         {
-            case AgentUpdateAssetKind.WindowsInstaller:
-                state.WindowsInstallerFileName = fileName;
-                state.WindowsInstallerSha256 = sha256;
-                state.WindowsInstallerSizeBytes = sizeBytes;
+            case (AgentUpdateAssetKind.WindowsInstaller, AgentUpdateAssetArch.X64):
+                state.WindowsInstallerX64FileName = fileName;
+                state.WindowsInstallerX64Sha256 = sha256;
+                state.WindowsInstallerX64SizeBytes = sizeBytes;
                 break;
-            case AgentUpdateAssetKind.LinuxDeb:
-                state.LinuxDebFileName = fileName;
-                state.LinuxDebSha256 = sha256;
-                state.LinuxDebSizeBytes = sizeBytes;
+            case (AgentUpdateAssetKind.WindowsInstaller, AgentUpdateAssetArch.Arm64):
+                state.WindowsInstallerArm64FileName = fileName;
+                state.WindowsInstallerArm64Sha256 = sha256;
+                state.WindowsInstallerArm64SizeBytes = sizeBytes;
                 break;
-            case AgentUpdateAssetKind.LinuxRpm:
-                state.LinuxRpmFileName = fileName;
-                state.LinuxRpmSha256 = sha256;
-                state.LinuxRpmSizeBytes = sizeBytes;
+            case (AgentUpdateAssetKind.LinuxDeb, AgentUpdateAssetArch.X64):
+                state.LinuxDebX64FileName = fileName;
+                state.LinuxDebX64Sha256 = sha256;
+                state.LinuxDebX64SizeBytes = sizeBytes;
+                break;
+            case (AgentUpdateAssetKind.LinuxDeb, AgentUpdateAssetArch.Arm64):
+                state.LinuxDebArm64FileName = fileName;
+                state.LinuxDebArm64Sha256 = sha256;
+                state.LinuxDebArm64SizeBytes = sizeBytes;
+                break;
+            case (AgentUpdateAssetKind.LinuxRpm, AgentUpdateAssetArch.X64):
+                state.LinuxRpmX64FileName = fileName;
+                state.LinuxRpmX64Sha256 = sha256;
+                state.LinuxRpmX64SizeBytes = sizeBytes;
+                break;
+            case (AgentUpdateAssetKind.LinuxRpm, AgentUpdateAssetArch.Arm64):
+                state.LinuxRpmArm64FileName = fileName;
+                state.LinuxRpmArm64Sha256 = sha256;
+                state.LinuxRpmArm64SizeBytes = sizeBytes;
                 break;
         }
     }
 
-    private static string? GetAssetSlotFileName(AgentUpdateState state, AgentUpdateAssetKind kind) => kind switch
+    private static string? GetAssetSlotFileName(AgentUpdateState state, AgentUpdateAssetKind kind, AgentUpdateAssetArch arch) => (kind, arch) switch
     {
-        AgentUpdateAssetKind.WindowsInstaller => state.WindowsInstallerFileName,
-        AgentUpdateAssetKind.LinuxDeb => state.LinuxDebFileName,
-        AgentUpdateAssetKind.LinuxRpm => state.LinuxRpmFileName,
+        (AgentUpdateAssetKind.WindowsInstaller, AgentUpdateAssetArch.X64) => state.WindowsInstallerX64FileName,
+        (AgentUpdateAssetKind.WindowsInstaller, AgentUpdateAssetArch.Arm64) => state.WindowsInstallerArm64FileName,
+        (AgentUpdateAssetKind.LinuxDeb, AgentUpdateAssetArch.X64) => state.LinuxDebX64FileName,
+        (AgentUpdateAssetKind.LinuxDeb, AgentUpdateAssetArch.Arm64) => state.LinuxDebArm64FileName,
+        (AgentUpdateAssetKind.LinuxRpm, AgentUpdateAssetArch.X64) => state.LinuxRpmX64FileName,
+        (AgentUpdateAssetKind.LinuxRpm, AgentUpdateAssetArch.Arm64) => state.LinuxRpmArm64FileName,
         _ => null,
     };
 

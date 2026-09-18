@@ -416,7 +416,7 @@ public class AgentRegistrationServiceTests : IDisposable
     public async Task RecordAliveAsync_surfaces_whatever_IAgentUpdateService_offers_for_this_agents_reported_version()
     {
         await _service.RegisterAsync("update-offer-host", BareRequest with { AgentVersion = "0.9.0" });
-        var expectedOffer = new AgentUpdateOffer("0.11.0", null, null, null);
+        var expectedOffer = new AgentUpdateOffer("0.11.0", null, null, null, null, null, null);
         _agentUpdateService.Offer = expectedOffer;
 
         var result = await _service.RecordAliveAsync("update-offer-host", request: null);

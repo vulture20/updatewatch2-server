@@ -15,31 +15,91 @@ public enum AgentUpdateAssetKind
 }
 
 /// <summary>
-/// Classifies a release asset filename by extension alone — shared by both
-/// ways an asset reaches local storage: <see cref="AgentUpdateService"/>'s
-/// GitHub download path and its manual-upload path (an admin uploading
-/// release files directly through the admin UI, for a server that
-/// deliberately has no internet access — see CLAUDE.md's "Agent
-/// auto-update" bullet). Never inspects file content, only the name.
+/// The two architectures this project's own release pipeline publishes for
+/// every <see cref="AgentUpdateAssetKind"/> (updatewatch2-agent#22/#23) —
+/// orthogonal to <see cref="AgentUpdateAssetKind"/>, not folded into it:
+/// <see cref="AgentUpdateAssetKind"/> alone still fully determines which
+/// package FORMAT/command applies (dpkg vs. rpm vs. the Windows installer),
+/// something several call sites (agent-side <c>LinuxPackageApplier</c>,
+/// this project's own DI wiring choosing which <c>IPlatformUpdateApplier</c>
+/// to construct) only ever cared about and never needed to know the
+/// architecture for — expanding <see cref="AgentUpdateAssetKind"/> itself
+/// to six values instead would have forced every one of those call sites to
+/// learn about architecture too, for no reason.
+/// </summary>
+public enum AgentUpdateAssetArch
+{
+    X64,
+    Arm64,
+}
+
+/// <summary>
+/// Classifies a release asset filename by extension AND architecture
+/// suffix — shared by both ways an asset reaches local storage:
+/// <see cref="AgentUpdateService"/>'s GitHub download path and its
+/// manual-upload path (an admin uploading release files directly through
+/// the admin UI, for a server that deliberately has no internet access —
+/// see CLAUDE.md's "Agent auto-update" bullet). Never inspects file
+/// content, only the name.
+///
+/// <para>
+/// Architecture-aware since updatewatch2-agent#22/#23 added a second
+/// architecture for every kind — before that, a release only ever
+/// published exactly one file per kind, so classifying by extension alone
+/// was enough. Left unfixed, two files of the same kind (e.g. the x64 and
+/// arm64 Windows installers) would classify identically and the second one
+/// processed would silently overwrite the first in
+/// <see cref="AgentUpdateService"/>'s single-slot-per-kind storage — found
+/// by a direct user question asking whether self-update had actually been
+/// considered for the new multi-arch releases at all (it hadn't, when this
+/// was first asked).
+/// </para>
+///
+/// <para>
+/// Matches this project's own exact, unchanging filename conventions —
+/// <c>UpdateWatch2Agent-Setup-&lt;version&gt;-{x64,arm64}.exe</c>,
+/// <c>updatewatch2-agent_&lt;version&gt;_{amd64,arm64}.deb</c>,
+/// <c>updatewatch2-agent-&lt;version&gt;-1.{x86_64,aarch64}.rpm</c> — every
+/// historical release already carried an explicit architecture suffix (the
+/// installer/package filenames were never architecture-ambiguous, even
+/// before a second architecture existed to publish), so this is fully
+/// backward compatible with every asset this project has ever published,
+/// not just future ones.
+/// </para>
 /// </summary>
 public static class AgentUpdateAssetClassifier
 {
-    /// <summary>Null for anything that isn't one of the three known kinds (e.g. a GitHub release's own checksums.txt, or an admin uploading the wrong file).</summary>
-    public static AgentUpdateAssetKind? Classify(string fileName)
+    /// <summary>Null for anything that isn't one of the six known kind/architecture combinations (e.g. a GitHub release's own checksums.txt, an admin uploading the wrong file, or a filename missing its architecture suffix).</summary>
+    public static (AgentUpdateAssetKind Kind, AgentUpdateAssetArch Arch)? Classify(string fileName)
     {
-        if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        if (fileName.EndsWith("-x64.exe", StringComparison.OrdinalIgnoreCase))
         {
-            return AgentUpdateAssetKind.WindowsInstaller;
+            return (AgentUpdateAssetKind.WindowsInstaller, AgentUpdateAssetArch.X64);
         }
 
-        if (fileName.EndsWith(".deb", StringComparison.OrdinalIgnoreCase))
+        if (fileName.EndsWith("-arm64.exe", StringComparison.OrdinalIgnoreCase))
         {
-            return AgentUpdateAssetKind.LinuxDeb;
+            return (AgentUpdateAssetKind.WindowsInstaller, AgentUpdateAssetArch.Arm64);
         }
 
-        if (fileName.EndsWith(".rpm", StringComparison.OrdinalIgnoreCase))
+        if (fileName.EndsWith("_amd64.deb", StringComparison.OrdinalIgnoreCase))
         {
-            return AgentUpdateAssetKind.LinuxRpm;
+            return (AgentUpdateAssetKind.LinuxDeb, AgentUpdateAssetArch.X64);
+        }
+
+        if (fileName.EndsWith("_arm64.deb", StringComparison.OrdinalIgnoreCase))
+        {
+            return (AgentUpdateAssetKind.LinuxDeb, AgentUpdateAssetArch.Arm64);
+        }
+
+        if (fileName.EndsWith(".x86_64.rpm", StringComparison.OrdinalIgnoreCase))
+        {
+            return (AgentUpdateAssetKind.LinuxRpm, AgentUpdateAssetArch.X64);
+        }
+
+        if (fileName.EndsWith(".aarch64.rpm", StringComparison.OrdinalIgnoreCase))
+        {
+            return (AgentUpdateAssetKind.LinuxRpm, AgentUpdateAssetArch.Arm64);
         }
 
         return null;

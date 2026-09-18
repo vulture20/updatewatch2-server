@@ -17,16 +17,34 @@ public record AgentUpdateAssetOffer(string DownloadUrl, string Sha256, long Size
 /// (<see cref="Agents.AliveRecordResult.UpdateAvailable"/>) once a newer
 /// agent version than the one it self-reports is known and auto-update
 /// is enabled. Each asset slot is independently nullable — a release
-/// might not (yet) carry every platform's package, and an agent build
-/// that doesn't know how to act on this field yet (updatewatch2-agent#14
-/// is not implemented at the time this was added) simply ignores the
-/// whole object.
+/// might not (yet) carry every platform/architecture's package, and an
+/// agent build that doesn't know how to act on this field yet
+/// (updatewatch2-agent#14 is not implemented at the time this was added)
+/// simply ignores the whole object.
+///
+/// <para>
+/// Six slots, not three — one per (<see cref="AgentUpdateAssetKind"/>,
+/// <see cref="AgentUpdateAssetArch"/>) combination, replacing the original
+/// three-slot shape (protocol bumped accordingly) after updatewatch2-agent#22/#23
+/// added a second architecture for every kind: the old shape had no way to
+/// tell an x64 asset apart from an arm64 one of the same kind, so a server
+/// new enough to know about both architectures but still using the old
+/// shape could only ever offer one of them per kind, arbitrarily. A build
+/// old enough to only know the three old field names simply won't find
+/// them in a response using the new names (System.Text.Json's default
+/// unknown-property tolerance) — self-update becomes a no-op for it until
+/// upgraded, which is the correct, safe degradation, not silently offering
+/// the wrong architecture.
+/// </para>
 /// </summary>
 public record AgentUpdateOffer(
     string Version,
-    AgentUpdateAssetOffer? WindowsInstaller,
-    AgentUpdateAssetOffer? LinuxDeb,
-    AgentUpdateAssetOffer? LinuxRpm);
+    AgentUpdateAssetOffer? WindowsInstallerX64,
+    AgentUpdateAssetOffer? WindowsInstallerArm64,
+    AgentUpdateAssetOffer? LinuxDebX64,
+    AgentUpdateAssetOffer? LinuxDebArm64,
+    AgentUpdateAssetOffer? LinuxRpmX64,
+    AgentUpdateAssetOffer? LinuxRpmArm64);
 
 /// <summary>Read-only status shown on the admin Settings page.</summary>
 public record AgentUpdateStatusDto(bool Enabled, string? LatestVersion, DateTimeOffset? CheckedAt, string? LastError, bool ManuallyUploaded);
@@ -35,9 +53,9 @@ public record AgentUpdateStatusDto(bool Enabled, string? LatestVersion, DateTime
 /// One file an admin is manually uploading via <c>POST /api/admin/agent-update-status/upload</c>
 /// (the offline/air-gapped alternative to <see cref="IAgentUpdateService.CheckForUpdatesAsync"/>'s
 /// GitHub download — see CLAUDE.md's "Agent auto-update" bullet).
-/// <see cref="FileName"/> is only ever used to classify which of the three
-/// known asset kinds (<see cref="AgentUpdateAssetClassifier"/>) this is and
-/// as the name it's saved/offered under — never trusted as a path (see
+/// <see cref="FileName"/> is only ever used to classify which of the six
+/// known kind/architecture combinations (<see cref="AgentUpdateAssetClassifier"/>)
+/// this is and as the name it's saved/offered under — never trusted as a path (see
 /// <see cref="IAgentUpdateService.UploadAssetsAsync"/>'s own doc comment).
 /// <see cref="Content"/> is owned and disposed by the caller (the
 /// controller), not by whatever consumes this record.

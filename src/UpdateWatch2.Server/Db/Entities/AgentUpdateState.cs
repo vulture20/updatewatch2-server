@@ -8,13 +8,22 @@ namespace UpdateWatch2.Server.Db.Entities;
 /// <see cref="LatestVersion"/> means no release has ever been
 /// successfully checked yet.
 ///
-/// Three fixed asset slots (Windows installer, Debian package, RPM
-/// package) rather than a child table of arbitrary assets — this
-/// project's own release pipeline (agent repo's <c>release.yml</c>)
-/// always publishes exactly these three, so a flat, singleton-row shape
-/// stays consistent with how the rest of this settings-like data is
-/// modeled rather than introducing a one-to-many relation for a fixed,
-/// small set of well-known kinds.
+/// Six fixed asset slots (Windows installer / Debian package / RPM
+/// package, each × x64/arm64 — updatewatch2-agent#22/#23) rather than a
+/// child table of arbitrary assets — this project's own release pipeline
+/// (agent repo's <c>release.yml</c>) always publishes exactly these six,
+/// so a flat, singleton-row shape stays consistent with how the rest of
+/// this settings-like data is modeled rather than introducing a
+/// one-to-many relation for a fixed, small set of well-known kinds. Was
+/// three slots (one per kind, no architecture dimension) until a direct
+/// user question ("wurde beim Selfupdate berücksichtigt, dass es jetzt
+/// zusätzliche Releases gibt?") surfaced that the three-slot shape
+/// predated the second architecture per kind entirely — every release now
+/// carries two files per kind, and the old shape had no way to keep both,
+/// so whichever one <see cref="AgentUpdates.AgentUpdateService"/> happened
+/// to process last for a given kind silently overwrote the other, leaving
+/// roughly half of a fleet's agents (by architecture) offered the wrong
+/// platform's binary to self-update to.
 /// </summary>
 public class AgentUpdateState
 {
@@ -24,23 +33,41 @@ public class AgentUpdateState
 
     public DateTimeOffset? CheckedAt { get; set; }
 
-    public string? WindowsInstallerFileName { get; set; }
+    public string? WindowsInstallerX64FileName { get; set; }
 
-    public string? WindowsInstallerSha256 { get; set; }
+    public string? WindowsInstallerX64Sha256 { get; set; }
 
-    public long? WindowsInstallerSizeBytes { get; set; }
+    public long? WindowsInstallerX64SizeBytes { get; set; }
 
-    public string? LinuxDebFileName { get; set; }
+    public string? WindowsInstallerArm64FileName { get; set; }
 
-    public string? LinuxDebSha256 { get; set; }
+    public string? WindowsInstallerArm64Sha256 { get; set; }
 
-    public long? LinuxDebSizeBytes { get; set; }
+    public long? WindowsInstallerArm64SizeBytes { get; set; }
 
-    public string? LinuxRpmFileName { get; set; }
+    public string? LinuxDebX64FileName { get; set; }
 
-    public string? LinuxRpmSha256 { get; set; }
+    public string? LinuxDebX64Sha256 { get; set; }
 
-    public long? LinuxRpmSizeBytes { get; set; }
+    public long? LinuxDebX64SizeBytes { get; set; }
+
+    public string? LinuxDebArm64FileName { get; set; }
+
+    public string? LinuxDebArm64Sha256 { get; set; }
+
+    public long? LinuxDebArm64SizeBytes { get; set; }
+
+    public string? LinuxRpmX64FileName { get; set; }
+
+    public string? LinuxRpmX64Sha256 { get; set; }
+
+    public long? LinuxRpmX64SizeBytes { get; set; }
+
+    public string? LinuxRpmArm64FileName { get; set; }
+
+    public string? LinuxRpmArm64Sha256 { get; set; }
+
+    public long? LinuxRpmArm64SizeBytes { get; set; }
 
     /// <summary>
     /// Set when the most recent check (GitHub API call or asset download)
