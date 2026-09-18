@@ -262,7 +262,7 @@ export function ScheduleDialog({
             <p>{t('schedules.loading')}</p>
           ) : (
             filteredAgents.map((agent) => (
-              <label key={agent.hostname} style={{ display: 'block' }}>
+              <label key={agent.hostname}>
                 <input type="checkbox" checked={selectedHostnames.has(agent.hostname)} onChange={() => toggleAgent(agent.hostname)} />
                 {agent.hostname}
               </label>

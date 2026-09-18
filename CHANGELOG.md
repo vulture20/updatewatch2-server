@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.4.1] - 2026-09-18
+
+### Fixed
+
+- **Two `ScheduleDialog` layout bugs reported by the user directly after trying the new schedules feature: the "Once"/"Recurring" radio options rendered extremely large, and the "N agent(s) selected" hint text overlapped the agent picker list.** Root cause for the first: `index.css`'s generic `input, select { width: 100%; min-height: 36px; ...bordered... }` rule applies to every `<input>` by default, and while there's a long-standing `input[type='checkbox']` override sizing it down to a plain 16×16 control, no equivalent existed for `input[type='radio']` — the new schedule-type/pattern radios (this app's first use of radio inputs at all) inherited the full-width, bordered, 36px-tall text-input styling instead. Fixed by extending both the sizing override and the `label:has(...)` row-layout selector to also match `input[type='radio']`. `ScheduleDialog` is also this app's first use of `<fieldset>`/`<legend>` (for the schedule-type/pattern/weekday/action groups), which had no styling at all and so rendered with the browser's default grooved-border-plus-straddling-legend look — visibly out of place against Nocturne's borderless, card-based chrome and a further contributor to the "far too large" impression; added a plain, bordered-less `fieldset` reset with the `legend` styled like this app's existing field-caption `label` convention. Root cause for the second: the per-agent checkbox `<label>` in the scrollable agent picker had an inline `style={{ display: 'block' }}` overriding this app's own established `label:has(> input[type='checkbox'])` row-layout rule, which every other checkbox in the app already relies on with no such override — removed, letting each agent row use the same tested layout as everywhere else. Not visually verified in a real browser — no browser automation available in this sandbox session; re-check after rebuilding that both are actually resolved.
+
 ## [1.4.0] - 2026-09-18
 
 ### Added

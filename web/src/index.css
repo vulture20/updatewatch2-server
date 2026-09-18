@@ -102,7 +102,8 @@ label {
   margin-bottom: var(--space-4);
 }
 
-label:has(> input[type='checkbox']) {
+label:has(> input[type='checkbox']),
+label:has(> input[type='radio']) {
   flex-direction: row;
   align-items: center;
   gap: 8px;
@@ -134,12 +135,38 @@ select:focus-visible {
   outline-offset: 0;
 }
 
-input[type='checkbox'] {
+input[type='checkbox'],
+input[type='radio'] {
   width: 16px;
   min-height: 0;
   height: 16px;
   padding: 0;
   accent-color: var(--color-accent);
+}
+
+/* A group of related radios/checkboxes (Schedules' schedule-type/pattern/
+   weekday/action pickers — this app's first use of <fieldset>) — the
+   browser default grooved border + legend-straddling-the-border look
+   clashes badly with Nocturne's borderless, card-based chrome, so it's
+   reset to a plain block and the legend styled like the same field
+   caption `label` already uses, rather than left unstyled. */
+fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  border: none;
+}
+
+fieldset > label {
+  margin-bottom: 0;
+}
+
+legend {
+  padding: 0;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
 }
 
 /* — buttons — outlined, never filled: this system's one first-class
