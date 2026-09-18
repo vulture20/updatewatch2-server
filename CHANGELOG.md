@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.4.2] - 2026-09-18
+
+### Fixed
+
+- **`ScheduleDialog`'s agent picker was still completely obscured after v1.4.1's fix, reported by the user directly with a screenshot: "man kann durchscrollen, aber man sieht immer maximal eine einzige Zeile."** v1.4.1 fixed the radio-button/fieldset sizing (confirmed correct this time via a real headless-Chromium screenshot, not just reasoning — Playwright was installed for this specific verification, logged into a real running server, and screenshotted the actual rendered dialog) but left the real cause of the second bug untouched: the agent-picker `.card`'s default `flex-shrink: 1` as a flex child of `.dialog` (itself `display: flex; flex-direction: column`). Once `.dialog`'s total content exceeded its own 600px cap, its flex layout compressed every shrinkable child to fit — form-field `<label>`s resisted shrinking (fixed `min-height` on their inputs), so the one plain, freely-shrinkable `.card` absorbed nearly the entire deficit, rendering at ~17px (one row) instead of its intended 180px regardless of scroll. Measured directly in the real browser before and after: `clientHeight` was 17px against a `scrollHeight` of 321px beforehand (matching the "can scroll but only ever see one row" report exactly), and a clean 180px after adding `flexShrink: 0` to the card's inline style so `.dialog`'s own shrink pass never touches it. Confirmed visually afterward: the agent list now shows five full rows within its own scrollable box, selecting agents updates "N Agent(s) ausgewählt" below it with no overlap, and Save/Cancel are reachable. Both this and the v1.4.1 fixes are now real, screenshot-confirmed fixes rather than reasoned-through-CSS guesses — worth remembering for any future report of a flex child not respecting its own `max-height`: check `flex-shrink` on that item before assuming the `max-height`/`overflow` combination itself is wrong.
+
 ## [1.4.1] - 2026-09-18
 
 ### Fixed

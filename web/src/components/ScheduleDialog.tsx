@@ -257,7 +257,7 @@ export function ScheduleDialog({
             placeholder={t('schedules.dialog.agentsSearchPlaceholder')}
           />
         </label>
-        <div className="card" style={{ maxHeight: 180, overflowY: 'auto' }}>
+        <div className="card" style={{ maxHeight: 180, overflowY: 'auto', flexShrink: 0 }}>
           {agents === null ? (
             <p>{t('schedules.loading')}</p>
           ) : (
