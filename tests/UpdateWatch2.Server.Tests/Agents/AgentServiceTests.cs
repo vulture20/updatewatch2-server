@@ -600,6 +600,51 @@ public class AgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAllAsync_flags_an_agent_whose_version_is_older_than_the_known_latest_release()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("outdated-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.AgentVersion = "1.0.16";
+        _db.AgentUpdateStates.Add(new AgentUpdateState { LatestVersion = "1.0.20" });
+        await _db.SaveChangesAsync();
+
+        var list = await _service.GetAllAsync();
+
+        var item = Assert.Single(list, a => a.Hostname == hostname);
+        Assert.Equal("1.0.16", item.AgentVersion);
+        Assert.True(item.IsOutdated);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_does_not_flag_an_agent_already_on_the_latest_known_version()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("current-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.AgentVersion = "1.0.20";
+        _db.AgentUpdateStates.Add(new AgentUpdateState { LatestVersion = "1.0.20" });
+        await _db.SaveChangesAsync();
+
+        var list = await _service.GetAllAsync();
+
+        var item = Assert.Single(list, a => a.Hostname == hostname);
+        Assert.False(item.IsOutdated);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_does_not_flag_an_agent_when_no_release_has_ever_been_recorded()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("no-known-release-host");
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.AgentVersion = "1.0.16";
+        await _db.SaveChangesAsync();
+
+        var list = await _service.GetAllAsync();
+
+        var item = Assert.Single(list, a => a.Hostname == hostname);
+        Assert.False(item.IsOutdated);
+    }
+
+    [Fact]
     public async Task GetByHostnameAsync_surfaces_the_rejection_reason_and_timestamp()
     {
         var hostname = await RegisterApproveAndCertifyAsync("cert-flagged-detail-host");

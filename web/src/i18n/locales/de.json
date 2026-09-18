@@ -43,6 +43,7 @@
     "certificateRejectedIcon": "Dieser Agent hat innerhalb der letzten 24 Stunden ein abgelehntes Zertifikat vorgelegt ({{reason}}).",
     "offline": "Offline",
     "offlineIcon": "Dieser Agent hat innerhalb der konfigurierten Warnschwelle keinen Heartbeat gesendet.",
+    "outdatedIcon": "Die Version dieses Agents ({{version}}) ist veraltet — es ist eine neuere Agent-Version verfügbar.",
     "bulkSettings": {
       "button": "Einstellungen",
       "title": "Einstellungen für {{count}} ausgewählte Agents",

@@ -46,7 +46,22 @@ public record AgentListItemDto(
     /// </summary>
     DateTimeOffset? PendingInstallRequestedAt,
     /// <summary>Same as <see cref="PendingInstallRequestedAt"/>, for the "Neustart"/reboot activity badge — mirrors <see cref="AgentDetailDto.PendingRebootRequestedAt"/>.</summary>
-    DateTimeOffset? PendingRebootRequestedAt);
+    DateTimeOffset? PendingRebootRequestedAt,
+    /// <summary>Same self-reported string as <see cref="AgentDetailDto.AgentVersion"/> — added alongside <see cref="IsOutdated"/> so the overview list's outdated-agent icon has a version to show in its tooltip.</summary>
+    string? AgentVersion,
+    /// <summary>
+    /// True when <see cref="AgentVersion"/> is older than the newest agent
+    /// release the server currently knows about
+    /// (<see cref="Db.Entities.AgentUpdateState.LatestVersion"/> —
+    /// see <see cref="AgentUpdates.AgentVersionComparer"/> for the shared
+    /// comparison this also drives the self-update offer with). Computed
+    /// live on every request, the same "never a stored/stale flag"
+    /// discipline <see cref="IsOffline"/> already follows — independent of
+    /// whether agent auto-update itself is enabled, since this is purely
+    /// informational. False whenever no release has ever been recorded, or
+    /// either version fails to parse.
+    /// </summary>
+    bool IsOutdated);
 
 /// <summary>Full shape for the per-agent detail view.</summary>
 public record AgentDetailDto(

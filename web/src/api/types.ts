@@ -27,6 +27,10 @@ export interface AgentListItem {
   pendingInstallRequestedAt: string | null;
   /** Non-null while an admin-triggered reboot is pending/in progress — drives the "Neustart"/reboot activity badge. */
   pendingRebootRequestedAt: string | null;
+  /** Same self-reported string as AgentDetail.agentVersion — shown in the outdated-icon tooltip alongside isOutdated. */
+  agentVersion: string | null;
+  /** Live-computed: true when agentVersion is older than the newest agent release the server currently knows about. Drives the outdated-agent icon. */
+  isOutdated: boolean;
 }
 
 export interface AgentDetail {

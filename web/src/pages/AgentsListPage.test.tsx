@@ -35,6 +35,8 @@ function makeAgent(overrides: Partial<AgentListItem> & { hostname: string }): Ag
     isOffline: false,
     pendingInstallRequestedAt: null,
     pendingRebootRequestedAt: null,
+    agentVersion: null,
+    isOutdated: false,
     ...overrides,
   };
 }
@@ -362,6 +364,27 @@ describe('AgentsListPage', () => {
 
     await screen.findByText('host-1');
     expect(screen.getByRole('img', { name: /Expired/ })).toBeInTheDocument();
+  });
+
+  it('flags a row with the outdated icon when the agent is behind the latest known release', async () => {
+    mockedList.mockResolvedValue([
+      makeAgent({ hostname: 'host-1', isOutdated: true, agentVersion: '1.0.16' }),
+      makeAgent({ hostname: 'host-2' }),
+    ]);
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    expect(screen.getByRole('img', { name: /1\.0\.16/ })).toBeInTheDocument();
+  });
+
+  it('shows no outdated icon when the agent is already current', async () => {
+    mockedList.mockResolvedValue([makeAgent({ hostname: 'host-1', isOutdated: false })]);
+
+    renderPage();
+
+    await screen.findByText('host-1');
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('shows no warning icon when nothing was recently rejected', async () => {

@@ -62,6 +62,8 @@ function makeAgent(hostname: string): AgentListItem {
     isOffline: false,
     pendingInstallRequestedAt: null,
     pendingRebootRequestedAt: null,
+    agentVersion: null,
+    isOutdated: false,
   };
 }
 

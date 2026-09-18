@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using UpdateWatch2.Server.Admin;
+using UpdateWatch2.Server.AgentUpdates;
 using UpdateWatch2.Server.Api;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
@@ -26,20 +27,22 @@ public class AgentService(
             .Select(a => new
             {
                 a.Id, a.Hostname, a.Approved, a.RebootRequired, a.LastAliveAt, a.OperatingSystem,
-                a.PendingInstallRequestedAt, a.PendingRebootRequestedAt,
+                a.PendingInstallRequestedAt, a.PendingRebootRequestedAt, a.AgentVersion,
             })
             .ToListAsync(ct);
 
         var countsByAgent = await CountFilteredPendingUpdatesByAgentAsync(ct);
         var rejectionsByHostname = await rejectionService.GetRecentByHostnameAsync(ct);
         var offlineThreshold = TimeSpan.FromMinutes(settingsStore.AgentOffline.ThresholdMinutes);
+        var latestKnownAgentVersion = (await db.AgentUpdateStates.Select(s => s.LatestVersion).SingleOrDefaultAsync(ct));
 
         return agents
             .Select(a => new AgentListItemDto(
                 a.Hostname, a.Approved, a.RebootRequired, countsByAgent.GetValueOrDefault(a.Id),
                 ResolveActiveRejection(rejectionsByHostname.GetValueOrDefault(a.Hostname), a.LastAliveAt)?.Reason,
                 a.OperatingSystem, a.LastAliveAt, IsOffline(a.LastAliveAt, offlineThreshold),
-                a.PendingInstallRequestedAt, a.PendingRebootRequestedAt))
+                a.PendingInstallRequestedAt, a.PendingRebootRequestedAt,
+                a.AgentVersion, AgentVersionComparer.IsOlderThan(a.AgentVersion, latestKnownAgentVersion)))
             .ToList();
     }
 

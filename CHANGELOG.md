@@ -12,6 +12,16 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.5.1] - 2026-09-19
+
+### Added
+
+- **`AgentsListPage` now flags an outdated agent with an icon to the left of the hostname, mirroring the existing offline/certificate-rejection icons.** Raised as an exploratory question first ("Wenn der jeweilige Agent veraltet ist... sollte das in der Agent-Ansicht angezeigt werden. Am besten wie auch die anderen Icons links neben dem Hostname. Mein Vorschlag wäre ein Pfeil nach unten. Was wäre dein Vorschlag?"), answered with a recommendation (an up arrow — the software-industry-standard "update available" symbol app stores/package managers consistently use, versus a down arrow which reads more as "download"/"demote"), then implemented exactly as proposed once confirmed ("Setze das bitte genau so mit deinem Vorschlag um."). No DB schema/protocol bump — purely a new computed DTO field plus a new icon component.
+  - `AgentListItemDto` gained `AgentVersion` (the same self-reported string `AgentDetailDto` already exposed, not previously surfaced on the list) and `IsOutdated` (computed live on every request, never a stored flag — same discipline `IsOffline` already follows) — independent of whether the agent-auto-update feature itself is enabled, since this is purely informational.
+  - New shared `AgentUpdates.AgentVersionComparer.IsOlderThan` is the one decision point for "is this agent version older than a reference version", now used both by `AgentService.GetAllAsync` (the new icon) and `AgentUpdateService`'s own self-update-offer check (refactored to call the shared helper instead of duplicating the comparison) — so the two can never disagree about what counts as outdated. Missing/unparsable versions on either side err toward "not outdated", matching the self-update offer's own long-standing reasoning for the identical comparison.
+  - New `web/src/components/OutdatedIcon.tsx` (an accent-purple circle with a dark up-arrow, matching `WarningTriangleIcon`/`OfflineIcon`'s exact SVG/tooltip conventions), wired into `AgentsListPage`'s hostname cell next to the existing offline/certificate-rejection icons, with a bilingual tooltip naming the agent's current version (`agents.outdatedIcon`).
+  - Live-verified end to end against a real running server, not just `dotnet test`/`npm test`: registered two scratch agents self-reporting `1.0.16` and `1.0.20`, manually uploaded a fake `1.0.20` release to seed `AgentUpdateState.LatestVersion`, confirmed the real `GET /api/agents` response computed `isOutdated: true`/`false` correctly for each, and confirmed in a real headless-Chromium screenshot that only the `1.0.16` agent's row shows the new purple up-arrow icon, with the correct German tooltip text.
+
 ## [1.5.0] - 2026-09-18
 
 ### Added

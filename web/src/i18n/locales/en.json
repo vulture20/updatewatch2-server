@@ -43,6 +43,7 @@
     "certificateRejectedIcon": "This agent presented a rejected certificate ({{reason}}) within the last 24 hours.",
     "offline": "Offline",
     "offlineIcon": "This agent hasn't sent a heartbeat within the configured offline threshold.",
+    "outdatedIcon": "This agent's version ({{version}}) is outdated — a newer agent release is available.",
     "bulkSettings": {
       "button": "Settings",
       "title": "Settings for {{count}} selected agents",

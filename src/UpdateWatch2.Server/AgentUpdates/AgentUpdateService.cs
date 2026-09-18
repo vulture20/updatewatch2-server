@@ -444,22 +444,9 @@ public class AgentUpdateService(
     private static AgentUpdateAssetOffer? ToAssetOffer(string? fileName, string? sha256, long? sizeBytes) =>
         fileName is null ? null : new AgentUpdateAssetOffer($"/api/agent/updates/{Uri.EscapeDataString(fileName)}", sha256!, sizeBytes!.Value);
 
-    private static bool IsUpToDate(string? currentVersion, string latestVersion)
-    {
-        if (string.IsNullOrWhiteSpace(currentVersion))
-        {
-            return true;
-        }
-
-        // System.Version parses a bare "0.10.0"-style SemVer string fine
-        // (three-part Major.Minor.Build) — this project's agent version
-        // never uses a pre-release suffix, so no dedicated SemVer parser
-        // is needed here.
-        if (!Version.TryParse(currentVersion, out var current) || !Version.TryParse(latestVersion, out var latest))
-        {
-            return true;
-        }
-
-        return current >= latest;
-    }
+    // Delegates to the shared AgentVersionComparer (see its own doc
+    // comment) rather than duplicating this comparison — AgentService's
+    // "outdated agent" icon relies on the two never disagreeing.
+    private static bool IsUpToDate(string? currentVersion, string latestVersion) =>
+        !AgentVersionComparer.IsOlderThan(currentVersion, latestVersion);
 }

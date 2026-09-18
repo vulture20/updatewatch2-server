@@ -6,6 +6,7 @@ import type { AgentListItem, BulkAgentSettingsUpdate } from '../api/types';
 import { AgentBulkSettingsDialog } from '../components/AgentBulkSettingsDialog';
 import { OfflineIcon } from '../components/OfflineIcon';
 import { OsIcon } from '../components/OsIcon';
+import { OutdatedIcon } from '../components/OutdatedIcon';
 import { WarningTriangleIcon } from '../components/WarningTriangleIcon';
 import { formatRelativeTime } from '../utils/relativeTime';
 import { sortBy, toggleSort, type SortState } from '../utils/sorting';
@@ -450,6 +451,11 @@ export function AgentsListPage() {
                       {agent.isOffline && (
                         <>
                           <OfflineIcon title={t('agents.offlineIcon')} />{' '}
+                        </>
+                      )}
+                      {agent.isOutdated && (
+                        <>
+                          <OutdatedIcon title={t('agents.outdatedIcon', { version: agent.agentVersion })} />{' '}
                         </>
                       )}
                       <Link to={`/agents/${encodeURIComponent(agent.hostname)}`}>{agent.hostname}</Link>
