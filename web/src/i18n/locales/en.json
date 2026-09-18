@@ -438,6 +438,7 @@
       "deadlineHoursHint": "If an agent hasn't picked up this action within this many hours, it's abandoned and logged as missed instead of staying pending indefinitely.",
       "agents": "Agents",
       "agentsSearchPlaceholder": "Search agents…",
+      "selectAllVisible": "Select all visible",
       "agentsSelectedCount": "{{count}} agent(s) selected",
       "save": "Save",
       "cancel": "Cancel"

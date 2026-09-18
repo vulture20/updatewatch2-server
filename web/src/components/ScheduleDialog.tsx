@@ -93,6 +93,24 @@ export function ScheduleDialog({
     });
   };
 
+  // Selects/deselects every currently visible (search-filtered) agent, not
+  // necessarily the schedule's whole existing membership — same "visible,
+  // not everything" convention AgentsListPage's own select-all checkbox
+  // already established for its (also filterable) table.
+  const allVisibleSelected = filteredAgents.length > 0 && filteredAgents.every((a) => selectedHostnames.has(a.hostname));
+  const someVisibleSelected = filteredAgents.some((a) => selectedHostnames.has(a.hostname));
+  const toggleSelectAllVisible = () => {
+    setSelectedHostnames((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        filteredAgents.forEach((a) => next.delete(a.hostname));
+      } else {
+        filteredAgents.forEach((a) => next.add(a.hostname));
+      }
+      return next;
+    });
+  };
+
   const toggleWeekday = (day: WeekdayName) => {
     setWeeklyDays((prev) => {
       const next = new Set(prev);
@@ -256,6 +274,20 @@ export function ScheduleDialog({
             onChange={(e) => setAgentSearch(e.target.value)}
             placeholder={t('schedules.dialog.agentsSearchPlaceholder')}
           />
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={allVisibleSelected}
+            ref={(el) => {
+              if (el) {
+                el.indeterminate = !allVisibleSelected && someVisibleSelected;
+              }
+            }}
+            onChange={toggleSelectAllVisible}
+            disabled={filteredAgents.length === 0}
+          />
+          {t('schedules.dialog.selectAllVisible')}
         </label>
         <div className="card" style={{ maxHeight: 180, overflowY: 'auto', flexShrink: 0 }}>
           {agents === null ? (

@@ -110,6 +110,42 @@ describe('SchedulesListPage', () => {
     expect(screen.getByText('host-2')).toBeInTheDocument();
   });
 
+  it('select-all-visible only checks agents matching the current search filter', async () => {
+    mockedList.mockResolvedValue([]);
+    mockedAgentsList.mockResolvedValue([makeAgent('web-host'), makeAgent('web-host-2'), makeAgent('db-host')]);
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText(/no schedules yet/i);
+    await user.click(screen.getByRole('button', { name: /new schedule/i }));
+    await screen.findByText('web-host');
+
+    await user.type(screen.getByPlaceholderText(/search agents/i), 'web');
+    expect(screen.queryByText('db-host')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: /select all visible/i }));
+
+    expect(screen.getByLabelText('web-host')).toBeChecked();
+    expect(screen.getByLabelText('web-host-2')).toBeChecked();
+
+    // Clearing the filter reveals the previously-hidden agent, untouched —
+    // not all visible are selected anymore, so the checkbox now selects
+    // (not deselects) on the next click, including the newly-visible one.
+    await user.clear(screen.getByPlaceholderText(/search agents/i));
+    expect(screen.getByLabelText('db-host')).not.toBeChecked();
+
+    await user.click(screen.getByRole('checkbox', { name: /select all visible/i }));
+    expect(screen.getByLabelText('web-host')).toBeChecked();
+    expect(screen.getByLabelText('web-host-2')).toBeChecked();
+    expect(screen.getByLabelText('db-host')).toBeChecked();
+
+    // Now every agent is selected, so the same checkbox deselects all.
+    await user.click(screen.getByRole('checkbox', { name: /select all visible/i }));
+    expect(screen.getByLabelText('web-host')).not.toBeChecked();
+    expect(screen.getByLabelText('web-host-2')).not.toBeChecked();
+    expect(screen.getByLabelText('db-host')).not.toBeChecked();
+  });
+
   it('creates a schedule and reloads the list', async () => {
     mockedList.mockResolvedValueOnce([]).mockResolvedValueOnce([makeSchedule({ id: 1, name: 'New schedule' })]);
     mockedAgentsList.mockResolvedValue([makeAgent('host-1')]);

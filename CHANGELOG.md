@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.4.3] - 2026-09-18
+
+### Added
+
+- **`ScheduleDialog`'s agent picker gained a "select all visible" checkbox, at the user's explicit request** ("Gibt es die Möglichkeit bei der Agent-Auswahl des Zeitplans alle gerade sichtbaren Agents auszuwählen/anzuhaken?"). Mirrors `AgentsListPage`'s own long-standing select-all-visible convention exactly, not a new pattern: it only selects/deselects agents currently matching the search filter, never the schedule's whole existing membership, and shows an indeterminate state when some but not all visible agents are already checked. Live-verified in a real browser (Playwright, same setup as the v1.4.2 fix): filtered the agent list down to two hostnames, checked "select all visible," confirmed only those two got checked and the count updated; cleared the filter and confirmed the previously out-of-view agents were untouched and the checkbox correctly showed its indeterminate (dash) state; checking it again from there selected every now-visible agent including the previously-hidden ones. Real unit test coverage added alongside (`SchedulesListPage.test.tsx`).
+
 ## [1.4.2] - 2026-09-18
 
 ### Fixed

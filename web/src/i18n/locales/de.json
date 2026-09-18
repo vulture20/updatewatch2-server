@@ -438,6 +438,7 @@
       "deadlineHoursHint": "Holt ein Agent diese Aktion nicht innerhalb dieser Frist ab, wird sie als verpasst protokolliert, statt unbegrenzt ausstehend zu bleiben.",
       "agents": "Agents",
       "agentsSearchPlaceholder": "Agents suchen…",
+      "selectAllVisible": "Alle sichtbaren auswählen",
       "agentsSelectedCount": "{{count}} Agent(s) ausgewählt",
       "save": "Speichern",
       "cancel": "Abbrechen"
