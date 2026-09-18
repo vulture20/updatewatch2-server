@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.3.23] - 2026-09-18
+
+### Added
+
+- **The published Docker image (`ghcr.io/vulture20/updatewatch2-server`) is now multi-arch (`linux/amd64` + `linux/arm64`), closing #23** — raised after a direct user question ("Wäre auch ein arm64-Release denkbar?"), whose own codebase-survey analysis found no application-level blocker: no pinned .NET `RuntimeIdentifier` anywhere in `docker/Dockerfile` (a plain, portable `dotnet publish`), and every base image already publishes an official `linux/arm64` manifest (`node:22-alpine`, `mcr.microsoft.com/dotnet/sdk:10.0`, `mcr.microsoft.com/dotnet/aspnet:10.0`), including the SQLite native binary EF Core's `SQLitePCLRaw.bundle_e_sqlite3` bundles for `linux-arm64`. `.github/workflows/docker-publish.yml`'s single `build-and-push` job was replaced with a `build` matrix job (native `ubuntu-latest` for `linux/amd64`, native `ubuntu-24.04-arm` for `linux/arm64` — both free for this public repo, and per the issue's own analysis meaningfully faster/more reliable for a .NET SDK build than `docker/setup-qemu-action` emulation) plus a `merge` job, following Docker's own documented multi-platform-images pattern: each matrix leg builds and pushes its own image *by digest only* (`push-by-digest=true`, no tag), uploads that digest as a build artifact, and the `merge` job downloads both digests and combines them into the real tags (`latest`/`vX.Y.Z`/`sha-...`) via `docker buildx imagetools create` — the one and only place any of this repo's tags actually get written, avoiding a last-matrix-leg-wins race that pushing a tag directly from each per-arch leg would otherwise create. `cache-from`/`cache-to` are scoped per platform (`scope=build-linux-amd64`/`scope=build-linux-arm64`) so the two architectures' GitHub Actions caches don't overwrite each other. The `release` job (creates the matching GitHub Release on a tag push) now depends on `merge` instead of the old `build-and-push`. Not live-verified against a real arm64 host pulling and running the image — same standing honesty caveat this project applies to every not-yet-hands-on-confirmed change; confirmed only that the workflow YAML parses and that the Dockerfile itself has no architecture-specific assumption to work around.
+
 ## [1.3.22] - 2026-09-17
 
 ### Added

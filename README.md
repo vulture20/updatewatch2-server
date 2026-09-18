@@ -50,7 +50,7 @@ UpdateWatch2 was built with **vibe coding**: implemented and iterated on with [C
 
 ## 🐳 Installation & configuration (Docker)
 
-UpdateWatch2 Server ships as a single, self-contained Docker image — the API and the built admin UI in one container, no separate build step or database container required:
+UpdateWatch2 Server ships as a single, self-contained Docker image — the API and the built admin UI in one container, no separate build step or database container required. The published image is multi-arch (`linux/amd64` and `linux/arm64`, e.g. AWS Graviton, Ampere Altra, Raspberry Pi 4/5) — Docker/Podman pull the manifest matching the host automatically, no separate tag or flag needed.
 
 ```bash
 docker run -d \

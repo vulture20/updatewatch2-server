@@ -60,7 +60,7 @@ jobs:
   # and standing up a real directory never slows down the fast path every
   # ordinary push/PR already takes. continue-on-error: true so a flaky
   # container start (or an actual regression here) never blocks
-  # build-and-push/release — the same "don't let the newer, less-certain
+  # build/merge/release — the same "don't let the newer, less-certain
   # piece block the core pipeline" precedent the agent repo's own
   # release.yml already established for its optional linux-packages job.
   ldap-integration-test:
@@ -82,9 +82,29 @@ jobs:
         if: always()
         run: scripts/run-ldap-test-server.sh down
 
-  build-and-push:
+  # Builds and pushes one architecture's image at a time, by digest, never
+  # by tag — a native GitHub-hosted runner per architecture (updatewatch2-server#23:
+  # ubuntu-24.04-arm for linux/arm64, free for this public repo, same as
+  # ubuntu-latest already was for linux/amd64) rather than
+  # docker/setup-qemu-action emulation, since the issue's own analysis
+  # found native builds meaningfully faster/more reliable for a .NET SDK
+  # build than binfmt_misc emulation would be. A real tag/manifest list
+  # gluing both architectures' digests together into one multi-arch image
+  # only gets created once, by the merge job below, after every matrix leg
+  # here has finished — pushing a tag directly from here would let
+  # whichever leg finishes last silently overwrite the other's tag with a
+  # single-arch image instead of a real multi-arch manifest.
+  build:
     needs: test
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -93,10 +113,19 @@ jobs:
 
       # Feeds a "vX.Y.Z" image tag from the project's own VERSION file
       # (CLAUDE.md's four-independent-version-numbers scheme) rather than
-      # only tagging by git ref/sha.
+      # only tagging by git ref/sha. Only actually consumed for the
+      # metadata-action call below (this job never applies a tag itself —
+      # see the job comment), but read here anyway so both matrix legs
+      # compute the exact same labels.
       - name: Read app version
         id: version
         run: echo "value=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Compute a filesystem/cache-scope-safe platform pair (linux/arm64 -> linux-arm64)
+        id: pair
+        run: echo "value=${PLATFORM//\//-}" >> "$GITHUB_OUTPUT"
+        env:
+          PLATFORM: ${{ matrix.platform }}
 
       - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
@@ -117,25 +146,105 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=ref,event=tag
 
+      # cache-from/cache-to are scoped per platform pair — sharing one
+      # scope across both matrix legs would let the arm64 and amd64 builds
+      # overwrite each other's GHA cache entries every run instead of each
+      # keeping its own.
       - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        id: build
         with:
           context: .
           file: docker/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=build-${{ steps.pair.outputs.value }}
+          cache-to: type=gha,mode=max,scope=build-${{ steps.pair.outputs.value }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p "${{ runner.temp }}/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event_name != 'pull_request'
+        with:
+          name: digests-${{ steps.pair.outputs.value }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Combines both architectures' digests (uploaded above) into one real
+  # multi-arch manifest list under the actual tags (latest/vX.Y.Z/sha-.../
+  # the git tag) — nothing above this job ever pushes a tag itself, only a
+  # bare digest, specifically so this is the one and only place a tag ever
+  # gets written, avoiding the last-leg-wins race described on the build
+  # job above. Skipped entirely on a pull_request, matching build's own
+  # push=false there — there are no digests to merge when nothing was
+  # pushed.
+  merge:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read app version
+        id: version
+        run: echo "value=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: digests-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        id: meta
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=v${{ steps.version.outputs.value }},enable={{is_default_branch}}
+            type=sha,prefix=sha-,format=short
+            type=ref,event=tag
+
+      # DOCKER_METADATA_OUTPUT_JSON is an env var docker/metadata-action
+      # exports automatically (alongside its usual step outputs) — the
+      # documented pattern for feeding its computed tag list into
+      # `buildx imagetools create` by digest, per Docker's own official
+      # multi-platform-images CI guide.
+      - name: Create and push the multi-arch manifest list
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect the published manifest list
+        run: docker buildx imagetools inspect ${{ env.IMAGE }}:${{ steps.meta.outputs.version }}
 
   # A tag push used to publish the Docker image but never create a GitHub
   # Release to go with it — every server release before this had to be
   # backfilled by hand, unlike the agent repo's own release.yml, which
   # already does this on every tag. Mirrors that job's own shape exactly
   # (generate_release_notes: true, no files: — this repo has no
-  # downloadable release artifact, only the container image
-  # build-and-push above already published).
+  # downloadable release artifact, only the container image published by
+  # build/merge above).
   release:
-    needs: build-and-push
+    needs: merge
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
