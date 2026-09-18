@@ -1,3 +1,4 @@
+using Cronos;
 using UpdateWatch2.Server.Db.Entities;
 
 namespace UpdateWatch2.Server.Schedules;
@@ -37,12 +38,61 @@ public static class ScheduleRecurrenceCalculator
             return schedule.OnceAt is { } onceAt && onceAt >= after ? onceAt : null;
         }
 
+        if (schedule.ScheduleType == ScheduleType.Cron)
+        {
+            return ComputeNextCron(schedule, after);
+        }
+
         return schedule.Pattern switch
         {
             SchedulePattern.Weekly => ComputeNextWeekly(schedule, after),
             SchedulePattern.IntervalDays => ComputeNextInterval(schedule, after),
             _ => null,
         };
+    }
+
+    /// <summary>
+    /// Parses a standard 5-field cron expression, returning false (with
+    /// <paramref name="cron"/> unset) on anything Cronos can't parse — the
+    /// same signature shape used both by <see cref="ComputeNextCron"/> and
+    /// by <see cref="ScheduleService"/>'s own request-time validation, so
+    /// the two can never disagree about what counts as a valid expression.
+    /// </summary>
+    public static bool TryParseCron(string? expression, out CronExpression cron) =>
+        TryParseCron(expression, out cron, out _);
+
+    /// <summary>Same as the two-out-parameter overload, plus Cronos' own parse-error message for a request-validation <c>errorDetail</c> field — see <c>ApiErrorCode.ScheduleCronExpressionInvalid</c>.</summary>
+    public static bool TryParseCron(string? expression, out CronExpression cron, out string? errorMessage)
+    {
+        cron = null!;
+        errorMessage = null;
+        if (string.IsNullOrWhiteSpace(expression))
+        {
+            errorMessage = "Cron expression must not be empty.";
+            return false;
+        }
+
+        try
+        {
+            cron = CronExpression.Parse(expression.Trim());
+            return true;
+        }
+        catch (CronFormatException ex)
+        {
+            errorMessage = ex.Message;
+            return false;
+        }
+    }
+
+    private static DateTimeOffset? ComputeNextCron(Schedule schedule, DateTimeOffset after)
+    {
+        if (!TryParseCron(schedule.CronExpression, out var cron))
+        {
+            return null;
+        }
+
+        var nextUtc = cron.GetNextOccurrence(after.UtcDateTime, TimeZoneInfo.Local, inclusive: true);
+        return nextUtc is { } value ? new DateTimeOffset(value, TimeSpan.Zero) : null;
     }
 
     public static IReadOnlyList<DayOfWeek> ParseWeeklyDays(string? weeklyDays) =>

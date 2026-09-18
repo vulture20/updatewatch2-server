@@ -394,6 +394,7 @@
     "type": {
       "once": "Einmalig",
       "recurring": "Wiederkehrend",
+      "cron": "Cron",
       "weekly": "Wöchentlich",
       "interval": "Alle N Tage"
     },
@@ -431,11 +432,15 @@
       "weeklyDays": "Wochentage",
       "intervalDays": "Alle N Tage",
       "intervalStartDate": "Beginnend am",
+      "cronExpression": "Cron-Ausdruck",
+      "cronExpressionHint": "Standard-5-Feld-Cron-Format (Minute Stunde Tag-des-Monats Monat Wochentag), ausgewertet in der lokalen Zeitzone des Servers.",
       "timeOfDay": "Uhrzeit",
       "action": "Aktion",
       "rebootOnlyIfRequired": "Nur wenn ein Neustart tatsächlich erforderlich ist",
       "deadlineHours": "Frist (Stunden)",
       "deadlineHoursHint": "Holt ein Agent diese Aktion nicht innerhalb dieser Frist ab, wird sie als verpasst protokolliert, statt unbegrenzt ausstehend zu bleiben.",
+      "notifyOnFailure": "Bei Fehlschlag eine Benachrichtigungs-E-Mail senden",
+      "notifyOnFailureHint": "Sendet eine E-Mail, wenn eine Installation oder ein Neustart aus diesem Zeitplan fehlschlägt oder als verpasst abgebrochen wird, sofern ein Benachrichtigungsempfänger konfiguriert ist.",
       "agents": "Agents",
       "agentsSearchPlaceholder": "Agents suchen…",
       "selectAllVisible": "Alle sichtbaren auswählen",
@@ -505,6 +510,8 @@
     "ScheduleWeeklyDaysRequired": "Mindestens ein Wochentag ist erforderlich.",
     "ScheduleIntervalDaysInvalid": "Das Intervall muss mindestens 1 Tag betragen.",
     "ScheduleIntervalStartDateRequired": "Ein Startdatum ist erforderlich.",
-    "ScheduleUnknownAgents": "Unbekannte Agent(s): {{detail}}"
+    "ScheduleUnknownAgents": "Unbekannte Agent(s): {{detail}}",
+    "ScheduleCronExpressionRequired": "Ein Cron-Ausdruck ist erforderlich.",
+    "ScheduleCronExpressionInvalid": "Der Cron-Ausdruck konnte nicht verarbeitet werden: {{detail}}"
   }
 }

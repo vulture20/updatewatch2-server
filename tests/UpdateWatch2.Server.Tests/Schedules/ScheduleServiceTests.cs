@@ -6,6 +6,7 @@ using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
+using UpdateWatch2.Server.Notifications;
 using UpdateWatch2.Server.Schedules;
 using UpdateWatch2.Server.Tests.TestHelpers;
 using UpdateWatch2.Server.Updates;
@@ -30,6 +31,8 @@ public class ScheduleServiceTests : IDisposable
     private readonly AgentService _agentService;
     private readonly UpdateService _updateService;
     private readonly AgentRegistrationService _registrationService;
+    private readonly FakeAdminSettingsStore _settingsStore = new(smtp: new SmtpOptions { Host = "smtp.example.com", FromAddress = "noreply@example.com", NotificationRecipientAddress = "admin@example.com" });
+    private readonly FakeEmailNotificationService _email = new();
 
     public ScheduleServiceTests()
     {
@@ -38,12 +41,11 @@ public class ScheduleServiceTests : IDisposable
         _db.Database.Migrate();
 
         var auditLog = new AuditLogService(_db);
-        var settingsStore = new FakeAdminSettingsStore();
         var rejectionService = new CertificateRejectionService(_db, auditLog, NullLogger<CertificateRejectionService>.Instance);
-        _agentService = new AgentService(_db, auditLog, rejectionService, settingsStore);
-        _updateService = new UpdateService(_db, auditLog);
-        _registrationService = new AgentRegistrationService(_db, new InternalCertificateAuthority(_certsDirectory), auditLog, settingsStore, new FakeAgentUpdateService());
-        _service = new ScheduleService(_db, _updateService, _agentService, auditLog);
+        _agentService = new AgentService(_db, auditLog, rejectionService, _settingsStore, _email, NullLogger<AgentService>.Instance);
+        _updateService = new UpdateService(_db, auditLog, _settingsStore, _email, NullLogger<UpdateService>.Instance);
+        _registrationService = new AgentRegistrationService(_db, new InternalCertificateAuthority(_certsDirectory), auditLog, _settingsStore, new FakeAgentUpdateService());
+        _service = new ScheduleService(_db, _updateService, _agentService, auditLog, _settingsStore, _email, NullLogger<ScheduleService>.Instance);
     }
 
     public void Dispose()
@@ -64,7 +66,7 @@ public class ScheduleServiceTests : IDisposable
         return agent;
     }
 
-    private static UpsertScheduleRequest OnceRequest(IReadOnlyList<string> hostnames, DateTimeOffset onceAt, bool actionInstall = true, bool actionReboot = false, bool rebootOnlyIfRequired = false) => new(
+    private static UpsertScheduleRequest OnceRequest(IReadOnlyList<string> hostnames, DateTimeOffset onceAt, bool actionInstall = true, bool actionReboot = false, bool rebootOnlyIfRequired = false, bool notifyOnFailure = true) => new(
         Name: "test-schedule",
         Enabled: true,
         ScheduleType: ScheduleType.Once,
@@ -74,10 +76,30 @@ public class ScheduleServiceTests : IDisposable
         TimeOfDay: default,
         IntervalDays: null,
         IntervalStartDate: null,
+        CronExpression: null,
         ActionInstall: actionInstall,
         ActionReboot: actionReboot,
         RebootOnlyIfRequired: rebootOnlyIfRequired,
         DeadlineHours: 4,
+        NotifyOnFailure: notifyOnFailure,
+        Hostnames: hostnames);
+
+    private static UpsertScheduleRequest CronRequest(IReadOnlyList<string> hostnames, string? cronExpression) => new(
+        Name: "test-cron-schedule",
+        Enabled: true,
+        ScheduleType: ScheduleType.Cron,
+        Pattern: null,
+        OnceAt: null,
+        WeeklyDays: null,
+        TimeOfDay: default,
+        IntervalDays: null,
+        IntervalStartDate: null,
+        CronExpression: cronExpression,
+        ActionInstall: true,
+        ActionReboot: false,
+        RebootOnlyIfRequired: false,
+        DeadlineHours: 4,
+        NotifyOnFailure: true,
         Hostnames: hostnames);
 
     [Fact]
@@ -154,6 +176,44 @@ public class ScheduleServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.Null(result.Schedule!.NextRunAt);
         Assert.Equal(ScheduleStatus.Paused, result.Schedule.Status);
+    }
+
+    [Fact]
+    public async Task CreateAsync_rejects_a_cron_schedule_with_no_expression()
+    {
+        await AddAgentAsync("host-1");
+
+        var result = await _service.CreateAsync(CronRequest(["host-1"], null), "admin");
+
+        Assert.False(result.Success);
+        Assert.Equal(ApiErrorCode.ScheduleCronExpressionRequired, result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task CreateAsync_rejects_an_unparseable_cron_expression()
+    {
+        await AddAgentAsync("host-1");
+
+        var result = await _service.CreateAsync(CronRequest(["host-1"], "not a cron expression"), "admin");
+
+        Assert.False(result.Success);
+        Assert.Equal(ApiErrorCode.ScheduleCronExpressionInvalid, result.ErrorCode);
+        Assert.NotNull(result.ErrorDetail);
+    }
+
+    [Fact]
+    public async Task CreateAsync_accepts_a_valid_cron_expression_and_computes_NextRunAt()
+    {
+        await AddAgentAsync("host-1");
+
+        // Every minute — guarantees a next occurrence within 60s of "now"
+        // regardless of when this test happens to run.
+        var result = await _service.CreateAsync(CronRequest(["host-1"], "* * * * *"), "admin");
+
+        Assert.True(result.Success);
+        Assert.Equal("* * * * *", result.Schedule!.CronExpression);
+        Assert.NotNull(result.Schedule.NextRunAt);
+        Assert.True(result.Schedule.NextRunAt <= DateTimeOffset.UtcNow.AddMinutes(1).AddSeconds(1));
     }
 
     [Fact]
@@ -292,6 +352,66 @@ public class ScheduleServiceTests : IDisposable
 
         var reloaded = await _db.Agents.SingleAsync(a => a.Hostname == "host-1");
         Assert.NotNull(reloaded.PendingInstallRequestedAt);
+    }
+
+    [Fact]
+    public async Task ExpireMissedAsync_sends_a_failure_notification_email_for_a_missed_action_when_NotifyOnFailure_is_true()
+    {
+        await AddAgentAsync("host-1");
+        var created = await _service.CreateAsync(OnceRequest(["host-1"], DateTimeOffset.UtcNow.AddSeconds(1)) with { DeadlineHours = 1, NotifyOnFailure = true }, "admin");
+        await _service.RunNowAsync(created.Schedule!.Id, "admin");
+
+        var run = await _db.ScheduleRuns.SingleAsync(r => r.ScheduleId == created.Schedule.Id);
+        run.DeadlineAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        await _service.ExpireMissedAsync();
+
+        var sent = Assert.Single(_email.SentNotifications);
+        Assert.Equal("admin@example.com", sent.To);
+        Assert.NotEmpty(await _db.AuditLogEntries.Where(e => e.Action == "schedule.run.missed.notified").ToListAsync());
+    }
+
+    [Fact]
+    public async Task ExpireMissedAsync_does_not_send_a_failure_notification_email_when_NotifyOnFailure_is_false()
+    {
+        await AddAgentAsync("host-1");
+        var created = await _service.CreateAsync(OnceRequest(["host-1"], DateTimeOffset.UtcNow.AddSeconds(1)) with { DeadlineHours = 1, NotifyOnFailure = false }, "admin");
+        await _service.RunNowAsync(created.Schedule!.Id, "admin");
+
+        var run = await _db.ScheduleRuns.SingleAsync(r => r.ScheduleId == created.Schedule.Id);
+        run.DeadlineAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        await _service.ExpireMissedAsync();
+
+        Assert.Empty(_email.SentNotifications);
+    }
+
+    [Fact]
+    public async Task ExpireMissedAsync_does_not_send_a_failure_notification_email_for_a_merely_skipped_conditional_reboot()
+    {
+        // A Skipped conditional reboot (never confirmed necessary) is an
+        // expected, benign outcome — only a genuine Missed transition is
+        // worth emailing about. The install itself is acknowledged as
+        // Succeeded before the deadline expires, so only the reboot watch
+        // (still AwaitingInstallResult) is left for ExpireMissedAsync to
+        // resolve, isolating the Skipped-only case from an install miss.
+        await AddAgentAsync("host-1", rebootRequired: false);
+        var request = OnceRequest(["host-1"], DateTimeOffset.UtcNow.AddSeconds(1), actionInstall: true, actionReboot: true, rebootOnlyIfRequired: true) with { DeadlineHours = 1 };
+        var created = await _service.CreateAsync(request, "admin");
+        await _service.RunNowAsync(created.Schedule!.Id, "admin");
+        await _updateService.AcknowledgeInstallAsync("host-1", InstallOutcome.Succeeded, null);
+
+        var run = await _db.ScheduleRuns.SingleAsync(r => r.ScheduleId == created.Schedule!.Id);
+        run.DeadlineAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        await _service.ExpireMissedAsync();
+
+        var runs = await _service.GetRunsAsync(created.Schedule.Id);
+        Assert.Equal(ScheduleRunActionStatus.Skipped, runs[0].Agents.Single().RebootStatus);
+        Assert.Empty(_email.SentNotifications);
     }
 
     [Fact]

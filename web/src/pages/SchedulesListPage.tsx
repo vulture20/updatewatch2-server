@@ -26,6 +26,9 @@ function typeLabel(schedule: Schedule, t: (key: string) => string): string {
   if (schedule.scheduleType === 'Once') {
     return t('schedules.type.once');
   }
+  if (schedule.scheduleType === 'Cron') {
+    return t('schedules.type.cron');
+  }
   return schedule.pattern === 'Weekly' ? t('schedules.type.weekly') : t('schedules.type.interval');
 }
 

@@ -15,6 +15,9 @@ public enum ScheduleType
 {
     Once,
     Recurring,
+
+    /// <summary>Standard 5-field cron expression (<see cref="Schedule.CronExpression"/>), parsed via Cronos and evaluated in the server's own local time zone — same no-per-schedule-time-zone reasoning as <see cref="Recurring"/>.</summary>
+    Cron,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -73,6 +76,9 @@ public class Schedule
     /// <summary>Anchor date for the interval calculation — only set when <see cref="Pattern"/> is <see cref="SchedulePattern.IntervalDays"/>.</summary>
     public DateOnly? IntervalStartDate { get; set; }
 
+    /// <summary>Standard 5-field cron expression — only set when <see cref="ScheduleType"/> is <see cref="Db.Entities.ScheduleType.Cron"/>.</summary>
+    public string? CronExpression { get; set; }
+
     public bool ActionInstall { get; set; }
 
     public bool ActionReboot { get; set; }
@@ -98,6 +104,19 @@ public class Schedule
     /// See <see cref="ScheduleRun.DeadlineAt"/>.
     /// </summary>
     public int DeadlineHours { get; set; } = 4;
+
+    /// <summary>
+    /// Whether a failed install/reboot acknowledgement or a missed
+    /// (deadline-expired) action for this schedule should send a
+    /// notification email, reusing the same
+    /// <see cref="Notifications.IEmailNotificationService.SendNotificationAsync"/>
+    /// bilingual primitive and <c>IsConfigured</c>-plus-recipient guard every
+    /// other automated notification in this codebase already uses. Default
+    /// true — this is a per-schedule opt-out, not opt-in. Audit logging of
+    /// the same failure/miss is unconditional regardless of this flag; it
+    /// only gates the email attempt.
+    /// </summary>
+    public bool NotifyOnFailure { get; set; } = true;
 
     /// <summary>
     /// Pre-computed next firing time, read by <see cref="Schedules.ScheduleWorker"/>

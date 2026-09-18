@@ -1,7 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
+using UpdateWatch2.Server.Notifications;
+using UpdateWatch2.Server.Tests.TestHelpers;
 using UpdateWatch2.Server.Updates;
 
 namespace UpdateWatch2.Server.Tests.Updates;
@@ -21,6 +25,8 @@ public class UpdateServiceTests : IDisposable
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"updatewatch2-update-service-test-{Guid.NewGuid()}.sqlite");
     private readonly AppDbContext _db;
+    private readonly FakeAdminSettingsStore _settingsStore = new(smtp: new SmtpOptions { Host = "smtp.example.com", FromAddress = "noreply@example.com", NotificationRecipientAddress = "admin@example.com" });
+    private readonly FakeEmailNotificationService _email = new();
     private readonly UpdateService _service;
 
     public UpdateServiceTests()
@@ -28,7 +34,7 @@ public class UpdateServiceTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={_dbPath}").Options;
         _db = new AppDbContext(options);
         _db.Database.Migrate();
-        _service = new UpdateService(_db, new AuditLogService(_db));
+        _service = new UpdateService(_db, new AuditLogService(_db), _settingsStore, _email, NullLogger<UpdateService>.Instance);
     }
 
     public void Dispose()
@@ -298,6 +304,60 @@ public class UpdateServiceTests : IDisposable
         await _service.AcknowledgeInstallAsync("ack-failed-keeps-pending-host", InstallOutcome.Failed, "install failed");
 
         Assert.Single(await _db.UpdateItems.Where(u => u.AgentId == agent.Id).ToListAsync());
+    }
+
+    [Fact]
+    public async Task AcknowledgeInstallAsync_sends_a_failure_notification_email_for_a_schedule_originated_install_when_NotifyOnFailure_is_true()
+    {
+        var schedule = new Schedule { Name = "Nightly install", ScheduleType = ScheduleType.Once, NotifyOnFailure = true };
+        _db.Schedules.Add(schedule);
+        await _db.SaveChangesAsync();
+        var run = new ScheduleRun { ScheduleId = schedule.Id, FiredAt = DateTimeOffset.UtcNow, DeadlineAt = DateTimeOffset.UtcNow.AddHours(4) };
+        _db.ScheduleRuns.Add(run);
+        await _db.SaveChangesAsync();
+        _db.ScheduleRunAgents.Add(new ScheduleRunAgent { ScheduleRunId = run.Id, Hostname = "scheduled-fail-host", InstallStatus = ScheduleRunActionStatus.Pending });
+        var agent = new Agent { Hostname = "scheduled-fail-host", Approved = true, PendingInstallRequestedAt = DateTimeOffset.UtcNow, PendingInstallScheduleRunId = run.Id };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeInstallAsync("scheduled-fail-host", InstallOutcome.Failed, "simulated failure");
+
+        var sent = Assert.Single(_email.SentNotifications);
+        Assert.Equal("admin@example.com", sent.To);
+        Assert.NotEmpty(await _db.AuditLogEntries.Where(e => e.Action == "schedule.run.install-failed.notified").ToListAsync());
+    }
+
+    [Fact]
+    public async Task AcknowledgeInstallAsync_does_not_send_a_failure_notification_email_when_NotifyOnFailure_is_false()
+    {
+        var schedule = new Schedule { Name = "Silent schedule", ScheduleType = ScheduleType.Once, NotifyOnFailure = false };
+        _db.Schedules.Add(schedule);
+        await _db.SaveChangesAsync();
+        var run = new ScheduleRun { ScheduleId = schedule.Id, FiredAt = DateTimeOffset.UtcNow, DeadlineAt = DateTimeOffset.UtcNow.AddHours(4) };
+        _db.ScheduleRuns.Add(run);
+        await _db.SaveChangesAsync();
+        _db.ScheduleRunAgents.Add(new ScheduleRunAgent { ScheduleRunId = run.Id, Hostname = "scheduled-silent-fail-host", InstallStatus = ScheduleRunActionStatus.Pending });
+        var agent = new Agent { Hostname = "scheduled-silent-fail-host", Approved = true, PendingInstallRequestedAt = DateTimeOffset.UtcNow, PendingInstallScheduleRunId = run.Id };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeInstallAsync("scheduled-silent-fail-host", InstallOutcome.Failed, "simulated failure");
+
+        Assert.Empty(_email.SentNotifications);
+    }
+
+    [Fact]
+    public async Task AcknowledgeInstallAsync_does_not_send_a_failure_notification_email_for_a_manually_triggered_install()
+    {
+        // PendingInstallScheduleRunId null == not schedule-originated —
+        // nothing to notify about even on a Failed outcome.
+        var agent = new Agent { Hostname = "manual-fail-host", Approved = true, PendingInstallRequestedAt = DateTimeOffset.UtcNow };
+        _db.Agents.Add(agent);
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeInstallAsync("manual-fail-host", InstallOutcome.Failed, "simulated failure");
+
+        Assert.Empty(_email.SentNotifications);
     }
 
     [Fact]

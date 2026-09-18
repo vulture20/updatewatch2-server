@@ -394,6 +394,7 @@
     "type": {
       "once": "One-time",
       "recurring": "Recurring",
+      "cron": "Cron",
       "weekly": "Weekly",
       "interval": "Every N days"
     },
@@ -431,11 +432,15 @@
       "weeklyDays": "Weekdays",
       "intervalDays": "Every N days",
       "intervalStartDate": "Starting on",
+      "cronExpression": "Cron expression",
+      "cronExpressionHint": "Standard 5-field cron format (minute hour day-of-month month day-of-week), evaluated in the server's local time zone.",
       "timeOfDay": "Time of day",
       "action": "Action",
       "rebootOnlyIfRequired": "Only if a reboot is actually required",
       "deadlineHours": "Deadline (hours)",
       "deadlineHoursHint": "If an agent hasn't picked up this action within this many hours, it's abandoned and logged as missed instead of staying pending indefinitely.",
+      "notifyOnFailure": "Send a notification email on failure",
+      "notifyOnFailureHint": "Sends an email when an install or reboot from this schedule fails, or is abandoned as missed, if a notification recipient is configured.",
       "agents": "Agents",
       "agentsSearchPlaceholder": "Search agents…",
       "selectAllVisible": "Select all visible",
@@ -505,6 +510,8 @@
     "ScheduleWeeklyDaysRequired": "At least one weekday is required.",
     "ScheduleIntervalDaysInvalid": "The interval must be at least 1 day.",
     "ScheduleIntervalStartDateRequired": "A start date is required.",
-    "ScheduleUnknownAgents": "Unknown agent(s): {{detail}}"
+    "ScheduleUnknownAgents": "Unknown agent(s): {{detail}}",
+    "ScheduleCronExpressionRequired": "A cron expression is required.",
+    "ScheduleCronExpressionInvalid": "The cron expression could not be parsed: {{detail}}"
   }
 }

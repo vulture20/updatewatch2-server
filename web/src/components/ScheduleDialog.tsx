@@ -51,10 +51,12 @@ export function ScheduleDialog({
   const [timeOfDay, setTimeOfDay] = useState(schedule ? toTimeInputValue(schedule.timeOfDay) : '02:00');
   const [intervalDays, setIntervalDays] = useState((schedule?.intervalDays ?? 1).toString());
   const [intervalStartDate, setIntervalStartDate] = useState(schedule?.intervalStartDate ?? new Date().toISOString().slice(0, 10));
+  const [cronExpression, setCronExpression] = useState(schedule?.cronExpression ?? '');
   const [actionInstall, setActionInstall] = useState(schedule?.actionInstall ?? true);
   const [actionReboot, setActionReboot] = useState(schedule?.actionReboot ?? false);
   const [rebootOnlyIfRequired, setRebootOnlyIfRequired] = useState(schedule?.rebootOnlyIfRequired ?? true);
   const [deadlineHours, setDeadlineHours] = useState((schedule?.deadlineHours ?? 4).toString());
+  const [notifyOnFailure, setNotifyOnFailure] = useState(schedule?.notifyOnFailure ?? true);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +136,7 @@ export function ScheduleDialog({
     deadlineValid &&
     intervalValid &&
     (scheduleType !== 'Once' || onceAt !== '') &&
+    (scheduleType !== 'Cron' || cronExpression.trim() !== '') &&
     (scheduleType !== 'Recurring' || pattern !== 'Weekly' || weeklyDays.size > 0);
 
   const save = async () => {
@@ -150,10 +153,12 @@ export function ScheduleDialog({
         timeOfDay: `${timeOfDay}:00`,
         intervalDays: scheduleType === 'Recurring' && pattern === 'IntervalDays' ? intervalValue : null,
         intervalStartDate: scheduleType === 'Recurring' && pattern === 'IntervalDays' ? intervalStartDate : null,
+        cronExpression: scheduleType === 'Cron' ? cronExpression.trim() : null,
         actionInstall,
         actionReboot,
         rebootOnlyIfRequired,
         deadlineHours: deadlineValue,
+        notifyOnFailure,
         hostnames: [...selectedHostnames],
       };
       await onSave(schedule?.id ?? null, request);
@@ -191,12 +196,27 @@ export function ScheduleDialog({
             <input type="radio" name="scheduleType" checked={scheduleType === 'Recurring'} onChange={() => setScheduleType('Recurring')} />
             {t('schedules.type.recurring')}
           </label>
+          <label>
+            <input type="radio" name="scheduleType" checked={scheduleType === 'Cron'} onChange={() => setScheduleType('Cron')} />
+            {t('schedules.type.cron')}
+          </label>
         </fieldset>
 
         {scheduleType === 'Once' ? (
           <label>
             {t('schedules.dialog.onceAt')}
             <input type="datetime-local" value={onceAt} onChange={(e) => setOnceAt(e.target.value)} />
+          </label>
+        ) : scheduleType === 'Cron' ? (
+          <label>
+            {t('schedules.dialog.cronExpression')}
+            <input
+              type="text"
+              value={cronExpression}
+              onChange={(e) => setCronExpression(e.target.value)}
+              placeholder="0 3 * * *"
+            />
+            <p className="field-hint">{t('schedules.dialog.cronExpressionHint')}</p>
           </label>
         ) : (
           <>
@@ -265,6 +285,12 @@ export function ScheduleDialog({
           <input type="number" min={1} value={deadlineHours} onChange={(e) => setDeadlineHours(e.target.value)} />
           <p className="field-hint">{t('schedules.dialog.deadlineHoursHint')}</p>
         </label>
+
+        <label>
+          <input type="checkbox" checked={notifyOnFailure} onChange={(e) => setNotifyOnFailure(e.target.checked)} />
+          {t('schedules.dialog.notifyOnFailure')}
+        </label>
+        <p className="field-hint">{t('schedules.dialog.notifyOnFailureHint')}</p>
 
         <label>
           {t('schedules.dialog.agents')}

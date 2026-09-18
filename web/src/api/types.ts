@@ -371,7 +371,7 @@ export interface AuditLogPage {
  * existing install/reboot delivery mechanism — the agent itself is
  * unaware schedules exist at all.
  */
-export type ScheduleType = 'Once' | 'Recurring';
+export type ScheduleType = 'Once' | 'Recurring' | 'Cron';
 export type SchedulePattern = 'Weekly' | 'IntervalDays';
 export type ScheduleStatus = 'Active' | 'Paused' | 'Completed';
 export type WeekdayName = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
@@ -390,11 +390,15 @@ export interface Schedule {
   intervalDays: number | null;
   /** "YYYY-MM-DD" (a serialized .NET DateOnly). */
   intervalStartDate: string | null;
+  /** Standard 5-field cron expression — only set when scheduleType is 'Cron'. */
+  cronExpression: string | null;
   actionInstall: boolean;
   actionReboot: boolean;
   /** Only meaningful when actionReboot is true — see UpsertSchedule's own doc comment on the combined-with-install case. */
   rebootOnlyIfRequired: boolean;
   deadlineHours: number;
+  /** Whether a failed install/reboot or a missed action for this schedule sends a notification email. Default true. */
+  notifyOnFailure: boolean;
   nextRunAt: string | null;
   lastRunAt: string | null;
   hostnames: string[];
@@ -417,10 +421,12 @@ export interface UpsertSchedule {
   timeOfDay: string;
   intervalDays: number | null;
   intervalStartDate: string | null;
+  cronExpression: string | null;
   actionInstall: boolean;
   actionReboot: boolean;
   rebootOnlyIfRequired: boolean;
   deadlineHours: number;
+  notifyOnFailure: boolean;
   hostnames: string[];
 }
 

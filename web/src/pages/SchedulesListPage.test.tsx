@@ -37,10 +37,12 @@ function makeSchedule(overrides: Partial<Schedule> & { id: number; name: string 
     timeOfDay: '02:00:00',
     intervalDays: null,
     intervalStartDate: null,
+    cronExpression: null,
     actionInstall: true,
     actionReboot: false,
     rebootOnlyIfRequired: false,
     deadlineHours: 4,
+    notifyOnFailure: true,
     nextRunAt: '2026-12-01T02:00:00Z',
     lastRunAt: null,
     hostnames: ['host-1'],
@@ -168,6 +170,54 @@ describe('SchedulesListPage', () => {
     // renders — the toolbar's own "New schedule" button, and this row's
     // Name cell — so disambiguate by role rather than plain text.
     await screen.findByRole('cell', { name: 'New schedule' });
+  });
+
+  it('creates a cron schedule with the notify-on-failure checkbox left at its default', async () => {
+    mockedList.mockResolvedValueOnce([]).mockResolvedValueOnce([makeSchedule({ id: 1, name: 'Cron schedule', scheduleType: 'Cron' })]);
+    mockedAgentsList.mockResolvedValue([makeAgent('host-1')]);
+    mockedCreate.mockResolvedValue(makeSchedule({ id: 1, name: 'Cron schedule', scheduleType: 'Cron' }));
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText(/no schedules yet/i);
+    await user.click(screen.getByRole('button', { name: /new schedule/i }));
+
+    await screen.findByText('host-1');
+    await user.type(screen.getByLabelText(/^name$/i), 'Cron schedule');
+    await user.click(screen.getByRole('radio', { name: /cron/i }));
+    await user.type(screen.getByLabelText(/cron expression/i), '0 3 * * *');
+    await user.click(screen.getByLabelText('host-1'));
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+    await waitFor(() => expect(mockedCreate).toHaveBeenCalledTimes(1));
+    expect(mockedCreate.mock.calls[0][0]).toMatchObject({
+      name: 'Cron schedule',
+      scheduleType: 'Cron',
+      cronExpression: '0 3 * * *',
+      notifyOnFailure: true,
+      hostnames: ['host-1'],
+    });
+  });
+
+  it('creates a schedule with the notify-on-failure checkbox unchecked', async () => {
+    mockedList.mockResolvedValueOnce([]).mockResolvedValueOnce([makeSchedule({ id: 1, name: 'Silent schedule' })]);
+    mockedAgentsList.mockResolvedValue([makeAgent('host-1')]);
+    mockedCreate.mockResolvedValue(makeSchedule({ id: 1, name: 'Silent schedule' }));
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText(/no schedules yet/i);
+    await user.click(screen.getByRole('button', { name: /new schedule/i }));
+
+    await screen.findByText('host-1');
+    await user.type(screen.getByLabelText(/^name$/i), 'Silent schedule');
+    await user.type(screen.getByLabelText(/date\/time/i), '2027-01-01T02:00');
+    await user.click(screen.getByLabelText(/send a notification email on failure/i));
+    await user.click(screen.getByLabelText('host-1'));
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+
+    await waitFor(() => expect(mockedCreate).toHaveBeenCalledTimes(1));
+    expect(mockedCreate.mock.calls[0][0]).toMatchObject({ name: 'Silent schedule', notifyOnFailure: false });
   });
 
   it('deletes a schedule after confirmation', async () => {

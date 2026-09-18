@@ -5,6 +5,7 @@ using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
+using UpdateWatch2.Server.Notifications;
 using UpdateWatch2.Server.Tests.TestHelpers;
 
 namespace UpdateWatch2.Server.Tests.Agents;
@@ -18,7 +19,8 @@ public class AgentServiceTests : IDisposable
     private readonly InternalCertificateAuthority _ca;
     private readonly AgentRegistrationService _registrationService;
     private readonly CertificateRejectionService _rejectionService;
-    private readonly FakeAdminSettingsStore _settingsStore = new();
+    private readonly FakeAdminSettingsStore _settingsStore = new(smtp: new SmtpOptions { Host = "smtp.example.com", FromAddress = "noreply@example.com", NotificationRecipientAddress = "admin@example.com" });
+    private readonly FakeEmailNotificationService _email = new();
 
     private static readonly AgentRegisterRequest BareRequest = new(null, null, null, null, null, null);
 
@@ -30,7 +32,7 @@ public class AgentServiceTests : IDisposable
 
         var auditLog = new AuditLogService(_db);
         _rejectionService = new CertificateRejectionService(_db, auditLog, NullLogger<CertificateRejectionService>.Instance);
-        _service = new AgentService(_db, auditLog, _rejectionService, _settingsStore);
+        _service = new AgentService(_db, auditLog, _rejectionService, _settingsStore, _email, NullLogger<AgentService>.Instance);
         _ca = new InternalCertificateAuthority(_certsDirectory);
         _registrationService = new AgentRegistrationService(_db, _ca, auditLog, _settingsStore, new FakeAgentUpdateService());
     }
@@ -204,6 +206,61 @@ public class AgentServiceTests : IDisposable
         var result = await _service.AcknowledgeRebootAsync("does-not-exist", RebootOutcome.Succeeded, errorDetail: null);
 
         Assert.False(result);
+    }
+
+    [Fact]
+    public async Task AcknowledgeRebootAsync_sends_a_failure_notification_email_for_a_schedule_originated_reboot_when_NotifyOnFailure_is_true()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("scheduled-reboot-fail-host");
+        var schedule = new Schedule { Name = "Nightly reboot", ScheduleType = ScheduleType.Once, NotifyOnFailure = true };
+        _db.Schedules.Add(schedule);
+        await _db.SaveChangesAsync();
+        var run = new ScheduleRun { ScheduleId = schedule.Id, FiredAt = DateTimeOffset.UtcNow, DeadlineAt = DateTimeOffset.UtcNow.AddHours(4) };
+        _db.ScheduleRuns.Add(run);
+        await _db.SaveChangesAsync();
+        _db.ScheduleRunAgents.Add(new ScheduleRunAgent { ScheduleRunId = run.Id, Hostname = hostname, RebootStatus = ScheduleRunActionStatus.Pending });
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.PendingRebootRequestedAt = DateTimeOffset.UtcNow;
+        agent.PendingRebootScheduleRunId = run.Id;
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeRebootAsync(hostname, RebootOutcome.Failed, "shutdown.exe exited with code 1190");
+
+        var sent = Assert.Single(_email.SentNotifications);
+        Assert.Equal("admin@example.com", sent.To);
+        Assert.NotEmpty(await _db.AuditLogEntries.Where(e => e.Action == "schedule.run.reboot-failed.notified").ToListAsync());
+    }
+
+    [Fact]
+    public async Task AcknowledgeRebootAsync_does_not_send_a_failure_notification_email_when_NotifyOnFailure_is_false()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("scheduled-silent-reboot-fail-host");
+        var schedule = new Schedule { Name = "Silent reboot schedule", ScheduleType = ScheduleType.Once, NotifyOnFailure = false };
+        _db.Schedules.Add(schedule);
+        await _db.SaveChangesAsync();
+        var run = new ScheduleRun { ScheduleId = schedule.Id, FiredAt = DateTimeOffset.UtcNow, DeadlineAt = DateTimeOffset.UtcNow.AddHours(4) };
+        _db.ScheduleRuns.Add(run);
+        await _db.SaveChangesAsync();
+        _db.ScheduleRunAgents.Add(new ScheduleRunAgent { ScheduleRunId = run.Id, Hostname = hostname, RebootStatus = ScheduleRunActionStatus.Pending });
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == hostname);
+        agent.PendingRebootRequestedAt = DateTimeOffset.UtcNow;
+        agent.PendingRebootScheduleRunId = run.Id;
+        await _db.SaveChangesAsync();
+
+        await _service.AcknowledgeRebootAsync(hostname, RebootOutcome.Failed, "shutdown.exe exited with code 1190");
+
+        Assert.Empty(_email.SentNotifications);
+    }
+
+    [Fact]
+    public async Task AcknowledgeRebootAsync_does_not_send_a_failure_notification_email_for_a_manually_triggered_reboot()
+    {
+        var hostname = await RegisterApproveAndCertifyAsync("manual-reboot-fail-host");
+        await _service.TriggerRebootAsync(hostname, triggeredBy: "admin");
+
+        await _service.AcknowledgeRebootAsync(hostname, RebootOutcome.Failed, "shutdown.exe exited with code 1190");
+
+        Assert.Empty(_email.SentNotifications);
     }
 
     [Fact]

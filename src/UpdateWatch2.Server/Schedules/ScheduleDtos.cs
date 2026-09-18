@@ -37,10 +37,12 @@ public record ScheduleDto(
     TimeSpan TimeOfDay,
     int? IntervalDays,
     DateOnly? IntervalStartDate,
+    string? CronExpression,
     bool ActionInstall,
     bool ActionReboot,
     bool RebootOnlyIfRequired,
     int DeadlineHours,
+    bool NotifyOnFailure,
     DateTimeOffset? NextRunAt,
     DateTimeOffset? LastRunAt,
     IReadOnlyList<string> Hostnames);
@@ -56,10 +58,12 @@ public record UpsertScheduleRequest(
     TimeSpan TimeOfDay,
     int? IntervalDays,
     DateOnly? IntervalStartDate,
+    string? CronExpression,
     bool ActionInstall,
     bool ActionReboot,
     bool RebootOnlyIfRequired,
     int DeadlineHours,
+    bool NotifyOnFailure,
     IReadOnlyList<string> Hostnames);
 
 /// <summary>Result of a create/update — mirrors <c>UpdateFilterResult</c>'s success/failure-reason shape.</summary>

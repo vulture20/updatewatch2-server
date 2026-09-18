@@ -5,6 +5,8 @@ using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
+using UpdateWatch2.Server.Notifications;
+using UpdateWatch2.Server.Schedules;
 using UpdateWatch2.Server.UpdateFilters;
 
 namespace UpdateWatch2.Server.Agents;
@@ -13,7 +15,9 @@ public class AgentService(
     AppDbContext db,
     IAuditLogService auditLog,
     ICertificateRejectionService rejectionService,
-    IAdminSettingsStore settingsStore) : IAgentService
+    IAdminSettingsStore settingsStore,
+    IEmailNotificationService email,
+    ILogger<AgentService> logger) : IAgentService
 {
     public async Task<IReadOnlyList<AgentListItemDto>> GetAllAsync(CancellationToken ct = default)
     {
@@ -262,11 +266,31 @@ public class AgentService(
         if (agent.PendingRebootScheduleRunId is { } scheduleRunId)
         {
             var runAgent = await db.ScheduleRunAgents
+                .Include(ra => ra.ScheduleRun!)
+                .ThenInclude(r => r.Schedule)
                 .SingleOrDefaultAsync(ra => ra.ScheduleRunId == scheduleRunId && ra.Hostname == hostname, ct);
             if (runAgent is not null)
             {
                 runAgent.RebootStatus = outcome == RebootOutcome.Succeeded ? ScheduleRunActionStatus.Delivered : ScheduleRunActionStatus.Failed;
                 runAgent.ErrorDetail = outcome == RebootOutcome.Failed ? errorDetail : null;
+
+                if (outcome == RebootOutcome.Failed)
+                {
+                    var schedule = runAgent.ScheduleRun!.Schedule!;
+                    await ScheduleFailureNotifier.NotifyAsync(
+                        settingsStore, email, auditLog, logger,
+                        schedule.Name, schedule.NotifyOnFailure,
+                        subject: "UpdateWatch2: scheduled reboot failed",
+                        body: $"The scheduled reboot for agent \"{hostname}\" (schedule \"{schedule.Name}\") failed"
+                            + (string.IsNullOrWhiteSpace(errorDetail) ? "." : $": {errorDetail}")
+                            + "\n\nCheck the agent's detail page in the UpdateWatch2 admin UI for details.",
+                        subjectDe: "UpdateWatch2: geplanter Neustart fehlgeschlagen",
+                        bodyDe: $"Der geplante Neustart für Agent \"{hostname}\" (Zeitplan \"{schedule.Name}\") ist fehlgeschlagen"
+                            + (string.IsNullOrWhiteSpace(errorDetail) ? "." : $": {errorDetail}")
+                            + "\n\nDetails findest du auf der Agent-Detailseite in der UpdateWatch2-Verwaltungsoberfläche.",
+                        auditAction: "schedule.run.reboot-failed.notified",
+                        ct);
+                }
             }
         }
 

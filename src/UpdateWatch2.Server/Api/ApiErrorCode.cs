@@ -119,4 +119,7 @@ public enum ApiErrorCode
     ScheduleIntervalStartDateRequired,
     /// <summary>Dynamic — <c>errorDetail</c> carries the unknown hostname(s).</summary>
     ScheduleUnknownAgents,
+    ScheduleCronExpressionRequired,
+    /// <summary>Dynamic — <c>errorDetail</c> carries Cronos' own parse-error message.</summary>
+    ScheduleCronExpressionInvalid,
 }

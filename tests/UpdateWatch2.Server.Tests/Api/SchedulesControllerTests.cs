@@ -60,10 +60,12 @@ public class SchedulesControllerTests : IClassFixture<WebApplicationFactory<Prog
         TimeOfDay: default,
         IntervalDays: null,
         IntervalStartDate: null,
+        CronExpression: null,
         ActionInstall: true,
         ActionReboot: false,
         RebootOnlyIfRequired: false,
         DeadlineHours: 4,
+        NotifyOnFailure: true,
         Hostnames: ["schedules-test-host"]);
 
     [Fact]

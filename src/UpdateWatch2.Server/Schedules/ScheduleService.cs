@@ -1,14 +1,23 @@
 using Microsoft.EntityFrameworkCore;
+using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Agents;
 using UpdateWatch2.Server.Api;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
+using UpdateWatch2.Server.Notifications;
 using UpdateWatch2.Server.Updates;
 
 namespace UpdateWatch2.Server.Schedules;
 
-public class ScheduleService(AppDbContext db, IUpdateService updateService, IAgentService agentService, IAuditLogService auditLog) : IScheduleService
+public class ScheduleService(
+    AppDbContext db,
+    IUpdateService updateService,
+    IAgentService agentService,
+    IAuditLogService auditLog,
+    IAdminSettingsStore settingsStore,
+    IEmailNotificationService email,
+    ILogger<ScheduleService> logger) : IScheduleService
 {
     public async Task<IReadOnlyList<ScheduleDto>> GetAllAsync(CancellationToken ct = default) =>
         (await db.Schedules.Include(s => s.Agents).OrderBy(s => s.Name).ToListAsync(ct))
@@ -246,8 +255,31 @@ public class ScheduleService(AppDbContext db, IUpdateService updateService, IAge
 
         foreach (var group in expired.GroupBy(ra => ra.ScheduleRunId))
         {
-            var scheduleName = group.First().ScheduleRun!.Schedule!.Name;
-            await auditLog.LogAsync("system", "schedule.run.missed", $"{scheduleName}: {group.Count()} agent action(s) expired", ct);
+            var schedule = group.First().ScheduleRun!.Schedule!;
+            var missedCount = group.Count(ra => ra.InstallStatus == ScheduleRunActionStatus.Missed || ra.RebootStatus == ScheduleRunActionStatus.Missed);
+            await auditLog.LogAsync("system", "schedule.run.missed", $"{schedule.Name}: {group.Count()} agent action(s) expired", ct);
+
+            // "Skipped" (the conditional-reboot-never-confirmed-necessary
+            // case) is an expected, benign outcome, not a failure — only a
+            // genuine Missed transition (an agent that never checked in in
+            // time) is worth emailing about, per NotifyOnFailure's own doc
+            // comment.
+            if (missedCount > 0)
+            {
+                await ScheduleFailureNotifier.NotifyAsync(
+                    settingsStore, email, auditLog, logger,
+                    schedule.Name, schedule.NotifyOnFailure,
+                    subject: "UpdateWatch2: scheduled action missed",
+                    body: $"{missedCount} agent action(s) for schedule \"{schedule.Name}\" were not delivered before "
+                        + "their deadline and have been marked as missed. Check the schedule's run history in the "
+                        + "UpdateWatch2 admin UI for details.",
+                    subjectDe: "UpdateWatch2: geplante Aktion verpasst",
+                    bodyDe: $"{missedCount} Agent-Aktion(en) für den Zeitplan \"{schedule.Name}\" wurden vor Ablauf der "
+                        + "Frist nicht zugestellt und wurden als verpasst markiert. Details findest du im Ausführungsverlauf "
+                        + "des Zeitplans in der UpdateWatch2-Verwaltungsoberfläche.",
+                    auditAction: "schedule.run.missed.notified",
+                    ct);
+            }
         }
     }
 
@@ -365,10 +397,12 @@ public class ScheduleService(AppDbContext db, IUpdateService updateService, IAge
         schedule.TimeOfDay = request.TimeOfDay;
         schedule.IntervalDays = request.IntervalDays;
         schedule.IntervalStartDate = request.IntervalStartDate;
+        schedule.CronExpression = request.CronExpression;
         schedule.ActionInstall = request.ActionInstall;
         schedule.ActionReboot = request.ActionReboot;
         schedule.RebootOnlyIfRequired = request.RebootOnlyIfRequired;
         schedule.DeadlineHours = request.DeadlineHours;
+        schedule.NotifyOnFailure = request.NotifyOnFailure;
 
         var newHostnames = request.Hostnames.ToHashSet();
         var existingHostnames = schedule.Agents.Select(a => a.Hostname).ToHashSet();
@@ -408,10 +442,12 @@ public class ScheduleService(AppDbContext db, IUpdateService updateService, IAge
         schedule.TimeOfDay,
         schedule.IntervalDays,
         schedule.IntervalStartDate,
+        schedule.CronExpression,
         schedule.ActionInstall,
         schedule.ActionReboot,
         schedule.RebootOnlyIfRequired,
         schedule.DeadlineHours,
+        schedule.NotifyOnFailure,
         schedule.NextRunAt,
         schedule.LastRunAt,
         schedule.Agents.Select(a => a.Hostname).OrderBy(h => h, StringComparer.OrdinalIgnoreCase).ToList());
@@ -448,6 +484,18 @@ public class ScheduleService(AppDbContext db, IUpdateService updateService, IAge
             if (onceAt <= DateTimeOffset.UtcNow)
             {
                 return (ApiErrorCode.ScheduleOnceAtInPast, "The date/time must be in the future.", null);
+            }
+        }
+        else if (request.ScheduleType == ScheduleType.Cron)
+        {
+            if (string.IsNullOrWhiteSpace(request.CronExpression))
+            {
+                return (ApiErrorCode.ScheduleCronExpressionRequired, "A cron expression is required.", null);
+            }
+
+            if (!ScheduleRecurrenceCalculator.TryParseCron(request.CronExpression, out _, out var cronError))
+            {
+                return (ApiErrorCode.ScheduleCronExpressionInvalid, "The cron expression could not be parsed.", cronError);
             }
         }
         else

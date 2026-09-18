@@ -1,13 +1,21 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using UpdateWatch2.Server.Admin;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Db.Entities;
+using UpdateWatch2.Server.Notifications;
+using UpdateWatch2.Server.Schedules;
 using UpdateWatch2.Server.UpdateFilters;
 
 namespace UpdateWatch2.Server.Updates;
 
-public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdateService
+public class UpdateService(
+    AppDbContext db,
+    IAuditLogService auditLog,
+    IAdminSettingsStore settingsStore,
+    IEmailNotificationService email,
+    ILogger<UpdateService> logger) : IUpdateService
 {
     public async Task<IReadOnlyList<UpdateItemDto>?> GetForAgentAsync(string hostname, CancellationToken ct = default)
     {
@@ -219,11 +227,31 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
         if (agent.PendingInstallScheduleRunId is { } scheduleRunId)
         {
             var runAgent = await db.ScheduleRunAgents
+                .Include(ra => ra.ScheduleRun!)
+                .ThenInclude(r => r.Schedule)
                 .SingleOrDefaultAsync(ra => ra.ScheduleRunId == scheduleRunId && ra.Hostname == hostname, ct);
             if (runAgent is not null)
             {
                 runAgent.InstallStatus = outcome == InstallOutcome.Succeeded ? ScheduleRunActionStatus.Delivered : ScheduleRunActionStatus.Failed;
                 runAgent.ErrorDetail = outcome == InstallOutcome.Failed ? errorDetail : null;
+
+                if (outcome == InstallOutcome.Failed)
+                {
+                    var schedule = runAgent.ScheduleRun!.Schedule!;
+                    await ScheduleFailureNotifier.NotifyAsync(
+                        settingsStore, email, auditLog, logger,
+                        schedule.Name, schedule.NotifyOnFailure,
+                        subject: "UpdateWatch2: scheduled install failed",
+                        body: $"The scheduled update install for agent \"{hostname}\" (schedule \"{schedule.Name}\") failed"
+                            + (string.IsNullOrWhiteSpace(errorDetail) ? "." : $": {errorDetail}")
+                            + "\n\nCheck the agent's detail page in the UpdateWatch2 admin UI for details.",
+                        subjectDe: "UpdateWatch2: geplante Installation fehlgeschlagen",
+                        bodyDe: $"Die geplante Update-Installation für Agent \"{hostname}\" (Zeitplan \"{schedule.Name}\") ist fehlgeschlagen"
+                            + (string.IsNullOrWhiteSpace(errorDetail) ? "." : $": {errorDetail}")
+                            + "\n\nDetails findest du auf der Agent-Detailseite in der UpdateWatch2-Verwaltungsoberfläche.",
+                        auditAction: "schedule.run.install-failed.notified",
+                        ct);
+                }
             }
         }
 
