@@ -67,6 +67,7 @@ public enum ApiErrorCode
     NotificationRecipientAddressInvalid,
     InstanceUrlInvalid,
     AgentOfflineThresholdMinutesInvalid,
+    TimeZoneIdInvalid,
 
     // AuthController
     TooManyFailedAttempts,

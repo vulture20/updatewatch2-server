@@ -44,7 +44,8 @@ public class AdminSettingsDiffFormatterTests
         AgentOfflineNotificationEnabled: true,
         AgentOnlineRecoveryNotificationEnabled: true,
         PreDownloadWindowsUpdatesEnabled: true,
-        PreDownloadLinuxUpdatesEnabled: true);
+        PreDownloadLinuxUpdatesEnabled: true,
+        TimeZoneId: "UTC");
 
     [Fact]
     public void Returns_null_when_nothing_changed()

@@ -49,4 +49,5 @@ public record UpdateAdminSettingsRequest(
     bool AgentOfflineNotificationEnabled = true,
     bool AgentOnlineRecoveryNotificationEnabled = true,
     bool PreDownloadWindowsUpdatesEnabled = true,
-    bool PreDownloadLinuxUpdatesEnabled = true);
+    bool PreDownloadLinuxUpdatesEnabled = true,
+    string TimeZoneId = "UTC");

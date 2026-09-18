@@ -126,5 +126,20 @@ public class AdminSettings
     /// <summary>See <see cref="Admin.IAdminSettingsStore.PreDownloadLinuxUpdatesEnabled"/>'s doc comment. Default true.</summary>
     public bool PreDownloadLinuxUpdatesEnabled { get; set; } = true;
 
+    /// <summary>
+    /// The IANA time zone ID (e.g. "Europe/Berlin") <see cref="Schedules.ScheduleRecurrenceCalculator"/>
+    /// uses for a Recurring/Cron schedule's bare time-of-day/cron
+    /// expression — see that class's own doc comment for the confusing
+    /// bug this setting replaced (relying on the server process's own OS
+    /// time zone, which defaults to UTC in a container unless a `TZ`
+    /// environment variable is set, easy to forget). Default "UTC" — the
+    /// same honest "not configured yet" default this codebase already uses
+    /// elsewhere (e.g. <see cref="NotificationRecipientAddress"/>) rather
+    /// than guessing at seed time, since the server process's own OS zone
+    /// at that moment is exactly the unreliable signal this setting exists
+    /// to stop depending on.
+    /// </summary>
+    public required string TimeZoneId { get; set; }
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

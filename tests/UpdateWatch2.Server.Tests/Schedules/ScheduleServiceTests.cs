@@ -217,6 +217,38 @@ public class ScheduleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_computes_a_recurring_schedules_NextRunAt_using_the_admin_configured_time_zone_not_UTC()
+    {
+        // Reproduces the exact bug this was fixed for: a Recurring
+        // schedule's bare TimeOfDay must be interpreted in the admin-
+        // configured AdminSettings.TimeZoneId, not the server process's
+        // own (often UTC-in-a-container) OS zone.
+        _settingsStore.TimeZoneId = "Europe/Berlin";
+        await AddAgentAsync("host-1");
+        var request = OnceRequest(["host-1"], DateTimeOffset.UtcNow) with
+        {
+            ScheduleType = ScheduleType.Recurring,
+            Pattern = SchedulePattern.IntervalDays,
+            IntervalDays = 1,
+            IntervalStartDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(-1)),
+            TimeOfDay = TimeSpan.FromHours(14),
+            OnceAt = null,
+        };
+
+        var result = await _service.CreateAsync(request, "admin");
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Schedule!.NextRunAt);
+        // 14:00 Europe/Berlin is 12:00 or 13:00 UTC depending on DST —
+        // never 14:00 UTC, which is what the old TimeZoneInfo.Local (UTC
+        // in this test's own process) bug would have produced instead.
+        var berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+        var inBerlin = TimeZoneInfo.ConvertTime(result.Schedule.NextRunAt.Value, berlin);
+        Assert.Equal(14, inBerlin.Hour);
+        Assert.NotEqual(14, result.Schedule.NextRunAt.Value.UtcDateTime.Hour);
+    }
+
+    [Fact]
     public async Task UpdateAsync_replaces_agent_membership()
     {
         await AddAgentAsync("host-1");

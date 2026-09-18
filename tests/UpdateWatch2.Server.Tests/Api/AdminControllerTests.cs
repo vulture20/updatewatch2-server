@@ -132,6 +132,24 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
+    public async Task Put_rejects_an_invalid_time_zone_id()
+    {
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { TimeZoneId = "Not/AZone" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Put_persists_a_valid_IANA_time_zone_id()
+    {
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { TimeZoneId = "Europe/Berlin" });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var settings = await _client.GetFromJsonAsync<AdminSettingsDto>("/api/admin/settings");
+        Assert.Equal("Europe/Berlin", settings!.TimeZoneId);
+    }
+
+    [Fact]
     public async Task Put_rejects_a_zero_agent_auto_update_check_interval()
     {
         var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AgentAutoUpdateCheckIntervalHours = 0 });

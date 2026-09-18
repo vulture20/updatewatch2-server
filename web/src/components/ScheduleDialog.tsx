@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { agentsApi } from '../api/endpoints';
+import { adminApi, agentsApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import type { AgentListItem, Schedule, SchedulePattern, ScheduleType, UpsertSchedule, WeekdayName } from '../api/types';
 
@@ -40,6 +40,7 @@ export function ScheduleDialog({
   const { t } = useTranslation();
   const [agents, setAgents] = useState<AgentListItem[] | null>(null);
   const [agentSearch, setAgentSearch] = useState('');
+  const [timeZoneId, setTimeZoneId] = useState<string | null>(null);
 
   const [name, setName] = useState(schedule?.name ?? '');
   const [enabled, setEnabled] = useState(schedule?.enabled ?? true);
@@ -63,6 +64,13 @@ export function ScheduleDialog({
 
   useEffect(() => {
     agentsApi.list().then(setAgents).catch(() => setAgents([]));
+  }, []);
+
+  useEffect(() => {
+    // Shown next to the time-of-day/cron fields below so an admin can see
+    // up front what "14:00" actually means, rather than only discovering
+    // it later from a next-run time that doesn't match what they typed.
+    adminApi.getSettings().then((settings) => setTimeZoneId(settings.timeZoneId)).catch(() => setTimeZoneId(null));
   }, []);
 
   useEffect(() => {
@@ -217,6 +225,7 @@ export function ScheduleDialog({
               placeholder="0 3 * * *"
             />
             <p className="field-hint">{t('schedules.dialog.cronExpressionHint')}</p>
+            {timeZoneId && <p className="field-hint">{t('schedules.dialog.timeZoneHint', { timeZone: timeZoneId })}</p>}
           </label>
         ) : (
           <>
@@ -258,6 +267,7 @@ export function ScheduleDialog({
             <label>
               {t('schedules.dialog.timeOfDay')}
               <input type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} />
+              {timeZoneId && <p className="field-hint">{t('schedules.dialog.timeZoneHint', { timeZone: timeZoneId })}</p>}
             </label>
           </>
         )}

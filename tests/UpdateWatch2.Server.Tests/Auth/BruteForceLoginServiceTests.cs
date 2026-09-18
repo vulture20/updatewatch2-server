@@ -86,6 +86,8 @@ public class BruteForceLoginServiceTests
         public bool PreDownloadWindowsUpdatesEnabled => throw new NotSupportedException();
         public bool PreDownloadLinuxUpdatesEnabled => throw new NotSupportedException();
 
+        public string TimeZoneId => throw new NotSupportedException();
+
         public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
         public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>

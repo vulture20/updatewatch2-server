@@ -5,13 +5,19 @@ namespace UpdateWatch2.Server.Tests.Schedules;
 
 public class ScheduleRecurrenceCalculatorTests
 {
+    // A fixed, no-DST offset distinct from both UTC and whatever the CI
+    // machine's own local time zone happens to be — using this (rather
+    // than TimeZoneInfo.Local, as this file used to) is what actually
+    // proves ComputeNextRunAt honors the PARAMETER, not the machine.
+    private static readonly TimeZoneInfo FixedPlusFive = TimeZoneInfo.CreateCustomTimeZone("Fixed+05:00", TimeSpan.FromHours(5), "Fixed+05:00", "Fixed+05:00");
+
     [Fact]
     public void ComputeNextRunAt_for_a_future_Once_schedule_returns_its_own_date()
     {
         var onceAt = DateTimeOffset.UtcNow.AddDays(3);
         var schedule = new Schedule { Name = "once", ScheduleType = ScheduleType.Once, OnceAt = onceAt };
 
-        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow);
+        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow, TimeZoneInfo.Utc);
 
         Assert.Equal(onceAt, next);
     }
@@ -22,7 +28,7 @@ public class ScheduleRecurrenceCalculatorTests
         var onceAt = DateTimeOffset.UtcNow.AddDays(-1);
         var schedule = new Schedule { Name = "once", ScheduleType = ScheduleType.Once, OnceAt = onceAt };
 
-        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow);
+        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow, TimeZoneInfo.Utc);
 
         Assert.Null(next);
     }
@@ -30,8 +36,9 @@ public class ScheduleRecurrenceCalculatorTests
     [Fact]
     public void ComputeNextRunAt_for_Weekly_picks_the_earliest_matching_weekday_at_or_after_now()
     {
-        // A Wednesday, well clear of any DST boundary.
-        var wednesday = new DateTimeOffset(2026, 3, 4, 12, 0, 0, TimeSpan.Zero).ToLocalTime();
+        // A Wednesday, well clear of any DST boundary, expressed directly
+        // in FixedPlusFive's own offset.
+        var wednesday = new DateTimeOffset(2026, 3, 4, 12, 0, 0, TimeSpan.FromHours(5));
         var schedule = new Schedule
         {
             Name = "weekly",
@@ -41,17 +48,15 @@ public class ScheduleRecurrenceCalculatorTests
             TimeOfDay = TimeSpan.FromHours(14),
         };
 
-        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, wednesday);
+        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, wednesday, FixedPlusFive);
 
-        Assert.NotNull(next);
-        Assert.Equal(DayOfWeek.Friday, next!.Value.ToLocalTime().DayOfWeek);
-        Assert.Equal(TimeSpan.FromHours(14), next.Value.ToLocalTime().TimeOfDay);
+        Assert.Equal(new DateTimeOffset(2026, 3, 6, 14, 0, 0, TimeSpan.FromHours(5)), next);
     }
 
     [Fact]
     public void ComputeNextRunAt_for_Weekly_wraps_to_next_week_once_todays_time_has_passed()
     {
-        var mondayEvening = new DateTimeOffset(2026, 3, 2, 20, 0, 0, TimeSpan.Zero).ToLocalTime();
+        var mondayEvening = new DateTimeOffset(2026, 3, 2, 20, 0, 0, TimeSpan.FromHours(5));
         var schedule = new Schedule
         {
             Name = "weekly",
@@ -61,18 +66,15 @@ public class ScheduleRecurrenceCalculatorTests
             TimeOfDay = TimeSpan.FromHours(9),
         };
 
-        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, mondayEvening);
+        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, mondayEvening, FixedPlusFive);
 
-        Assert.NotNull(next);
-        Assert.Equal(DayOfWeek.Monday, next!.Value.ToLocalTime().DayOfWeek);
-        Assert.True(next.Value > mondayEvening);
-        Assert.Equal(7, (next.Value.ToLocalTime().Date - mondayEvening.ToLocalTime().Date).Days);
+        Assert.Equal(new DateTimeOffset(2026, 3, 9, 9, 0, 0, TimeSpan.FromHours(5)), next);
     }
 
     [Fact]
     public void ComputeNextRunAt_for_IntervalDays_returns_the_start_date_when_it_is_still_in_the_future()
     {
-        var start = DateOnly.FromDateTime(DateTime.Today.AddDays(5));
+        var start = new DateOnly(2026, 3, 10);
         var schedule = new Schedule
         {
             Name = "interval",
@@ -82,16 +84,17 @@ public class ScheduleRecurrenceCalculatorTests
             IntervalStartDate = start,
             TimeOfDay = TimeSpan.FromHours(2),
         };
+        var after = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.FromHours(5));
 
-        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow);
+        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, after, FixedPlusFive);
 
-        Assert.Equal(start, DateOnly.FromDateTime(next!.Value.ToLocalTime().Date));
+        Assert.Equal(new DateTimeOffset(2026, 3, 10, 2, 0, 0, TimeSpan.FromHours(5)), next);
     }
 
     [Fact]
     public void ComputeNextRunAt_for_IntervalDays_advances_by_whole_multiples_of_the_interval()
     {
-        var start = DateOnly.FromDateTime(DateTime.Today.AddDays(-10));
+        var start = new DateOnly(2026, 2, 1);
         var schedule = new Schedule
         {
             Name = "interval",
@@ -101,13 +104,14 @@ public class ScheduleRecurrenceCalculatorTests
             IntervalStartDate = start,
             TimeOfDay = TimeSpan.FromHours(2),
         };
+        var after = new DateTimeOffset(2026, 2, 11, 0, 0, 0, TimeSpan.FromHours(5));
 
-        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow);
+        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, after, FixedPlusFive);
 
         Assert.NotNull(next);
-        var daysSinceStart = DateOnly.FromDateTime(next!.Value.ToLocalTime().Date).DayNumber - start.DayNumber;
-        Assert.Equal(0, daysSinceStart % 3);
-        Assert.True(next.Value >= DateTimeOffset.UtcNow);
+        var nextDateInZone = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(next!.Value, FixedPlusFive).Date);
+        Assert.Equal(0, (nextDateInZone.DayNumber - start.DayNumber) % 3);
+        Assert.True(next.Value >= after);
     }
 
     [Fact]
@@ -122,23 +126,49 @@ public class ScheduleRecurrenceCalculatorTests
             TimeOfDay = TimeSpan.FromHours(1),
         };
 
-        Assert.Null(ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow));
+        Assert.Null(ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow, TimeZoneInfo.Utc));
     }
 
     [Fact]
     public void ComputeNextRunAt_for_Cron_returns_the_next_matching_minute()
     {
-        // Fixed minute boundary, well clear of any DST edge case.
-        var after = new DateTimeOffset(2026, 3, 4, 10, 15, 30, TimeSpan.Zero).ToLocalTime();
+        var after = new DateTimeOffset(2026, 3, 4, 10, 15, 30, TimeSpan.FromHours(5));
         var schedule = new Schedule { Name = "cron", ScheduleType = ScheduleType.Cron, CronExpression = "30 4 * * *" };
 
-        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, after);
+        var next = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, after, FixedPlusFive);
 
         Assert.NotNull(next);
-        var local = next!.Value.ToLocalTime();
-        Assert.Equal(4, local.Hour);
-        Assert.Equal(30, local.Minute);
+        var inZone = TimeZoneInfo.ConvertTime(next!.Value, FixedPlusFive);
+        Assert.Equal(4, inZone.Hour);
+        Assert.Equal(30, inZone.Minute);
         Assert.True(next.Value >= after);
+    }
+
+    [Fact]
+    public void ComputeNextRunAt_for_Cron_uses_the_given_time_zone_and_honors_its_own_DST_rules()
+    {
+        // Reproduces the exact real-world bug this feature fixed: a
+        // Recurring/Cron schedule's wall-clock time must resolve to a
+        // DIFFERENT UTC instant across a DST boundary for the SAME
+        // configured time zone — using TimeZoneInfo.Local (the server
+        // process's own, often-UTC-in-a-container OS zone) instead of an
+        // explicit admin-configured one, as this class used to, could
+        // never do this correctly for an admin in a real DST-observing
+        // zone like Europe/Berlin.
+        var berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+        var schedule = new Schedule { Name = "cron", ScheduleType = ScheduleType.Cron, CronExpression = "30 4 * * *" };
+
+        // Winter: CET is UTC+1, so 04:30 Berlin time is 03:30 UTC.
+        var winterAfter = new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero);
+        var winterNext = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, winterAfter, berlin);
+        Assert.Equal(new DateTimeOffset(2026, 1, 10, 3, 30, 0, TimeSpan.Zero), winterNext);
+
+        // Summer: CEST is UTC+2, so the identical 04:30 Berlin-time
+        // schedule is 02:30 UTC instead — a different UTC instant for the
+        // same wall-clock rule.
+        var summerAfter = new DateTimeOffset(2026, 7, 10, 0, 0, 0, TimeSpan.Zero);
+        var summerNext = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, summerAfter, berlin);
+        Assert.Equal(new DateTimeOffset(2026, 7, 10, 2, 30, 0, TimeSpan.Zero), summerNext);
     }
 
     [Fact]
@@ -146,7 +176,7 @@ public class ScheduleRecurrenceCalculatorTests
     {
         var schedule = new Schedule { Name = "broken-cron", ScheduleType = ScheduleType.Cron, CronExpression = "not a cron expression" };
 
-        Assert.Null(ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow));
+        Assert.Null(ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow, TimeZoneInfo.Utc));
     }
 
     [Fact]
@@ -154,7 +184,7 @@ public class ScheduleRecurrenceCalculatorTests
     {
         var schedule = new Schedule { Name = "empty-cron", ScheduleType = ScheduleType.Cron, CronExpression = null };
 
-        Assert.Null(ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow));
+        Assert.Null(ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow, TimeZoneInfo.Utc));
     }
 
     [Fact]

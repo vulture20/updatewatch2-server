@@ -2,8 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { agentsApi, schedulesApi } from '../api/endpoints';
-import type { AgentListItem, Schedule } from '../api/types';
+import { adminApi, agentsApi, schedulesApi } from '../api/endpoints';
+import type { AdminSettings, AgentListItem, Schedule } from '../api/types';
 import { SchedulesListPage } from './SchedulesListPage';
 
 vi.mock('../api/endpoints', () => ({
@@ -18,6 +18,9 @@ vi.mock('../api/endpoints', () => ({
   agentsApi: {
     list: vi.fn(),
   },
+  adminApi: {
+    getSettings: vi.fn(),
+  },
 }));
 
 const mockedList = vi.mocked(schedulesApi.list);
@@ -25,6 +28,7 @@ const mockedCreate = vi.mocked(schedulesApi.create);
 const mockedDelete = vi.mocked(schedulesApi.delete);
 const mockedRunNow = vi.mocked(schedulesApi.runNow);
 const mockedAgentsList = vi.mocked(agentsApi.list);
+const mockedGetSettings = vi.mocked(adminApi.getSettings);
 
 function makeSchedule(overrides: Partial<Schedule> & { id: number; name: string }): Schedule {
   return {
@@ -82,6 +86,11 @@ describe('SchedulesListPage', () => {
     mockedDelete.mockReset();
     mockedRunNow.mockReset();
     mockedAgentsList.mockReset();
+    mockedGetSettings.mockReset();
+    // ScheduleDialog fetches this once on open to show the configured
+    // time zone next to the time-of-day/cron fields — a fixed default
+    // here since most tests don't care about its exact value.
+    mockedGetSettings.mockResolvedValue({ timeZoneId: 'UTC' } as AdminSettings);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
@@ -112,6 +121,23 @@ describe('SchedulesListPage', () => {
 
     expect(await screen.findByText('host-1')).toBeInTheDocument();
     expect(screen.getByText('host-2')).toBeInTheDocument();
+  });
+
+  it('shows the admin-configured time zone next to the recurring time-of-day field', async () => {
+    mockedList.mockResolvedValue([]);
+    mockedAgentsList.mockResolvedValue([makeAgent('host-1')]);
+    mockedGetSettings.mockResolvedValue({ timeZoneId: 'Europe/Berlin' } as AdminSettings);
+
+    renderPage();
+    await screen.findByText(/no schedules yet/i);
+    await userEvent.setup().click(screen.getByRole('button', { name: /new schedule/i }));
+
+    // Default schedule type is 'Once' (no time-of-day field shown yet) —
+    // "Wiederkehrend"/"Recurring" is the second radio, matching
+    // ScheduleDialog's own fixed ordering.
+    await userEvent.setup().click(screen.getByRole('radio', { name: /recurring|wiederkehrend/i }));
+
+    expect(await screen.findByText(/Europe\/Berlin/)).toBeInTheDocument();
   });
 
   it('select-all-visible only checks agents matching the current search filter', async () => {

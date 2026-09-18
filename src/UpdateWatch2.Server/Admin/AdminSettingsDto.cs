@@ -45,4 +45,6 @@ public record AdminSettingsDto(
     bool AgentOfflineNotificationEnabled,
     bool AgentOnlineRecoveryNotificationEnabled,
     bool PreDownloadWindowsUpdatesEnabled,
-    bool PreDownloadLinuxUpdatesEnabled);
+    bool PreDownloadLinuxUpdatesEnabled,
+    /// <summary>See <see cref="Db.Entities.AdminSettings.TimeZoneId"/>'s doc comment. Default "UTC".</summary>
+    string TimeZoneId);

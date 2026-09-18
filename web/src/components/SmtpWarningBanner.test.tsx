@@ -77,6 +77,7 @@ const baseSettings = {
   agentOnlineRecoveryNotificationEnabled: true,
   preDownloadWindowsUpdatesEnabled: true,
   preDownloadLinuxUpdatesEnabled: true,
+  timeZoneId: 'UTC',
 };
 
 // Renders both siblings the way App.tsx actually does — SmtpWarningBanner

@@ -47,6 +47,8 @@ public class FakeAdminSettingsStore(
     public bool PreDownloadWindowsUpdatesEnabled { get; set; } = true;
     public bool PreDownloadLinuxUpdatesEnabled { get; set; } = true;
 
+    public string TimeZoneId { get; set; } = "UTC";
+
     public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
     public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>

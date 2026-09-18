@@ -8,6 +8,17 @@ import { AuditLogTab } from '../components/AuditLogTab';
 import type { AdEncryption, AdminSettings, AgentUpdateStatus, CaRotationStatus, SmtpEncryption, UpdateFilter, VersionInfo } from '../api/types';
 
 const LOG_LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR'] as const;
+// Intl.supportedValuesOf('timeZone') isn't implemented in every browser
+// (Safari added it later than Chrome/Firefox) — falls back to just UTC
+// rather than throwing, since the <select> below always also includes
+// whatever is currently saved even if it's missing from this list.
+const TIME_ZONES: string[] = (() => {
+  try {
+    return Intl.supportedValuesOf('timeZone');
+  } catch {
+    return ['UTC'];
+  }
+})();
 const SMTP_ENCRYPTIONS: SmtpEncryption[] = ['None', 'StartTls', 'SslTls'];
 const AD_ENCRYPTIONS: AdEncryption[] = ['None', 'StartTls', 'Ldaps'];
 // Matches AdminController's server-side ValidAuditLogRetentionDays exactly —
@@ -300,6 +311,27 @@ export function AdminPage() {
               </select>
             </label>
             <p className="field-hint">{t('admin.logLevelHint')}</p>
+          </div>
+
+          <div className="card">
+            <span className="card-kicker">{t('admin.timeZone.title')}</span>
+            <label>
+              {t('admin.timeZone.label')}
+              <select value={form.timeZoneId} onChange={(e) => update('timeZoneId', e.target.value)}>
+                {(TIME_ZONES.includes(form.timeZoneId) ? TIME_ZONES : [form.timeZoneId, ...TIME_ZONES]).map((tz) => (
+                  <option key={tz} value={tz}>
+                    {tz}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => update('timeZoneId', Intl.DateTimeFormat().resolvedOptions().timeZone)}
+            >
+              {t('admin.timeZone.useBrowser')}
+            </button>
+            <p className="field-hint">{t('admin.timeZone.hint')}</p>
           </div>
 
           <div className="card">

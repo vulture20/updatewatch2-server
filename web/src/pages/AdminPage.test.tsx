@@ -128,6 +128,7 @@ const baseSettings = {
   agentOnlineRecoveryNotificationEnabled: true,
   preDownloadWindowsUpdatesEnabled: true,
   preDownloadLinuxUpdatesEnabled: true,
+  timeZoneId: 'UTC',
 };
 
 describe('AdminPage', () => {
@@ -591,6 +592,45 @@ describe('AdminPage', () => {
     expect(mockedUpdateSettings).toHaveBeenCalledWith(
       expect.objectContaining({ instanceUrl: 'https://updatewatch2.example.com' }),
     );
+  });
+
+  it('submits an edited time zone', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, timeZoneId: 'Europe/Berlin' });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.selectOptions(screen.getByLabelText('Time zone'), 'Europe/Berlin');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ timeZoneId: 'Europe/Berlin' }));
+  });
+
+  it('fills the time zone field from the browser\'s own detected zone', async () => {
+    const user = userEvent.setup();
+    const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+    Intl.DateTimeFormat.prototype.resolvedOptions = () => ({ timeZone: 'Europe/Berlin' }) as Intl.ResolvedDateTimeFormatOptions;
+
+    try {
+      render(
+        <MemoryRouter>
+          <AdminPage />
+        </MemoryRouter>,
+      );
+      await screen.findByLabelText('SMTP host');
+
+      await user.click(screen.getByRole('button', { name: "Use browser's time zone" }));
+
+      expect(screen.getByLabelText('Time zone')).toHaveValue('Europe/Berlin');
+    } finally {
+      Intl.DateTimeFormat.prototype.resolvedOptions = originalResolvedOptions;
+    }
   });
 
   it('turns certificate expiry notifications off and submits the change', async () => {

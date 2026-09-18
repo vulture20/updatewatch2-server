@@ -80,6 +80,9 @@ public interface IAdminSettingsStore
     /// </summary>
     bool PreDownloadLinuxUpdatesEnabled { get; }
 
+    /// <summary>See <see cref="Db.Entities.AdminSettings.TimeZoneId"/>'s doc comment. Default "UTC".</summary>
+    string TimeZoneId { get; }
+
     /// <summary>Loads the persisted row into the cache, seeding one from appsettings.json's defaults if none exists yet. Call once at startup.</summary>
     Task InitializeAsync(CancellationToken ct = default);
 

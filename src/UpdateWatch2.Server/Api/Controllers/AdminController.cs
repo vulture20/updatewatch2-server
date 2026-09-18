@@ -182,6 +182,20 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
             errors.Add(new ApiErrorItem(ApiErrorCode.AgentOfflineThresholdMinutesInvalid, "AgentOfflineThresholdMinutes must be between 1 and 1440."));
         }
 
+        // Validated the same way ScheduleRecurrenceCalculator itself will
+        // eventually resolve it (TimeZoneInfo.FindSystemTimeZoneById) so a
+        // value that passes here is guaranteed to actually work later —
+        // .NET on Linux resolves IANA IDs directly (no Windows-ID mapping
+        // needed, since this project only ever runs the server on Linux).
+        try
+        {
+            TimeZoneInfo.FindSystemTimeZoneById(request.TimeZoneId);
+        }
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            errors.Add(new ApiErrorItem(ApiErrorCode.TimeZoneIdInvalid, "TimeZoneId must be a valid IANA time zone identifier (e.g. \"Europe/Berlin\")."));
+        }
+
         return errors;
     }
 }

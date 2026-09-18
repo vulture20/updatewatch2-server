@@ -12,6 +12,21 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.6.0] - 2026-09-19
+
+### Fixed
+
+- **Recurring/Cron schedules could silently fire at the wrong wall-clock time, inconsistently by season — reported by the user directly ("Die Zeitpläne werden mit CEST, aber später mit lokaler Zeit angezeigt. Das ist ziemlich verwirrend. Die eingestellte Zeit soll bitte ebenfalls als lokale Zeit behandelt werden.").** Root cause, confirmed by inspecting the actual running container before writing any code: `ScheduleRecurrenceCalculator` interpreted a Recurring/Cron schedule's bare time-of-day using `TimeZoneInfo.Local` — the server *process's own OS time zone*, which is UTC by default in a Docker container unless an admin explicitly sets a `TZ` environment variable (confirmed the real container in question was in fact running UTC while its host was CEST/UTC+2). A `Once` schedule was never affected, since its date/time is already converted to an unambiguous UTC instant in the browser before being sent; only `Recurring`/`Cron`, whose wall-clock time carries no time zone of its own, silently drifted from what was actually typed by a DST-dependent amount (2h in summer, 1h in winter for a Europe/Berlin admin against a UTC container) — the drift itself changing with the seasons is exactly what made this look like "sometimes CEST, sometimes local time" rather than a simple, obviously-wrong offset.
+  - Asked directly how to fix it — a container `TZ` env var (zero code, but easy to forget, which is exactly what had happened) versus a real admin-configurable setting — the user chose the latter.
+  - New `AdminSettings.TimeZoneId` (Settings → General, default "UTC", validated as a real IANA time zone identifier via `TimeZoneInfo.FindSystemTimeZoneById`) replaces `TimeZoneInfo.Local` throughout `ScheduleRecurrenceCalculator`, which now takes a `TimeZoneInfo` parameter instead of reading the OS zone implicitly — resolved once per call by a new `ScheduleService.ResolveTimeZone()` (falling back to UTC if the stored value somehow doesn't resolve on this machine). DB schema bumped to `1.2.2`.
+  - The admin UI's new "Zeitzone"/"Time zone" card has a plain `<select>` populated via `Intl.supportedValuesOf('timeZone')` plus a "Use browser's time zone" convenience button (`Intl.DateTimeFormat().resolvedOptions().timeZone`) that fills the field with the browser's own detected zone — the exact value an admin actually wants in the overwhelmingly common case where they're configuring this from their own machine.
+  - `ScheduleDialog`'s time-of-day and cron-expression fields now show a live hint naming the currently configured zone (fetched once on open via the existing `GET /api/admin/settings`), so an admin sees up front what "14:00" actually means instead of only discovering a mismatch later from an unexpected next-run time.
+  - Live-verified end to end against a real isolated server instance with its OS time zone deliberately forced to UTC (reproducing the exact reported bug): confirmed the default `TimeZoneId` is "UTC", set it to "Europe/Berlin" via the real UI and confirmed it persisted, then created a real Recurring schedule for "14:00" and confirmed via the real API that its computed `NextRunAt` was `...T14:00:00+02:00` (correct Berlin/CEST offset) — never `14:00Z`, which is what the old bug would have produced from a UTC-zoned container.
+
+### Added
+
+- **`ScheduleRecurrenceCalculator` unit tests were rewritten to actually prove time-zone correctness, not just "does it work when the parameter happens to be UTC."** Every Weekly/IntervalDays test now uses a fixed, no-DST custom `TimeZoneInfo` distinct from both UTC and the test machine's own local zone, and a new dedicated Cron test exercises a real `Europe/Berlin` `TimeZoneInfo` across both a winter and a summer date, asserting the identical wall-clock schedule ("04:30 daily") resolves to two different UTC instants (03:30 UTC in winter/CET, 02:30 UTC in summer/CEST) — the exact DST-awareness this whole fix depends on.
+
 ## [1.5.1] - 2026-09-19
 
 ### Added

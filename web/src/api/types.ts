@@ -273,6 +273,8 @@ export interface AdminSettings {
   preDownloadWindowsUpdatesEnabled: boolean;
   /** Same idea as preDownloadWindowsUpdatesEnabled, for a Linux agent's apt/dnf package manager — a genuinely independent toggle, not derived from the Windows one. Default true. */
   preDownloadLinuxUpdatesEnabled: boolean;
+  /** IANA time zone ID (e.g. "Europe/Berlin") used to interpret a Recurring/Cron schedule's bare time-of-day/cron expression. Default "UTC". */
+  timeZoneId: string;
 }
 
 /**

@@ -39,7 +39,7 @@ public class ScheduleService(
         }
 
         var schedule = new Schedule { Name = request.Name };
-        ApplyRequest(schedule, request);
+        ApplyRequest(schedule, request, ResolveTimeZone());
 
         db.Schedules.Add(schedule);
         await db.SaveChangesAsync(ct);
@@ -62,7 +62,7 @@ public class ScheduleService(
             return ScheduleResult.Failed(validationError.Value.Message, validationError.Value.Code, validationError.Value.Detail);
         }
 
-        ApplyRequest(schedule, request);
+        ApplyRequest(schedule, request, ResolveTimeZone());
         schedule.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -164,12 +164,13 @@ public class ScheduleService(
             ? []
             : await db.Schedules.Include(s => s.Agents).Where(s => dueIds.Contains(s.Id)).ToListAsync(ct);
 
+        var timeZone = ResolveTimeZone();
         foreach (var schedule in due)
         {
             await FireAsync(schedule, now, "system", ct);
             // Strictly after "now" so the occurrence just fired is never
             // re-selected as its own "next" run.
-            schedule.NextRunAt = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, now.AddSeconds(1));
+            schedule.NextRunAt = ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, now.AddSeconds(1), timeZone);
         }
 
         if (due.Count > 0)
@@ -384,7 +385,7 @@ public class ScheduleService(
             ct);
     }
 
-    private static void ApplyRequest(Schedule schedule, UpsertScheduleRequest request)
+    private static void ApplyRequest(Schedule schedule, UpsertScheduleRequest request, TimeZoneInfo timeZone)
     {
         schedule.Name = request.Name;
         schedule.Enabled = request.Enabled;
@@ -419,7 +420,29 @@ public class ScheduleService(
         // editing its date effectively restarts it, the expected result
         // of "I changed the date". Null while disabled — see
         // Schedule.NextRunAt's own doc comment.
-        schedule.NextRunAt = schedule.Enabled ? ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow) : null;
+        schedule.NextRunAt = schedule.Enabled ? ScheduleRecurrenceCalculator.ComputeNextRunAt(schedule, DateTimeOffset.UtcNow, timeZone) : null;
+    }
+
+    /// <summary>
+    /// Resolves the admin-configured <see cref="IAdminSettingsStore.TimeZoneId"/>
+    /// to a real <see cref="TimeZoneInfo"/> — falls back to UTC on a value
+    /// that doesn't resolve on this machine (should only happen for a
+    /// value stored before it was ever validated, or a server migrated to
+    /// a host with a different/incomplete tzdata install), the same
+    /// "errs toward a safe, unsurprising default" discipline
+    /// <see cref="AgentUpdates.AgentVersionComparer"/> already follows.
+    /// </summary>
+    private TimeZoneInfo ResolveTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(settingsStore.TimeZoneId);
+        }
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            logger.LogWarning(ex, "Configured TimeZoneId {TimeZoneId} could not be resolved — falling back to UTC.", settingsStore.TimeZoneId);
+            return TimeZoneInfo.Utc;
+        }
     }
 
     private static ScheduleStatus ComputeStatus(Schedule schedule) => !schedule.Enabled

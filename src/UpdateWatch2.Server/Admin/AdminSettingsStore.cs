@@ -35,6 +35,7 @@ public class AdminSettingsStore(
     private int _auditLogRetentionDays = DefaultAuditLogRetentionDays;
     private bool _preDownloadWindowsUpdatesEnabled = true;
     private bool _preDownloadLinuxUpdatesEnabled = true;
+    private string _timeZoneId = "UTC";
 
     private const int DefaultAuditLogRetentionDays = 90;
 
@@ -91,6 +92,11 @@ public class AdminSettingsStore(
     public bool PreDownloadLinuxUpdatesEnabled
     {
         get { lock (_lock) return _preDownloadLinuxUpdatesEnabled; }
+    }
+
+    public string TimeZoneId
+    {
+        get { lock (_lock) return _timeZoneId; }
     }
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -168,6 +174,7 @@ public class AdminSettingsStore(
         row.AgentOnlineRecoveryNotificationEnabled = request.AgentOnlineRecoveryNotificationEnabled;
         row.PreDownloadWindowsUpdatesEnabled = request.PreDownloadWindowsUpdatesEnabled;
         row.PreDownloadLinuxUpdatesEnabled = request.PreDownloadLinuxUpdatesEnabled;
+        row.TimeZoneId = request.TimeZoneId;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -220,7 +227,8 @@ public class AdminSettingsStore(
                 _agentOffline.OfflineNotificationEnabled,
                 _agentOffline.OnlineRecoveryNotificationEnabled,
                 _preDownloadWindowsUpdatesEnabled,
-                _preDownloadLinuxUpdatesEnabled);
+                _preDownloadLinuxUpdatesEnabled,
+                _timeZoneId);
         }
     }
 
@@ -268,6 +276,7 @@ public class AdminSettingsStore(
         AgentOnlineRecoveryNotificationEnabled = defaultAgentOffline.Value.OnlineRecoveryNotificationEnabled,
         PreDownloadWindowsUpdatesEnabled = true,
         PreDownloadLinuxUpdatesEnabled = true,
+        TimeZoneId = "UTC",
     };
 
     private void Apply(AdminSettings row)
@@ -341,6 +350,7 @@ public class AdminSettingsStore(
             _auditLogRetentionDays = row.AuditLogRetentionDays;
             _preDownloadWindowsUpdatesEnabled = row.PreDownloadWindowsUpdatesEnabled;
             _preDownloadLinuxUpdatesEnabled = row.PreDownloadLinuxUpdatesEnabled;
+            _timeZoneId = row.TimeZoneId;
         }
 
         // Pushes the change to the ACTUAL running logger, not just this
