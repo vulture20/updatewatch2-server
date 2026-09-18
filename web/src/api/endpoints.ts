@@ -16,11 +16,14 @@ import type {
   LoginResponse,
   MeResponse,
   ReissueCertificateResult,
+  Schedule,
+  ScheduleRun,
   SmtpHealthStatus,
   UpdateAdminSettings,
   UpdateAgentSettings,
   UpdateFilter,
   UpdateItem,
+  UpsertSchedule,
   UpsertUpdateFilter,
   VersionInfo,
 } from './types';
@@ -147,6 +150,17 @@ export const certificateRejectionsApi = {
   // status, same "return the freshly recomputed state" shape as
   // agentUpdatesApi.checkNow.
   acknowledge: () => apiClient.post<CertificateRejectionStatus>('/api/admin/certificate-rejections/acknowledge'),
+};
+
+/** Scheduled maintenance windows (install/reboot for a fixed group of agents) — see SchedulesController. */
+export const schedulesApi = {
+  list: () => apiClient.get<Schedule[]>('/api/schedules'),
+  get: (id: number) => apiClient.get<Schedule>(`/api/schedules/${id}`),
+  create: (schedule: UpsertSchedule) => apiClient.post<Schedule>('/api/schedules', schedule),
+  update: (id: number, schedule: UpsertSchedule) => apiClient.put<Schedule>(`/api/schedules/${id}`, schedule),
+  delete: (id: number) => apiClient.delete<void>(`/api/schedules/${id}`),
+  runNow: (id: number) => apiClient.post<void>(`/api/schedules/${id}/run-now`),
+  getRuns: (id: number) => apiClient.get<ScheduleRun[]>(`/api/schedules/${id}/runs`),
 };
 
 /** Read-only, paginated audit log — see AuditLogController. */

@@ -105,4 +105,18 @@ public enum ApiErrorCode
     // CertificateAuthorityController
     NoRotationPendingToActivate,
     NoPreviousRootToRetire,
+
+    // SchedulesController / Schedules.ScheduleService.ValidateAsync
+    ScheduleNameRequired,
+    ScheduleAgentsRequired,
+    ScheduleActionRequired,
+    ScheduleDeadlineHoursInvalid,
+    ScheduleOnceAtRequired,
+    ScheduleOnceAtInPast,
+    SchedulePatternRequired,
+    ScheduleWeeklyDaysRequired,
+    ScheduleIntervalDaysInvalid,
+    ScheduleIntervalStartDateRequired,
+    /// <summary>Dynamic — <c>errorDetail</c> carries the unknown hostname(s).</summary>
+    ScheduleUnknownAgents,
 }

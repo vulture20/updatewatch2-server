@@ -37,8 +37,15 @@ public interface IUpdateService
     /// mechanism this reuses. Always installs everything pending per agent;
     /// there is no cross-agent equivalent of that method's <c>updateItemIds</c>
     /// selection (see <see cref="BulkInstallRequest"/>'s doc comment for why).
+    /// <paramref name="scheduleRunId"/> is additive (updatewatch2-server#25):
+    /// when set (a <see cref="Schedules.ScheduleWorker"/>-driven call, never
+    /// an admin-facing one), it's recorded on
+    /// <see cref="Db.Entities.Agent.PendingInstallScheduleRunId"/> alongside
+    /// the trigger, which is what makes this specific pending request
+    /// subject to that schedule run's deadline-expiry sweep rather than
+    /// staying pending indefinitely like an ordinary manual trigger.
     /// </summary>
-    Task<BulkInstallResult> TriggerInstallManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, CancellationToken ct = default);
+    Task<BulkInstallResult> TriggerInstallManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, int? scheduleRunId = null, CancellationToken ct = default);
 
     /// <summary>
     /// The agent's acknowledgement that it acted on a pending install

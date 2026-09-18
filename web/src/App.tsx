@@ -12,6 +12,7 @@ import { AdminPage } from './pages/AdminPage';
 import { AgentDetailPage } from './pages/AgentDetailPage';
 import { AgentsListPage } from './pages/AgentsListPage';
 import { LoginPage } from './pages/LoginPage';
+import { SchedulesListPage } from './pages/SchedulesListPage';
 
 export default function App() {
   const { t } = useTranslation();
@@ -34,6 +35,9 @@ export default function App() {
                   <NavLink to="/agents" className={({ isActive }) => (isActive ? 'active' : undefined)}>
                     {t('nav.agents')}
                   </NavLink>
+                  <NavLink to="/schedules" className={({ isActive }) => (isActive ? 'active' : undefined)}>
+                    {t('nav.schedules')}
+                  </NavLink>
                   <NavLink to="/admin" className={({ isActive }) => (isActive ? 'active' : undefined)}>
                     {t('nav.admin')}
                   </NavLink>
@@ -54,6 +58,7 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/agents" replace />} />
                 <Route path="/agents" element={<AgentsListPage />} />
                 <Route path="/agents/:hostname" element={<AgentDetailPage />} />
+                <Route path="/schedules" element={<SchedulesListPage />} />
                 <Route path="/admin" element={<AdminPage />} />
               </Routes>
             </div>

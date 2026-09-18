@@ -100,14 +100,14 @@ public class AgentsController(IAgentService agentService, IUpdateService updateS
     [HttpPost("install")]
     public async Task<IActionResult> InstallMany([FromBody] BulkInstallRequest request, CancellationToken ct)
     {
-        var result = await updateService.TriggerInstallManyAsync(request.Hostnames, triggeredBy: User.Identity!.Name!, ct);
+        var result = await updateService.TriggerInstallManyAsync(request.Hostnames, triggeredBy: User.Identity!.Name!, ct: ct);
         return Ok(result);
     }
 
     [HttpPost("reboot")]
     public async Task<IActionResult> RebootMany([FromBody] BulkRebootRequest request, CancellationToken ct)
     {
-        var result = await agentService.TriggerRebootManyAsync(request.Hostnames, triggeredBy: User.Identity!.Name!, ct);
+        var result = await agentService.TriggerRebootManyAsync(request.Hostnames, triggeredBy: User.Identity!.Name!, ct: ct);
         return Ok(result);
     }
 

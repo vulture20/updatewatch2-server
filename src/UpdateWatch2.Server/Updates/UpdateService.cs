@@ -177,7 +177,7 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
         return true;
     }
 
-    public async Task<BulkInstallResult> TriggerInstallManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, CancellationToken ct = default)
+    public async Task<BulkInstallResult> TriggerInstallManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, int? scheduleRunId = null, CancellationToken ct = default)
     {
         var agents = await db.Agents.Where(a => hostnames.Contains(a.Hostname)).ToListAsync(ct);
         var now = DateTimeOffset.UtcNow;
@@ -187,6 +187,7 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
             // comment for why a cross-agent selection isn't offered.
             agent.PendingInstallUpdateIds = null;
             agent.PendingInstallRequestedAt = now;
+            agent.PendingInstallScheduleRunId = scheduleRunId;
         }
 
         await db.SaveChangesAsync(ct);
@@ -211,8 +212,24 @@ public class UpdateService(AppDbContext db, IAuditLogService auditLog) : IUpdate
             await RemoveJustInstalledItemsAsync(agent, ct);
         }
 
+        // Additive (updatewatch2-server#25): if this pending install came
+        // from a schedule run, record its outcome there too, before the
+        // correlation is cleared below — a manually-triggered install
+        // (PendingInstallScheduleRunId null) is untouched by this.
+        if (agent.PendingInstallScheduleRunId is { } scheduleRunId)
+        {
+            var runAgent = await db.ScheduleRunAgents
+                .SingleOrDefaultAsync(ra => ra.ScheduleRunId == scheduleRunId && ra.Hostname == hostname, ct);
+            if (runAgent is not null)
+            {
+                runAgent.InstallStatus = outcome == InstallOutcome.Succeeded ? ScheduleRunActionStatus.Delivered : ScheduleRunActionStatus.Failed;
+                runAgent.ErrorDetail = outcome == InstallOutcome.Failed ? errorDetail : null;
+            }
+        }
+
         agent.PendingInstallRequestedAt = null;
         agent.PendingInstallUpdateIds = null;
+        agent.PendingInstallScheduleRunId = null;
         agent.LastInstallOutcome = outcome.ToString();
         // Only ever meaningful for a Failed outcome — cleared on a
         // Succeeded ack rather than left stale from a previous failed

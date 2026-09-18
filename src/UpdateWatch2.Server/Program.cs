@@ -19,6 +19,7 @@ using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
 using UpdateWatch2.Server.Demo;
 using UpdateWatch2.Server.Notifications;
+using UpdateWatch2.Server.Schedules;
 using UpdateWatch2.Server.UpdateFilters;
 using UpdateWatch2.Server.Updates;
 
@@ -114,6 +115,7 @@ builder.Services.Configure<AgentOfflineOptions>(builder.Configuration.GetSection
 
 builder.Services.AddScoped<IAgentService, AgentService>();
 builder.Services.AddScoped<IUpdateService, UpdateService>();
+builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddSingleton<ITrustedIpRangeProvider, EnvironmentTrustedIpRangeProvider>();
 builder.Services.AddSingleton<IBruteForceLoginService, BruteForceLoginService>();
@@ -154,6 +156,7 @@ builder.Services.AddHostedService<DatabaseVacuumWorker>();
 builder.Services.AddHostedService<UpdateThresholdNotificationWorker>();
 builder.Services.AddHostedService<AgentOfflineNotificationWorker>();
 builder.Services.AddHostedService<SmtpHealthCheckWorker>();
+builder.Services.AddHostedService<ScheduleWorker>();
 
 // The frontend (server/web) is a separate origin in development (its own
 // Vite dev server port) and, even in a same-origin production deployment

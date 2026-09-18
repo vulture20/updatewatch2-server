@@ -363,3 +363,83 @@ export interface AuditLogPage {
   page: number;
   pageSize: number;
 }
+
+/**
+ * A named, admin-defined maintenance window (see SchedulesController) —
+ * a fixed list of agents, a firing pattern, and an action (install
+ * updates and/or reboot). Purely server-side orchestration on top of the
+ * existing install/reboot delivery mechanism — the agent itself is
+ * unaware schedules exist at all.
+ */
+export type ScheduleType = 'Once' | 'Recurring';
+export type SchedulePattern = 'Weekly' | 'IntervalDays';
+export type ScheduleStatus = 'Active' | 'Paused' | 'Completed';
+export type WeekdayName = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+
+export interface Schedule {
+  id: number;
+  name: string;
+  enabled: boolean;
+  status: ScheduleStatus;
+  scheduleType: ScheduleType;
+  pattern: SchedulePattern | null;
+  onceAt: string | null;
+  weeklyDays: WeekdayName[] | null;
+  /** "HH:MM:SS" (a serialized .NET TimeSpan), in the server's own local time zone — see ScheduleRecurrenceCalculator's doc comment for why there's no per-schedule time zone. */
+  timeOfDay: string;
+  intervalDays: number | null;
+  /** "YYYY-MM-DD" (a serialized .NET DateOnly). */
+  intervalStartDate: string | null;
+  actionInstall: boolean;
+  actionReboot: boolean;
+  /** Only meaningful when actionReboot is true — see UpsertSchedule's own doc comment on the combined-with-install case. */
+  rebootOnlyIfRequired: boolean;
+  deadlineHours: number;
+  nextRunAt: string | null;
+  lastRunAt: string | null;
+  hostnames: string[];
+}
+
+/**
+ * Same editable fields as Schedule, used for both create and update. For
+ * an install+reboot schedule with rebootOnlyIfRequired, the reboot need
+ * can only be known once the install actually completes — the server
+ * watches for it on a later heartbeat rather than deciding at fire time,
+ * see the server's own AgentRegistrationService.RecordAliveAsync.
+ */
+export interface UpsertSchedule {
+  name: string;
+  enabled: boolean;
+  scheduleType: ScheduleType;
+  pattern: SchedulePattern | null;
+  onceAt: string | null;
+  weeklyDays: WeekdayName[] | null;
+  timeOfDay: string;
+  intervalDays: number | null;
+  intervalStartDate: string | null;
+  actionInstall: boolean;
+  actionReboot: boolean;
+  rebootOnlyIfRequired: boolean;
+  deadlineHours: number;
+  hostnames: string[];
+}
+
+export type ScheduleRunActionStatus = 'NotApplicable' | 'Skipped' | 'AwaitingInstallResult' | 'Pending' | 'Delivered' | 'Missed' | 'Failed';
+
+export interface ScheduleRunAgent {
+  hostname: string;
+  installStatus: ScheduleRunActionStatus;
+  rebootStatus: ScheduleRunActionStatus;
+  errorDetail: string | null;
+}
+
+/** One actual firing of a Schedule — see ScheduleRun/ScheduleRunAgent server-side. */
+export interface ScheduleRun {
+  id: number;
+  firedAt: string;
+  deadlineAt: string;
+  actionInstall: boolean;
+  actionReboot: boolean;
+  rebootOnlyIfRequired: boolean;
+  agents: ScheduleRunAgent[];
+}

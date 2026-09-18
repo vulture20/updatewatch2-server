@@ -99,6 +99,17 @@ public class Agent
     public DateTimeOffset? PendingInstallRequestedAt { get; set; }
 
     /// <summary>
+    /// Which <see cref="ScheduleRun"/> set <see cref="PendingInstallRequestedAt"/>,
+    /// if any — null for a manually-triggered install (which stays pending
+    /// indefinitely, unchanged existing behavior). Only when this is set
+    /// does <see cref="Schedules.ScheduleService"/>'s deadline-expiry sweep
+    /// ever clear a still-pending install out from under an offline agent.
+    /// Cleared alongside <see cref="PendingInstallRequestedAt"/> on ack or
+    /// expiry.
+    /// </summary>
+    public int? PendingInstallScheduleRunId { get; set; }
+
+    /// <summary>
     /// JSON-serialized array of the specific <see cref="UpdateItem.PackageId"/>
     /// values an admin selected when triggering this pending install — an
     /// admin's way to install only some pending updates while sparing
@@ -157,6 +168,24 @@ public class Agent
     /// decision actually being made and delivered.
     /// </summary>
     public DateTimeOffset? PendingRebootRequestedAt { get; set; }
+
+    /// <summary>Which <see cref="ScheduleRun"/> set <see cref="PendingRebootRequestedAt"/>, if any — same reasoning as <see cref="PendingInstallScheduleRunId"/>.</summary>
+    public int? PendingRebootScheduleRunId { get; set; }
+
+    /// <summary>
+    /// Set (instead of <see cref="PendingRebootRequestedAt"/> directly) when
+    /// a <see cref="ScheduleRun"/> requests install-then-reboot-if-required:
+    /// the reboot need can only be known once the install actually
+    /// completes, so this marks the agent as "being watched" rather than
+    /// firing the reboot trigger immediately. The moment this agent's next
+    /// heartbeat reports <see cref="RebootRequired"/> as true,
+    /// <see cref="Agents.AgentRegistrationService.RecordAliveAsync"/> turns
+    /// this into a real <see cref="PendingRebootRequestedAt"/>/<see cref="PendingRebootScheduleRunId"/>
+    /// and clears this field; if the run's deadline passes first, the
+    /// watch is abandoned (recorded as <c>Skipped</c> — no reboot was ever
+    /// confirmed necessary) without ever sending a trigger.
+    /// </summary>
+    public int? PendingConditionalRebootScheduleRunId { get; set; }
 
     /// <summary>
     /// The <see cref="Agents.RebootOutcome"/> name (e.g. "Succeeded") from

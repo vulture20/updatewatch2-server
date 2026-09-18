@@ -1,6 +1,7 @@
 {
   "nav": {
     "agents": "Agents",
+    "schedules": "Zeitpläne",
     "admin": "Einstellungen",
     "logout": "Abmelden",
     "language": "Sprache"
@@ -364,6 +365,92 @@
     "nextPage": "Weiter",
     "pageIndicator": "Seite {{page}} von {{totalPages}}"
   },
+  "schedules": {
+    "title": "Zeitpläne",
+    "loadError": "Zeitpläne konnten nicht geladen werden.",
+    "loading": "Wird geladen…",
+    "count": "{{count}} Zeitplan/Zeitpläne",
+    "new": "Neuer Zeitplan",
+    "empty": "Noch keine Zeitpläne vorhanden.",
+    "edit": "Bearbeiten",
+    "history": "Verlauf",
+    "runNow": "Jetzt ausführen",
+    "delete": "Löschen",
+    "deleteConfirm": "Zeitplan \"{{name}}\" löschen? Eine noch nicht zugestellte Aktion aus dem letzten Lauf wird dabei storniert.",
+    "columns": {
+      "name": "Name",
+      "type": "Typ",
+      "nextRun": "Nächste Ausführung",
+      "action": "Aktion",
+      "agents": "Agents",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "action": {
+      "install": "Updates installieren",
+      "reboot": "Neustart",
+      "installAndReboot": "Installieren, danach Neustart"
+    },
+    "type": {
+      "once": "Einmalig",
+      "recurring": "Wiederkehrend",
+      "weekly": "Wöchentlich",
+      "interval": "Alle N Tage"
+    },
+    "status": {
+      "Active": "Aktiv",
+      "Paused": "Pausiert",
+      "Completed": "Abgeschlossen"
+    },
+    "weekday": {
+      "Monday": "Montag",
+      "Tuesday": "Dienstag",
+      "Wednesday": "Mittwoch",
+      "Thursday": "Donnerstag",
+      "Friday": "Freitag",
+      "Saturday": "Samstag",
+      "Sunday": "Sonntag"
+    },
+    "runStatus": {
+      "NotApplicable": "—",
+      "Skipped": "Übersprungen",
+      "AwaitingInstallResult": "Wartet auf Installationsergebnis",
+      "Pending": "Ausstehend",
+      "Delivered": "Zugestellt",
+      "Missed": "Verpasst",
+      "Failed": "Fehlgeschlagen"
+    },
+    "dialog": {
+      "createTitle": "Neuer Zeitplan",
+      "editTitle": "Zeitplan bearbeiten",
+      "name": "Name",
+      "enabled": "Aktiv",
+      "scheduleType": "Zeitplan-Typ",
+      "onceAt": "Datum/Uhrzeit",
+      "pattern": "Wiederholungsmuster",
+      "weeklyDays": "Wochentage",
+      "intervalDays": "Alle N Tage",
+      "intervalStartDate": "Beginnend am",
+      "timeOfDay": "Uhrzeit",
+      "action": "Aktion",
+      "rebootOnlyIfRequired": "Nur wenn ein Neustart tatsächlich erforderlich ist",
+      "deadlineHours": "Frist (Stunden)",
+      "deadlineHoursHint": "Holt ein Agent diese Aktion nicht innerhalb dieser Frist ab, wird sie als verpasst protokolliert, statt unbegrenzt ausstehend zu bleiben.",
+      "agents": "Agents",
+      "agentsSearchPlaceholder": "Agents suchen…",
+      "agentsSelectedCount": "{{count}} Agent(s) ausgewählt",
+      "save": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "runs": {
+      "title": "Ausführungsverlauf",
+      "loadError": "Ausführungsverlauf konnte nicht geladen werden.",
+      "empty": "Dieser Zeitplan wurde noch nicht ausgeführt.",
+      "hostname": "Agent",
+      "install": "Installation",
+      "reboot": "Neustart"
+    }
+  },
   "errors": {
     "LogLevelInvalid": "LogLevel muss einer der folgenden Werte sein: DEBUG, INFO, WARNING, ERROR.",
     "BruteForceMaxAttemptsInvalid": "BruteForceMaxAttempts muss mindestens 1 sein.",
@@ -406,6 +493,17 @@
     "UpdateFilterPatternInvalid": "Ungültiger regulärer Ausdruck: {{detail}}",
     "UpdateFilterNameTaken": "Ein Filter mit diesem Namen existiert bereits.",
     "NoRotationPendingToActivate": "Keine vorbereitete Wurzel zum Aktivieren — zuerst eine Rotation vorbereiten.",
-    "NoPreviousRootToRetire": "Keine vorherige Wurzel zum Zurückziehen."
+    "NoPreviousRootToRetire": "Keine vorherige Wurzel zum Zurückziehen.",
+    "ScheduleNameRequired": "Name darf nicht leer sein.",
+    "ScheduleAgentsRequired": "Mindestens ein Agent muss ausgewählt sein.",
+    "ScheduleActionRequired": "Mindestens eine Aktion (Installieren oder Neustart) muss ausgewählt sein.",
+    "ScheduleDeadlineHoursInvalid": "Die Frist muss mindestens 1 Stunde betragen.",
+    "ScheduleOnceAtRequired": "Für einen einmaligen Zeitplan ist ein Datum/Uhrzeit erforderlich.",
+    "ScheduleOnceAtInPast": "Datum/Uhrzeit müssen in der Zukunft liegen.",
+    "SchedulePatternRequired": "Ein Wiederholungsmuster ist erforderlich.",
+    "ScheduleWeeklyDaysRequired": "Mindestens ein Wochentag ist erforderlich.",
+    "ScheduleIntervalDaysInvalid": "Das Intervall muss mindestens 1 Tag betragen.",
+    "ScheduleIntervalStartDateRequired": "Ein Startdatum ist erforderlich.",
+    "ScheduleUnknownAgents": "Unbekannte Agent(s): {{detail}}"
   }
 }

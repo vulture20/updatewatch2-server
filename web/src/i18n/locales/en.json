@@ -1,6 +1,7 @@
 {
   "nav": {
     "agents": "Agents",
+    "schedules": "Schedules",
     "admin": "Settings",
     "logout": "Log out",
     "language": "Language"
@@ -364,6 +365,92 @@
     "nextPage": "Next",
     "pageIndicator": "Page {{page}} of {{totalPages}}"
   },
+  "schedules": {
+    "title": "Schedules",
+    "loadError": "Failed to load schedules.",
+    "loading": "Loading…",
+    "count": "{{count}} schedule(s)",
+    "new": "New schedule",
+    "empty": "No schedules yet.",
+    "edit": "Edit",
+    "history": "History",
+    "runNow": "Run now",
+    "delete": "Delete",
+    "deleteConfirm": "Delete schedule \"{{name}}\"? Any not-yet-delivered pending action from its last run will be cancelled.",
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "nextRun": "Next run",
+      "action": "Action",
+      "agents": "Agents",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "action": {
+      "install": "Install updates",
+      "reboot": "Reboot",
+      "installAndReboot": "Install, then reboot"
+    },
+    "type": {
+      "once": "One-time",
+      "recurring": "Recurring",
+      "weekly": "Weekly",
+      "interval": "Every N days"
+    },
+    "status": {
+      "Active": "Active",
+      "Paused": "Paused",
+      "Completed": "Completed"
+    },
+    "weekday": {
+      "Monday": "Monday",
+      "Tuesday": "Tuesday",
+      "Wednesday": "Wednesday",
+      "Thursday": "Thursday",
+      "Friday": "Friday",
+      "Saturday": "Saturday",
+      "Sunday": "Sunday"
+    },
+    "runStatus": {
+      "NotApplicable": "—",
+      "Skipped": "Skipped",
+      "AwaitingInstallResult": "Awaiting install result",
+      "Pending": "Pending",
+      "Delivered": "Delivered",
+      "Missed": "Missed",
+      "Failed": "Failed"
+    },
+    "dialog": {
+      "createTitle": "New schedule",
+      "editTitle": "Edit schedule",
+      "name": "Name",
+      "enabled": "Enabled",
+      "scheduleType": "Schedule type",
+      "onceAt": "Date/time",
+      "pattern": "Recurrence pattern",
+      "weeklyDays": "Weekdays",
+      "intervalDays": "Every N days",
+      "intervalStartDate": "Starting on",
+      "timeOfDay": "Time of day",
+      "action": "Action",
+      "rebootOnlyIfRequired": "Only if a reboot is actually required",
+      "deadlineHours": "Deadline (hours)",
+      "deadlineHoursHint": "If an agent hasn't picked up this action within this many hours, it's abandoned and logged as missed instead of staying pending indefinitely.",
+      "agents": "Agents",
+      "agentsSearchPlaceholder": "Search agents…",
+      "agentsSelectedCount": "{{count}} agent(s) selected",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "runs": {
+      "title": "Run history",
+      "loadError": "Failed to load run history.",
+      "empty": "This schedule hasn't run yet.",
+      "hostname": "Agent",
+      "install": "Install",
+      "reboot": "Reboot"
+    }
+  },
   "errors": {
     "LogLevelInvalid": "LogLevel must be one of: DEBUG, INFO, WARNING, ERROR.",
     "BruteForceMaxAttemptsInvalid": "BruteForceMaxAttempts must be at least 1.",
@@ -406,6 +493,17 @@
     "UpdateFilterPatternInvalid": "Invalid regular expression: {{detail}}",
     "UpdateFilterNameTaken": "A filter with this name already exists.",
     "NoRotationPendingToActivate": "No pending root to activate — prepare a rotation first.",
-    "NoPreviousRootToRetire": "No previous root to retire."
+    "NoPreviousRootToRetire": "No previous root to retire.",
+    "ScheduleNameRequired": "Name must not be empty.",
+    "ScheduleAgentsRequired": "At least one agent must be selected.",
+    "ScheduleActionRequired": "At least one action (install or reboot) must be selected.",
+    "ScheduleDeadlineHoursInvalid": "The deadline must be at least 1 hour.",
+    "ScheduleOnceAtRequired": "A date/time is required for a one-time schedule.",
+    "ScheduleOnceAtInPast": "The date/time must be in the future.",
+    "SchedulePatternRequired": "A recurrence pattern is required.",
+    "ScheduleWeeklyDaysRequired": "At least one weekday is required.",
+    "ScheduleIntervalDaysInvalid": "The interval must be at least 1 day.",
+    "ScheduleIntervalStartDateRequired": "A start date is required.",
+    "ScheduleUnknownAgents": "Unknown agent(s): {{detail}}"
   }
 }

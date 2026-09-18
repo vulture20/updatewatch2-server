@@ -235,6 +235,29 @@ public class AgentRegistrationService(
             agent.AgentVersion = AgentMetadataValidator.Clamp(request.AgentVersion, AgentMetadataValidator.MaxAgentVersionLength) ?? agent.AgentVersion;
             agent.BootTimeUtc = request.BootTimeUtc ?? agent.BootTimeUtc;
             agent.RebootRequired = request.RebootRequired ?? agent.RebootRequired;
+
+            // Resolves a "install, then reboot only if required" schedule's
+            // (updatewatch2-server#25) reboot half — see
+            // Agent.PendingConditionalRebootScheduleRunId's own doc
+            // comment. The install itself was already requested when the
+            // schedule fired; this agent is just being watched until it
+            // self-reports RebootRequired=true (or the run's deadline
+            // passes, handled separately by ScheduleService's expiry
+            // sweep, which never sees this branch fire at all).
+            if (agent.PendingConditionalRebootScheduleRunId is { } watchedRunId && agent.RebootRequired)
+            {
+                var runAgent = await db.ScheduleRunAgents
+                    .SingleOrDefaultAsync(ra => ra.ScheduleRunId == watchedRunId && ra.Hostname == hostname, ct);
+                if (runAgent is not null)
+                {
+                    runAgent.RebootStatus = ScheduleRunActionStatus.Pending;
+                }
+
+                agent.PendingRebootRequestedAt = DateTimeOffset.UtcNow;
+                agent.PendingRebootScheduleRunId = watchedRunId;
+                agent.PendingConditionalRebootScheduleRunId = null;
+            }
+
             agent.ActualLogLevel = request.ActualLogLevel ?? agent.ActualLogLevel;
             agent.ActualUpdateCheckIntervalMinutes = request.ActualUpdateCheckIntervalMinutes ?? agent.ActualUpdateCheckIntervalMinutes;
             agent.ActualUpdateCheckJitterSeconds = request.ActualUpdateCheckJitterSeconds ?? agent.ActualUpdateCheckJitterSeconds;

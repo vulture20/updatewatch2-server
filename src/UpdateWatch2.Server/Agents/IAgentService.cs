@@ -78,8 +78,15 @@ public interface IAgentService
     /// </summary>
     Task<bool> TriggerRebootAsync(string hostname, string triggeredBy, CancellationToken ct = default);
 
-    /// <summary>Reboots several agents' machines at once (bulk reboot from the overview list) — see <see cref="TriggerRebootAsync"/> for the single-agent delivery mechanism this reuses.</summary>
-    Task<BulkRebootResult> TriggerRebootManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, CancellationToken ct = default);
+    /// <summary>
+    /// Reboots several agents' machines at once (bulk reboot from the
+    /// overview list) — see <see cref="TriggerRebootAsync"/> for the
+    /// single-agent delivery mechanism this reuses.
+    /// <paramref name="scheduleRunId"/> is additive (updatewatch2-server#25) —
+    /// see <see cref="Updates.IUpdateService.TriggerInstallManyAsync"/>'s
+    /// own doc comment on the identical parameter for what it does.
+    /// </summary>
+    Task<BulkRebootResult> TriggerRebootManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, int? scheduleRunId = null, CancellationToken ct = default);
 
     /// <summary>
     /// The agent's acknowledgement that it acted on a pending reboot

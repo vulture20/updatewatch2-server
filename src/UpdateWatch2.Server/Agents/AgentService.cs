@@ -4,6 +4,7 @@ using UpdateWatch2.Server.Api;
 using UpdateWatch2.Server.Audit;
 using UpdateWatch2.Server.Certificates;
 using UpdateWatch2.Server.Db;
+using UpdateWatch2.Server.Db.Entities;
 using UpdateWatch2.Server.UpdateFilters;
 
 namespace UpdateWatch2.Server.Agents;
@@ -229,13 +230,14 @@ public class AgentService(
         return true;
     }
 
-    public async Task<BulkRebootResult> TriggerRebootManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, CancellationToken ct = default)
+    public async Task<BulkRebootResult> TriggerRebootManyAsync(IReadOnlyList<string> hostnames, string triggeredBy, int? scheduleRunId = null, CancellationToken ct = default)
     {
         var agents = await db.Agents.Where(a => hostnames.Contains(a.Hostname)).ToListAsync(ct);
         var now = DateTimeOffset.UtcNow;
         foreach (var agent in agents)
         {
             agent.PendingRebootRequestedAt = now;
+            agent.PendingRebootScheduleRunId = scheduleRunId;
         }
 
         await db.SaveChangesAsync(ct);
@@ -255,7 +257,21 @@ public class AgentService(
             return false;
         }
 
+        // Additive (updatewatch2-server#25) — same reasoning as
+        // UpdateService.AcknowledgeInstallAsync's identical block.
+        if (agent.PendingRebootScheduleRunId is { } scheduleRunId)
+        {
+            var runAgent = await db.ScheduleRunAgents
+                .SingleOrDefaultAsync(ra => ra.ScheduleRunId == scheduleRunId && ra.Hostname == hostname, ct);
+            if (runAgent is not null)
+            {
+                runAgent.RebootStatus = outcome == RebootOutcome.Succeeded ? ScheduleRunActionStatus.Delivered : ScheduleRunActionStatus.Failed;
+                runAgent.ErrorDetail = outcome == RebootOutcome.Failed ? errorDetail : null;
+            }
+        }
+
         agent.PendingRebootRequestedAt = null;
+        agent.PendingRebootScheduleRunId = null;
         agent.LastRebootOutcome = outcome.ToString();
         // Only ever meaningful for a Failed outcome — mirrors
         // AcknowledgeInstallAsync's identical reasoning for LastInstallErrorDetail.
