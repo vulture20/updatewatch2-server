@@ -142,15 +142,30 @@ public class AdminSettings
     public required string TimeZoneId { get; set; }
 
     /// <summary>
-    /// How many rows the paginated admin-UI lists (agent overview,
-    /// schedules, audit log) show per page. Admin-configurable via a fixed
-    /// set of steps (10/25/50/100/200), plus <c>0</c> as the sentinel for
-    /// "unlimited — everything on one page/response", the same convention
-    /// <see cref="AuditLogRetentionDays"/> already uses for its own
-    /// unlimited option. One global value shared by all three lists, not a
-    /// per-list override. Default 50.
+    /// How many rows the agent overview and schedules lists show per page.
+    /// Admin-configurable via a fixed set of steps (10/25/50/100/200), plus
+    /// <c>0</c> as the sentinel for "unlimited — everything on one page",
+    /// the same convention <see cref="AuditLogRetentionDays"/> already uses
+    /// for its own unlimited option. Originally also governed the audit
+    /// log's own pagination, until the user asked for that to be
+    /// independently configurable — see <see cref="AuditLogItemsPerPage"/>.
+    /// Default 50.
     /// </summary>
     public int ItemsPerPage { get; set; } = 50;
+
+    /// <summary>
+    /// Same idea as <see cref="ItemsPerPage"/> (fixed steps 10/25/50/100/200,
+    /// 0 = unlimited), but specifically for the Audit Log — a genuinely
+    /// independent setting, not an override, at the user's explicit request
+    /// ("eine zusätzliche Einstellung... womit man das Pagination für das
+    /// Audit-Log getrennt einstellen kann"). The audit log is the one list
+    /// of the three that's actually paginated server-side (see
+    /// <see cref="Audit.AuditLogService.GetPageAsync"/>'s own "unlimited"
+    /// sentinel handling), so a fleet with a very large audit log but a
+    /// small agent count (or vice versa) can size each independently.
+    /// Default 50.
+    /// </summary>
+    public int AuditLogItemsPerPage { get; set; } = 50;
 
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

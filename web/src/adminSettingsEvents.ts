@@ -13,6 +13,8 @@ export interface AdminSettingsSavedDetail {
   smtpConfigured: boolean;
   /** Lets useItemsPerPage.ts react to a saved change instantly, the same way SmtpWarningBanner already does for smtpConfigured. */
   itemsPerPage: number;
+  /** Same idea as itemsPerPage, for the Audit Log's independent pagination setting. */
+  auditLogItemsPerPage: number;
 }
 
 export function announceAdminSettingsSaved(detail: AdminSettingsSavedDetail) {

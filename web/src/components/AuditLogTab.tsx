@@ -16,7 +16,7 @@ import type { AuditLogPage } from '../api/types';
  */
 export function AuditLogTab() {
   const { t, i18n } = useTranslation();
-  const itemsPerPage = useItemsPerPage();
+  const itemsPerPage = useItemsPerPage('auditLog');
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');

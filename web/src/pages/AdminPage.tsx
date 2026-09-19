@@ -265,7 +265,11 @@ export function AdminPage() {
       });
       setForm(toFormState(settings));
       setSavedMessage(true);
-      announceAdminSettingsSaved({ smtpConfigured: settings.smtpConfigured, itemsPerPage: settings.itemsPerPage });
+      announceAdminSettingsSaved({
+        smtpConfigured: settings.smtpConfigured,
+        itemsPerPage: settings.itemsPerPage,
+        auditLogItemsPerPage: settings.auditLogItemsPerPage,
+      });
       agentUpdatesApi.getStatus().then(setAgentUpdateStatus).catch(() => setAgentUpdateStatus(null));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('login.genericError'));
@@ -370,7 +374,7 @@ export function AdminPage() {
           </div>
 
           <div className="card">
-            <span className="card-kicker">{t('admin.itemsPerPage.title')}</span>
+            <span className="card-kicker">{t('admin.pagination.title')}</span>
             <label>
               {t('admin.itemsPerPage.title')}
               <select value={form.itemsPerPage} onChange={(e) => update('itemsPerPage', Number(e.target.value))}>
@@ -382,6 +386,17 @@ export function AdminPage() {
               </select>
             </label>
             <p className="field-hint">{t('admin.itemsPerPage.hint')}</p>
+            <label>
+              {t('admin.auditLogItemsPerPage.title')}
+              <select value={form.auditLogItemsPerPage} onChange={(e) => update('auditLogItemsPerPage', Number(e.target.value))}>
+                {ITEMS_PER_PAGE_OPTIONS.map((count) => (
+                  <option key={count} value={count}>
+                    {count === 0 ? t('admin.itemsPerPage.unlimited') : t('admin.itemsPerPage.option', { count })}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="field-hint">{t('admin.auditLogItemsPerPage.hint')}</p>
           </div>
 
           <div className="card">

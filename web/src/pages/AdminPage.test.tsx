@@ -130,6 +130,7 @@ const baseSettings = {
   preDownloadLinuxUpdatesEnabled: true,
   timeZoneId: 'UTC',
   itemsPerPage: 50,
+  auditLogItemsPerPage: 50,
 };
 
 describe('AdminPage', () => {
@@ -476,6 +477,26 @@ describe('AdminPage', () => {
 
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ itemsPerPage: 100 }));
+  });
+
+  it('submits an edited audit-log-specific items-per-page setting independently of the shared one', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, auditLogItemsPerPage: 200 });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.selectOptions(screen.getByLabelText('Items per page (Audit Log)'), '200');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ auditLogItemsPerPage: 200, itemsPerPage: 50 }),
+    );
   });
 
   it('offers unlimited as a retention option', async () => {

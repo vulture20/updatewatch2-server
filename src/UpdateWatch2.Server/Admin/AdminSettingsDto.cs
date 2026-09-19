@@ -49,4 +49,6 @@ public record AdminSettingsDto(
     /// <summary>See <see cref="Db.Entities.AdminSettings.TimeZoneId"/>'s doc comment. Default "UTC".</summary>
     string TimeZoneId,
     /// <summary>See <see cref="Db.Entities.AdminSettings.ItemsPerPage"/>'s doc comment. 0 = unlimited. Default 50.</summary>
-    int ItemsPerPage);
+    int ItemsPerPage,
+    /// <summary>See <see cref="Db.Entities.AdminSettings.AuditLogItemsPerPage"/>'s doc comment. 0 = unlimited. Default 50.</summary>
+    int AuditLogItemsPerPage);

@@ -46,7 +46,8 @@ public class AdminSettingsDiffFormatterTests
         PreDownloadWindowsUpdatesEnabled: true,
         PreDownloadLinuxUpdatesEnabled: true,
         TimeZoneId: "UTC",
-        ItemsPerPage: 50);
+        ItemsPerPage: 50,
+        AuditLogItemsPerPage: 50);
 
     [Fact]
     public void Returns_null_when_nothing_changed()

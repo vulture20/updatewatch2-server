@@ -342,11 +342,18 @@
     "auditLogRetention": "Aufbewahrung",
     "auditLogRetentionDays": "Aufbewahrungsdauer Audit-Log",
     "auditLogRetentionDaysHint": "Einträge, die älter sind, werden durch eine regelmäßige Bereinigung endgültig gelöscht — ein Verkürzen löscht beim nächsten Durchlauf auch bereits vorhandene ältere Einträge, nicht nur künftige.",
+    "pagination": {
+      "title": "Paginierung"
+    },
     "itemsPerPage": {
       "title": "Einträge pro Seite",
       "option": "{{count}} Einträge",
       "unlimited": "Unbegrenzt (alles auf einer Seite)",
-      "hint": "Legt fest, wie viele Zeilen die paginierten Listen (Agent-Übersicht, Zeitpläne, Audit-Log) jeweils auf einer Seite anzeigen."
+      "hint": "Legt fest, wie viele Zeilen die Agent-Übersicht und die Zeitpläne-Liste jeweils auf einer Seite anzeigen."
+    },
+    "auditLogItemsPerPage": {
+      "title": "Einträge pro Seite (Audit-Log)",
+      "hint": "Legt unabhängig davon fest, wie viele Zeilen das Audit-Log auf einer Seite anzeigt."
     },
     "auditLogRetentionDaysOption": "{{count}} Tage",
     "auditLogRetentionDaysUnlimited": "Unbegrenzt (nie verwerfen)",
@@ -497,6 +504,7 @@
     "AgentAutoUpdateCheckIntervalHoursInvalid": "AgentAutoUpdateCheckIntervalHours muss mindestens 1 sein.",
     "AuditLogRetentionDaysInvalid": "AuditLogRetentionDays muss einer der folgenden Werte sein: 0, 30, 60, 90, 180, 365 (0 = unbegrenzt).",
     "ItemsPerPageInvalid": "ItemsPerPage muss einer der folgenden Werte sein: 0, 10, 25, 50, 100, 200 (0 = unbegrenzt).",
+    "AuditLogItemsPerPageInvalid": "AuditLogItemsPerPage muss einer der folgenden Werte sein: 0, 10, 25, 50, 100, 200 (0 = unbegrenzt).",
     "CertificateExpiryWarningLeadDaysInvalid": "CertificateExpiryWarningLeadDays muss zwischen 1 und 365 liegen.",
     "NotificationRecipientAddressInvalid": "NotificationRecipientAddress muss eine gültige E-Mail-Adresse sein.",
     "InstanceUrlInvalid": "InstanceUrl muss eine absolute http://- oder https://-URL sein.",

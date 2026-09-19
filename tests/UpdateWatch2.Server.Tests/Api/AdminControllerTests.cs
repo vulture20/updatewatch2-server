@@ -51,6 +51,7 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal(730, settings.AgentCertificateValidityDays);
         Assert.Equal(90, settings.AuditLogRetentionDays);
         Assert.Equal(50, settings.ItemsPerPage);
+        Assert.Equal(50, settings.AuditLogItemsPerPage);
     }
 
     [Fact]
@@ -205,6 +206,34 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
 
         var settings = await _client.GetFromJsonAsync<AdminSettingsDto>("/api/admin/settings");
         Assert.Equal(itemsPerPage, settings!.ItemsPerPage);
+    }
+
+    [Fact]
+    public async Task Put_rejects_an_audit_log_items_per_page_outside_the_fixed_set_of_steps()
+    {
+        // AuditLogItemsPerPage is a genuinely independent setting from
+        // ItemsPerPage (at the user's explicit request), but validated
+        // against the identical fixed set of steps.
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { AuditLogItemsPerPage = 42 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(0)] // the "unlimited — everything on one page" sentinel
+    [InlineData(10)]
+    [InlineData(200)]
+    public async Task Put_persists_a_valid_audit_log_items_per_page_independently_of_items_per_page(int auditLogItemsPerPage)
+    {
+        var response = await _client.PutAsJsonAsync(
+            "/api/admin/settings",
+            ValidUpdateRequest() with { ItemsPerPage = 25, AuditLogItemsPerPage = auditLogItemsPerPage });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var settings = await _client.GetFromJsonAsync<AdminSettingsDto>("/api/admin/settings");
+        Assert.Equal(auditLogItemsPerPage, settings!.AuditLogItemsPerPage);
+        // Proves the two settings genuinely don't affect each other.
+        Assert.Equal(25, settings.ItemsPerPage);
     }
 
     [Fact]

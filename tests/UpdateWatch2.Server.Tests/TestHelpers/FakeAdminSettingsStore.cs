@@ -51,6 +51,8 @@ public class FakeAdminSettingsStore(
 
     public int ItemsPerPage { get; set; } = 50;
 
+    public int AuditLogItemsPerPage { get; set; } = 50;
+
     public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
     public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>

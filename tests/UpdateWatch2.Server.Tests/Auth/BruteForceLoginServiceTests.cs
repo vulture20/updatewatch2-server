@@ -90,6 +90,8 @@ public class BruteForceLoginServiceTests
 
         public int ItemsPerPage => throw new NotSupportedException();
 
+        public int AuditLogItemsPerPage => throw new NotSupportedException();
+
         public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
         public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>

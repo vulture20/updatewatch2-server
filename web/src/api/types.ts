@@ -275,8 +275,10 @@ export interface AdminSettings {
   preDownloadLinuxUpdatesEnabled: boolean;
   /** IANA time zone ID (e.g. "Europe/Berlin") used to interpret a Recurring/Cron schedule's bare time-of-day/cron expression. Default "UTC". */
   timeZoneId: string;
-  /** How many rows the paginated lists (agent overview, schedules, audit log) show per page. 0 = unlimited (everything on one page/response). Fixed UI steps: 10/25/50/100/200, or unlimited. Default 50. */
+  /** How many rows the agent overview and schedules lists show per page. 0 = unlimited (everything on one page). Fixed UI steps: 10/25/50/100/200, or unlimited. Default 50. Originally also governed the audit log's pagination — see auditLogItemsPerPage. */
   itemsPerPage: number;
+  /** Same idea as itemsPerPage, but specifically for the Audit Log — a genuinely independent setting, not an override. Default 50. */
+  auditLogItemsPerPage: number;
 }
 
 /**

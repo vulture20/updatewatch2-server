@@ -205,6 +205,15 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
             errors.Add(new ApiErrorItem(ApiErrorCode.ItemsPerPageInvalid, $"ItemsPerPage must be one of: {string.Join(", ", ValidItemsPerPage)} (0 = unlimited)."));
         }
 
+        // Reuses ValidItemsPerPage's identical fixed set of steps — the two
+        // settings are independent (AuditLogItemsPerPage, at the user's
+        // explicit request), but there's no reason to offer the Audit Log
+        // a different set of dropdown steps than every other paginated list.
+        if (!ValidItemsPerPage.Contains(request.AuditLogItemsPerPage))
+        {
+            errors.Add(new ApiErrorItem(ApiErrorCode.AuditLogItemsPerPageInvalid, $"AuditLogItemsPerPage must be one of: {string.Join(", ", ValidItemsPerPage)} (0 = unlimited)."));
+        }
+
         return errors;
     }
 }

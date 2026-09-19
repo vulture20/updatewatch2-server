@@ -37,6 +37,7 @@ public class AdminSettingsStore(
     private bool _preDownloadLinuxUpdatesEnabled = true;
     private string _timeZoneId = "UTC";
     private int _itemsPerPage = DefaultItemsPerPage;
+    private int _auditLogItemsPerPage = DefaultItemsPerPage;
 
     private const int DefaultAuditLogRetentionDays = 90;
     private const int DefaultItemsPerPage = 50;
@@ -104,6 +105,11 @@ public class AdminSettingsStore(
     public int ItemsPerPage
     {
         get { lock (_lock) return _itemsPerPage; }
+    }
+
+    public int AuditLogItemsPerPage
+    {
+        get { lock (_lock) return _auditLogItemsPerPage; }
     }
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -183,6 +189,7 @@ public class AdminSettingsStore(
         row.PreDownloadLinuxUpdatesEnabled = request.PreDownloadLinuxUpdatesEnabled;
         row.TimeZoneId = request.TimeZoneId;
         row.ItemsPerPage = request.ItemsPerPage;
+        row.AuditLogItemsPerPage = request.AuditLogItemsPerPage;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -237,7 +244,8 @@ public class AdminSettingsStore(
                 _preDownloadWindowsUpdatesEnabled,
                 _preDownloadLinuxUpdatesEnabled,
                 _timeZoneId,
-                _itemsPerPage);
+                _itemsPerPage,
+                _auditLogItemsPerPage);
         }
     }
 
@@ -287,6 +295,7 @@ public class AdminSettingsStore(
         PreDownloadLinuxUpdatesEnabled = true,
         TimeZoneId = "UTC",
         ItemsPerPage = DefaultItemsPerPage,
+        AuditLogItemsPerPage = DefaultItemsPerPage,
     };
 
     private void Apply(AdminSettings row)
@@ -362,6 +371,7 @@ public class AdminSettingsStore(
             _preDownloadLinuxUpdatesEnabled = row.PreDownloadLinuxUpdatesEnabled;
             _timeZoneId = row.TimeZoneId;
             _itemsPerPage = row.ItemsPerPage;
+            _auditLogItemsPerPage = row.AuditLogItemsPerPage;
         }
 
         // Pushes the change to the ACTUAL running logger, not just this

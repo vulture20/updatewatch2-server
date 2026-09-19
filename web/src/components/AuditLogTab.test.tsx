@@ -20,7 +20,7 @@ const mockedGetSettings = vi.mocked(adminApi.getSettings);
 describe('AuditLogTab', () => {
   beforeEach(() => {
     mockedGetPage.mockReset();
-    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 } as AdminSettings);
+    mockedGetSettings.mockReset().mockResolvedValue({ auditLogItemsPerPage: 50 } as AdminSettings);
   });
 
   it('renders the entries returned by the API', async () => {
@@ -130,13 +130,23 @@ describe('AuditLogTab', () => {
   });
 
   it('translates the "unlimited" items-per-page setting (0) into pageSize -1', async () => {
-    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 0 } as AdminSettings);
+    mockedGetSettings.mockReset().mockResolvedValue({ auditLogItemsPerPage: 0 } as AdminSettings);
     mockedGetPage.mockResolvedValue({ entries: [], totalCount: 0, page: 1, pageSize: 0 });
 
     render(<AuditLogTab />);
 
     await screen.findByText('No matching entries.');
     expect(mockedGetPage).toHaveBeenCalledWith(1, -1, undefined);
+  });
+
+  it('uses the independent auditLogItemsPerPage setting, not the shared itemsPerPage one', async () => {
+    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 10, auditLogItemsPerPage: 100 } as AdminSettings);
+    mockedGetPage.mockResolvedValue({ entries: [], totalCount: 0, page: 1, pageSize: 100 });
+
+    render(<AuditLogTab />);
+
+    await screen.findByText('No matching entries.');
+    expect(mockedGetPage).toHaveBeenCalledWith(1, 100, undefined);
   });
 
   it('jumps directly to a page number', async () => {

@@ -50,8 +50,25 @@ describe('useItemsPerPage', () => {
     const { result } = renderHook(() => useItemsPerPage());
     await waitFor(() => expect(result.current).toBe(50));
 
-    act(() => announceAdminSettingsSaved({ smtpConfigured: true, itemsPerPage: 200 }));
+    act(() => announceAdminSettingsSaved({ smtpConfigured: true, itemsPerPage: 200, auditLogItemsPerPage: 50 }));
 
     expect(result.current).toBe(200);
+  });
+
+  it("kind: 'auditLog' reads auditLogItemsPerPage instead of the shared itemsPerPage", async () => {
+    mockedGetSettings.mockResolvedValue({ itemsPerPage: 10, auditLogItemsPerPage: 200 } as AdminSettings);
+    const { result } = renderHook(() => useItemsPerPage('auditLog'));
+
+    await waitFor(() => expect(result.current).toBe(200));
+  });
+
+  it("kind: 'auditLog' updates live only from auditLogItemsPerPage on a settings save", async () => {
+    mockedGetSettings.mockResolvedValue({ itemsPerPage: 10, auditLogItemsPerPage: 50 } as AdminSettings);
+    const { result } = renderHook(() => useItemsPerPage('auditLog'));
+    await waitFor(() => expect(result.current).toBe(50));
+
+    act(() => announceAdminSettingsSaved({ smtpConfigured: true, itemsPerPage: 999, auditLogItemsPerPage: 25 }));
+
+    expect(result.current).toBe(25);
   });
 });
