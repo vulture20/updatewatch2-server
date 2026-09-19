@@ -11,6 +11,8 @@ const EVENT_NAME = 'uw2:admin-settings-saved';
 
 export interface AdminSettingsSavedDetail {
   smtpConfigured: boolean;
+  /** Lets useItemsPerPage.ts react to a saved change instantly, the same way SmtpWarningBanner already does for smtpConfigured. */
+  itemsPerPage: number;
 }
 
 export function announceAdminSettingsSaved(detail: AdminSettingsSavedDetail) {

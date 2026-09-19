@@ -2,9 +2,9 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { auditLogApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
+import { Pagination } from './Pagination';
+import { useItemsPerPage } from '../hooks/useItemsPerPage';
 import type { AuditLogPage } from '../api/types';
-
-const PAGE_SIZE = 50;
 
 /**
  * Administration → Audit Log — a read-only, paginated view of every
@@ -16,6 +16,7 @@ const PAGE_SIZE = 50;
  */
 export function AuditLogTab() {
   const { t, i18n } = useTranslation();
+  const itemsPerPage = useItemsPerPage();
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -24,11 +25,15 @@ export function AuditLogTab() {
 
   useEffect(() => {
     setError(null);
+    // itemsPerPage === 0 is AdminSettings.ItemsPerPage's own "unlimited"
+    // sentinel — translated here into the audit-log endpoint's own,
+    // distinct -1 "no limit" sentinel (see AuditLogService.GetPageAsync's
+    // doc comment for why 0 already means something else at that layer).
     auditLogApi
-      .getPage(page, PAGE_SIZE, appliedSearch || undefined)
+      .getPage(page, itemsPerPage === 0 ? -1 : itemsPerPage, appliedSearch || undefined)
       .then(setData)
       .catch((err) => setError(err instanceof ApiError ? err.message : t('login.genericError')));
-  }, [page, appliedSearch, t]);
+  }, [page, appliedSearch, itemsPerPage, t]);
 
   const submitSearch = () => {
     setPage(1);
@@ -88,15 +93,7 @@ export function AuditLogTab() {
             </tbody>
           </table>
 
-          <div className="audit-log-pagination">
-            <button type="button" className="btn-ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              {t('auditLog.previousPage')}
-            </button>
-            <span className="text-muted">{t('auditLog.pageIndicator', { page, totalPages })}</span>
-            <button type="button" className="btn-ghost" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              {t('auditLog.nextPage')}
-            </button>
-          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
     </div>

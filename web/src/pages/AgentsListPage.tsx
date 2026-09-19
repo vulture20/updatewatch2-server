@@ -7,7 +7,10 @@ import { AgentBulkSettingsDialog } from '../components/AgentBulkSettingsDialog';
 import { OfflineIcon } from '../components/OfflineIcon';
 import { OsIcon } from '../components/OsIcon';
 import { OutdatedIcon } from '../components/OutdatedIcon';
+import { Pagination } from '../components/Pagination';
 import { WarningTriangleIcon } from '../components/WarningTriangleIcon';
+import { useItemsPerPage } from '../hooks/useItemsPerPage';
+import { usePageSlice } from '../hooks/usePageSlice';
 import { formatRelativeTime } from '../utils/relativeTime';
 import { sortBy, toggleSort, type SortState } from '../utils/sorting';
 
@@ -50,6 +53,7 @@ export function AgentsListPage() {
   const [statFilter, setStatFilter] = useState<StatFilter>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [bulkSettingsOpen, setBulkSettingsOpen] = useState(false);
+  const itemsPerPage = useItemsPerPage();
   // Ref, not state: a background poll failure must not blow away an
   // already-rendered list — only the very first load failing should show
   // the hard error state. A ref survives across reload()'s closures
@@ -89,16 +93,18 @@ export function AgentsListPage() {
     });
   };
 
-  // Selects/deselects every currently visible (filtered) row, not the
-  // whole fleet — matches AgentDetailPage's own selectAllUpdates behavior
-  // for its (also potentially filtered-down) updates table.
+  // Selects/deselects only the CURRENT PAGE's rows, not every filtered row
+  // across every page (a user-confirmed decision, since a filtered set can
+  // now span multiple pages) — an admin can still build up a selection
+  // spanning several pages by paging through and re-checking "select all"
+  // on each one.
   const toggleSelectAll = () => {
     setSelected((prev) => {
       const next = new Set(prev);
       if (allVisibleSelected) {
-        filteredAndSorted.forEach((a) => next.delete(a.hostname));
+        pageItems.forEach((a) => next.delete(a.hostname));
       } else {
-        filteredAndSorted.forEach((a) => next.add(a.hostname));
+        pageItems.forEach((a) => next.add(a.hostname));
       }
       return next;
     });
@@ -202,8 +208,10 @@ export function AgentsListPage() {
     });
   }, [agents, filters, statFilter, sort]);
 
-  const allVisibleSelected = filteredAndSorted.length > 0 && filteredAndSorted.every((a) => selected.has(a.hostname));
-  const someVisibleSelected = filteredAndSorted.some((a) => selected.has(a.hostname));
+  const { page, setPage, totalPages, pageItems } = usePageSlice(filteredAndSorted, itemsPerPage);
+
+  const allVisibleSelected = pageItems.length > 0 && pageItems.every((a) => selected.has(a.hostname));
+  const someVisibleSelected = pageItems.some((a) => selected.has(a.hostname));
 
   const hasActiveFilters =
     statFilter !== null || Object.entries(filters).some(([key, value]) => value !== DEFAULT_FILTERS[key as keyof Filters]);
@@ -430,7 +438,7 @@ export function AgentsListPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAndSorted.map((agent) => (
+                {pageItems.map((agent) => (
                   <tr key={agent.hostname}>
                     <td>
                       <input
@@ -482,6 +490,8 @@ export function AgentsListPage() {
               </tbody>
             </table>
           </div>
+
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
     </section>

@@ -141,5 +141,16 @@ public class AdminSettings
     /// </summary>
     public required string TimeZoneId { get; set; }
 
+    /// <summary>
+    /// How many rows the paginated admin-UI lists (agent overview,
+    /// schedules, audit log) show per page. Admin-configurable via a fixed
+    /// set of steps (10/25/50/100/200), plus <c>0</c> as the sentinel for
+    /// "unlimited — everything on one page/response", the same convention
+    /// <see cref="AuditLogRetentionDays"/> already uses for its own
+    /// unlimited option. One global value shared by all three lists, not a
+    /// per-list override. Default 50.
+    /// </summary>
+    public int ItemsPerPage { get; set; } = 50;
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

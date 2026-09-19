@@ -119,6 +119,41 @@ public class AuditLogServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPageAsync_with_a_negative_pageSize_returns_every_matching_entry_unpaged()
+    {
+        // More than MaxPageSize (200) so this genuinely proves the -1
+        // "unlimited" sentinel bypasses the normal [1, 200] clamp, not just
+        // that a small fixture happens to fit on one page anyway.
+        for (var i = 0; i < 250; i++)
+        {
+            await _service.LogAsync("admin", $"action.{i}");
+        }
+
+        var page = await _service.GetPageAsync(page: 1, pageSize: -1);
+
+        Assert.Equal(250, page.TotalCount);
+        Assert.Equal(250, page.Entries.Count);
+        Assert.Equal(1, page.Page);
+        Assert.Equal(250, page.PageSize);
+        // Still newest-first, same ordering as the paged path.
+        Assert.Equal("action.249", page.Entries[0].Action);
+        Assert.Equal("action.0", page.Entries[^1].Action);
+    }
+
+    [Fact]
+    public async Task GetPageAsync_with_a_negative_pageSize_still_applies_search()
+    {
+        await _service.LogAsync("admin", "agent.approve", "host-1");
+        await _service.LogAsync("alice", "agent.delete", "host-2");
+
+        var page = await _service.GetPageAsync(page: 1, pageSize: -1, search: "alice");
+
+        Assert.Single(page.Entries);
+        Assert.Equal("alice", page.Entries[0].Actor);
+        Assert.Equal(1, page.TotalCount);
+    }
+
+    [Fact]
     public async Task PurgeOlderThanAsync_deletes_only_entries_older_than_the_retention_window()
     {
         await AddBackdatedAsync("stale", TimeSpan.FromDays(100));

@@ -50,6 +50,7 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
         Assert.False(settings.SmtpPasswordSet);
         Assert.Equal(730, settings.AgentCertificateValidityDays);
         Assert.Equal(90, settings.AuditLogRetentionDays);
+        Assert.Equal(50, settings.ItemsPerPage);
     }
 
     [Fact]
@@ -180,6 +181,30 @@ public class AdminControllerTests : IClassFixture<WebApplicationFactory<Program>
 
         var settings = await _client.GetFromJsonAsync<AdminSettingsDto>("/api/admin/settings");
         Assert.Equal(retentionDays, settings!.AuditLogRetentionDays);
+    }
+
+    [Fact]
+    public async Task Put_rejects_an_items_per_page_outside_the_fixed_set_of_steps()
+    {
+        // Same discipline as AuditLogRetentionDays above — the admin UI
+        // only ever offers a fixed dropdown (10/25/50/100/200, plus 0 for
+        // unlimited), so the API rejects anything else too.
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { ItemsPerPage = 42 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(0)] // the "unlimited — everything on one page" sentinel
+    [InlineData(10)]
+    [InlineData(200)]
+    public async Task Put_persists_a_valid_items_per_page(int itemsPerPage)
+    {
+        var response = await _client.PutAsJsonAsync("/api/admin/settings", ValidUpdateRequest() with { ItemsPerPage = itemsPerPage });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var settings = await _client.GetFromJsonAsync<AdminSettingsDto>("/api/admin/settings");
+        Assert.Equal(itemsPerPage, settings!.ItemsPerPage);
     }
 
     [Fact]

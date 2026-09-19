@@ -95,4 +95,28 @@ public class AuditLogControllerTests : IClassFixture<WebApplicationFactory<Progr
         Assert.Equal(1, page!.TotalCount);
         Assert.Equal("agent.delete", page.Entries[0].Action);
     }
+
+    [Fact]
+    public async Task Get_with_pageSize_negative_one_returns_every_entry_unpaged()
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var auditLog = scope.ServiceProvider.GetRequiredService<IAuditLogService>();
+            for (var i = 0; i < 5; i++)
+            {
+                await auditLog.LogAsync("admin", $"action.{i}");
+            }
+        }
+
+        var response = await _client.GetAsync("/api/admin/audit-log?pageSize=-1");
+
+        response.EnsureSuccessStatusCode();
+        var page = await response.Content.ReadFromJsonAsync<AuditLogPageDto>();
+        Assert.NotNull(page);
+        Assert.Equal(1, page!.Page);
+        // At least the 5 entries this test added, plus AuthTestHelper.LoginAsync's own —
+        // the point is the -1 sentinel wasn't silently remapped to the 50 default.
+        Assert.True(page.Entries.Count >= 5);
+        Assert.Equal(page.Entries.Count, page.PageSize);
+    }
 }

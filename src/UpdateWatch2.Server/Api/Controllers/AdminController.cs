@@ -19,6 +19,10 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
     // the rest are the fixed steps the admin UI's dropdown offers.
     private static readonly int[] ValidAuditLogRetentionDays = [0, 30, 60, 90, 180, 365];
 
+    // 0 is the "unlimited — everything on one page" sentinel (AdminSettings.ItemsPerPage),
+    // the rest are the fixed steps the admin UI's dropdown offers.
+    private static readonly int[] ValidItemsPerPage = [0, 10, 25, 50, 100, 200];
+
     [HttpGet]
     public IActionResult Get() => Ok(settingsStore.ToDto());
 
@@ -194,6 +198,11 @@ public class AdminController(IAdminSettingsStore settingsStore, IAuditLogService
         catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
         {
             errors.Add(new ApiErrorItem(ApiErrorCode.TimeZoneIdInvalid, "TimeZoneId must be a valid IANA time zone identifier (e.g. \"Europe/Berlin\")."));
+        }
+
+        if (!ValidItemsPerPage.Contains(request.ItemsPerPage))
+        {
+            errors.Add(new ApiErrorItem(ApiErrorCode.ItemsPerPageInvalid, $"ItemsPerPage must be one of: {string.Join(", ", ValidItemsPerPage)} (0 = unlimited)."));
         }
 
         return errors;

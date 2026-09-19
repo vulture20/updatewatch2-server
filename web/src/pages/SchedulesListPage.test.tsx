@@ -272,4 +272,25 @@ describe('SchedulesListPage', () => {
 
     await waitFor(() => expect(mockedRunNow).toHaveBeenCalledWith(1));
   });
+
+  it('paginates the schedule list according to the configured items-per-page setting', async () => {
+    mockedGetSettings.mockReset().mockResolvedValue({ timeZoneId: 'UTC', itemsPerPage: 2 } as AdminSettings);
+    mockedList.mockResolvedValue([
+      makeSchedule({ id: 1, name: 'Schedule 1' }),
+      makeSchedule({ id: 2, name: 'Schedule 2' }),
+      makeSchedule({ id: 3, name: 'Schedule 3' }),
+    ]);
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('Schedule 1');
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+    expect(screen.queryByText('Schedule 3')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    await screen.findByText('Schedule 3');
+    expect(screen.queryByText('Schedule 1')).not.toBeInTheDocument();
+  });
 });

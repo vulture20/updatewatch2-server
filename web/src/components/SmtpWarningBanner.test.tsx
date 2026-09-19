@@ -78,6 +78,7 @@ const baseSettings = {
   preDownloadWindowsUpdatesEnabled: true,
   preDownloadLinuxUpdatesEnabled: true,
   timeZoneId: 'UTC',
+  itemsPerPage: 50,
 };
 
 // Renders both siblings the way App.tsx actually does — SmtpWarningBanner

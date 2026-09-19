@@ -36,8 +36,10 @@ public class AdminSettingsStore(
     private bool _preDownloadWindowsUpdatesEnabled = true;
     private bool _preDownloadLinuxUpdatesEnabled = true;
     private string _timeZoneId = "UTC";
+    private int _itemsPerPage = DefaultItemsPerPage;
 
     private const int DefaultAuditLogRetentionDays = 90;
+    private const int DefaultItemsPerPage = 50;
 
     public BruteForceOptions BruteForce
     {
@@ -97,6 +99,11 @@ public class AdminSettingsStore(
     public string TimeZoneId
     {
         get { lock (_lock) return _timeZoneId; }
+    }
+
+    public int ItemsPerPage
+    {
+        get { lock (_lock) return _itemsPerPage; }
     }
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -175,6 +182,7 @@ public class AdminSettingsStore(
         row.PreDownloadWindowsUpdatesEnabled = request.PreDownloadWindowsUpdatesEnabled;
         row.PreDownloadLinuxUpdatesEnabled = request.PreDownloadLinuxUpdatesEnabled;
         row.TimeZoneId = request.TimeZoneId;
+        row.ItemsPerPage = request.ItemsPerPage;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -228,7 +236,8 @@ public class AdminSettingsStore(
                 _agentOffline.OnlineRecoveryNotificationEnabled,
                 _preDownloadWindowsUpdatesEnabled,
                 _preDownloadLinuxUpdatesEnabled,
-                _timeZoneId);
+                _timeZoneId,
+                _itemsPerPage);
         }
     }
 
@@ -277,6 +286,7 @@ public class AdminSettingsStore(
         PreDownloadWindowsUpdatesEnabled = true,
         PreDownloadLinuxUpdatesEnabled = true,
         TimeZoneId = "UTC",
+        ItemsPerPage = DefaultItemsPerPage,
     };
 
     private void Apply(AdminSettings row)
@@ -351,6 +361,7 @@ public class AdminSettingsStore(
             _preDownloadWindowsUpdatesEnabled = row.PreDownloadWindowsUpdatesEnabled;
             _preDownloadLinuxUpdatesEnabled = row.PreDownloadLinuxUpdatesEnabled;
             _timeZoneId = row.TimeZoneId;
+            _itemsPerPage = row.ItemsPerPage;
         }
 
         // Pushes the change to the ACTUAL running logger, not just this

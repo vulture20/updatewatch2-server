@@ -1,20 +1,26 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { auditLogApi } from '../api/endpoints';
+import { adminApi, auditLogApi } from '../api/endpoints';
+import type { AdminSettings } from '../api/types';
 import { AuditLogTab } from './AuditLogTab';
 
 vi.mock('../api/endpoints', () => ({
   auditLogApi: {
     getPage: vi.fn(),
   },
+  adminApi: {
+    getSettings: vi.fn(),
+  },
 }));
 
 const mockedGetPage = vi.mocked(auditLogApi.getPage);
+const mockedGetSettings = vi.mocked(adminApi.getSettings);
 
 describe('AuditLogTab', () => {
   beforeEach(() => {
     mockedGetPage.mockReset();
+    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 } as AdminSettings);
   });
 
   it('renders the entries returned by the API', async () => {
@@ -121,5 +127,41 @@ describe('AuditLogTab', () => {
     render(<AuditLogTab />);
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
+  it('translates the "unlimited" items-per-page setting (0) into pageSize -1', async () => {
+    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 0 } as AdminSettings);
+    mockedGetPage.mockResolvedValue({ entries: [], totalCount: 0, page: 1, pageSize: 0 });
+
+    render(<AuditLogTab />);
+
+    await screen.findByText('No matching entries.');
+    expect(mockedGetPage).toHaveBeenCalledWith(1, -1, undefined);
+  });
+
+  it('jumps directly to a page number', async () => {
+    mockedGetPage.mockResolvedValue({
+      entries: [{ id: 1, timestamp: '2026-01-01T00:00:00Z', actor: 'admin', action: 'agent.approve', details: null }],
+      totalCount: 500,
+      page: 1,
+      pageSize: 50,
+    });
+    const user = userEvent.setup();
+
+    render(<AuditLogTab />);
+    await screen.findByText('Page 1 of 10');
+
+    mockedGetPage.mockResolvedValue({
+      entries: [{ id: 2, timestamp: '2026-01-01T00:00:00Z', actor: 'admin', action: 'agent.delete', details: null }],
+      totalCount: 500,
+      page: 10,
+      pageSize: 50,
+    });
+    // With current=1/total=10, buildPageNumbers renders [1, 2, ellipsis, 10] —
+    // page 10 (the last page) is always present regardless of current page.
+    await user.click(screen.getByRole('button', { name: 'Page 10' }));
+
+    await screen.findByText('Page 10 of 10');
+    expect(mockedGetPage).toHaveBeenLastCalledWith(10, 50, undefined);
   });
 });

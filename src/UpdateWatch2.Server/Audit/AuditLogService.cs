@@ -22,8 +22,17 @@ public class AuditLogService(AppDbContext db) : IAuditLogService
 
     public async Task<AuditLogPageDto> GetPageAsync(int page, int pageSize, string? search = null, CancellationToken ct = default)
     {
+        // A negative pageSize (the frontend only ever sends exactly -1) is a
+        // distinct sentinel for "no limit at all" — AdminSettings.ItemsPerPage's
+        // "unlimited" option (0 there), translated by the frontend before it
+        // ever reaches this API, since 0 already means something else at
+        // this query-parameter layer (see AuditLogController). A deliberate,
+        // admin-opted-into exception to this method's own "never pull an
+        // unbounded table into memory" discipline noted below — only taken
+        // when an admin explicitly chose unlimited, never the default.
+        var unlimited = pageSize < 0;
         page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize, MinPageSize, MaxPageSize);
+        pageSize = unlimited ? pageSize : Math.Clamp(pageSize, MinPageSize, MaxPageSize);
 
         var query = db.AuditLogEntries.AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
@@ -50,15 +59,18 @@ public class AuditLogService(AppDbContext db) : IAuditLogService
         // same "newest first" order without touching that gap, and — unlike
         // that workaround's client-side materialize-then-sort — stays a
         // real server-side ORDER BY + LIMIT/OFFSET, so an unbounded audit
-        // log table never has to be pulled into memory just to page it.
-        var entries = await query
-            .OrderByDescending(e => e.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+        // log table never has to be pulled into memory just to page it
+        // (except in the unlimited branch below, an explicit admin opt-in).
+        var orderedQuery = query.OrderByDescending(e => e.Id);
+        var entries = await (unlimited
+                ? orderedQuery
+                : orderedQuery.Skip((page - 1) * pageSize).Take(pageSize))
             .Select(e => new AuditLogEntryDto(e.Id, e.Timestamp, e.Actor, e.Action, e.Details))
             .ToListAsync(ct);
 
-        return new AuditLogPageDto(entries, totalCount, page, pageSize);
+        return unlimited
+            ? new AuditLogPageDto(entries, totalCount, 1, entries.Count)
+            : new AuditLogPageDto(entries, totalCount, page, pageSize);
     }
 
     public async Task<int> PurgeOlderThanAsync(int retentionDays, CancellationToken ct = default)

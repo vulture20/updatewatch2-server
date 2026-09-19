@@ -129,6 +129,7 @@ const baseSettings = {
   preDownloadWindowsUpdatesEnabled: true,
   preDownloadLinuxUpdatesEnabled: true,
   timeZoneId: 'UTC',
+  itemsPerPage: 50,
 };
 
 describe('AdminPage', () => {
@@ -457,6 +458,24 @@ describe('AdminPage', () => {
 
     await screen.findByRole('status');
     expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ auditLogRetentionDays: 30 }));
+  });
+
+  it('submits an edited items-per-page setting', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, itemsPerPage: 100 });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.selectOptions(screen.getByLabelText('Items per page'), '100');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ itemsPerPage: 100 }));
   });
 
   it('offers unlimited as a retention option', async () => {

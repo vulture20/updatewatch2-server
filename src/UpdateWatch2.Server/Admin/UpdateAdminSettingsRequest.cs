@@ -50,4 +50,5 @@ public record UpdateAdminSettingsRequest(
     bool AgentOnlineRecoveryNotificationEnabled = true,
     bool PreDownloadWindowsUpdatesEnabled = true,
     bool PreDownloadLinuxUpdatesEnabled = true,
-    string TimeZoneId = "UTC");
+    string TimeZoneId = "UTC",
+    int ItemsPerPage = 50);

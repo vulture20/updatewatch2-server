@@ -2,8 +2,8 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { agentsApi } from '../api/endpoints';
-import type { AgentListItem } from '../api/types';
+import { adminApi, agentsApi } from '../api/endpoints';
+import type { AdminSettings, AgentListItem } from '../api/types';
 import { AgentsListPage } from './AgentsListPage';
 
 vi.mock('../api/endpoints', () => ({
@@ -15,6 +15,9 @@ vi.mock('../api/endpoints', () => ({
     deleteMany: vi.fn(),
     updateSettingsMany: vi.fn(),
   },
+  adminApi: {
+    getSettings: vi.fn(),
+  },
 }));
 
 const mockedList = vi.mocked(agentsApi.list);
@@ -23,6 +26,7 @@ const mockedInstallMany = vi.mocked(agentsApi.installMany);
 const mockedRebootMany = vi.mocked(agentsApi.rebootMany);
 const mockedDeleteMany = vi.mocked(agentsApi.deleteMany);
 const mockedUpdateSettingsMany = vi.mocked(agentsApi.updateSettingsMany);
+const mockedGetSettings = vi.mocked(adminApi.getSettings);
 
 function makeAgent(overrides: Partial<AgentListItem> & { hostname: string }): AgentListItem {
   return {
@@ -56,6 +60,7 @@ describe('AgentsListPage', () => {
     mockedInstallMany.mockReset();
     mockedRebootMany.mockReset();
     mockedDeleteMany.mockReset();
+    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 } as AdminSettings);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
@@ -526,5 +531,41 @@ describe('AgentsListPage', () => {
 
     const hostnames = screen.getAllByRole('row').slice(1).map((row) => within(row).getAllByRole('cell')[1].textContent);
     expect(hostnames).toEqual(['alpha', 'bravo']);
+  });
+
+  it('paginates the list according to the configured items-per-page setting', async () => {
+    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 10 } as AdminSettings);
+    mockedList.mockResolvedValue(Array.from({ length: 25 }, (_, i) => makeAgent({ hostname: `host-${i}` })));
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await screen.findByText('host-0');
+    expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
+    expect(screen.queryByText('host-10')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    await screen.findByText('host-10');
+    expect(screen.queryByText('host-0')).not.toBeInTheDocument();
+  });
+
+  it('only selects the current page via the header checkbox, leaving other pages untouched', async () => {
+    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 10 } as AdminSettings);
+    mockedList.mockResolvedValue(Array.from({ length: 25 }, (_, i) => makeAgent({ hostname: `host-${i}` })));
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText('host-0');
+
+    await user.click(screen.getByLabelText('Select all'));
+    expect(screen.getByLabelText('select host-0')).toBeChecked();
+    expect(screen.getByText('10 selected')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await screen.findByText('host-10');
+
+    expect(screen.getByLabelText('select host-10')).not.toBeChecked();
+    expect(screen.getByLabelText('Select all')).not.toBeChecked();
   });
 });

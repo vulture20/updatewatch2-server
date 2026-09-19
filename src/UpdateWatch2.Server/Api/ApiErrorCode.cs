@@ -68,6 +68,7 @@ public enum ApiErrorCode
     InstanceUrlInvalid,
     AgentOfflineThresholdMinutesInvalid,
     TimeZoneIdInvalid,
+    ItemsPerPageInvalid,
 
     // AuthController
     TooManyFailedAttempts,

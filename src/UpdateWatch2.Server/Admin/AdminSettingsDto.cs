@@ -47,4 +47,6 @@ public record AdminSettingsDto(
     bool PreDownloadWindowsUpdatesEnabled,
     bool PreDownloadLinuxUpdatesEnabled,
     /// <summary>See <see cref="Db.Entities.AdminSettings.TimeZoneId"/>'s doc comment. Default "UTC".</summary>
-    string TimeZoneId);
+    string TimeZoneId,
+    /// <summary>See <see cref="Db.Entities.AdminSettings.ItemsPerPage"/>'s doc comment. 0 = unlimited. Default 50.</summary>
+    int ItemsPerPage);

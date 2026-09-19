@@ -3,8 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { schedulesApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import type { Schedule, UpsertSchedule } from '../api/types';
+import { Pagination } from '../components/Pagination';
 import { ScheduleDialog } from '../components/ScheduleDialog';
 import { ScheduleRunsDialog } from '../components/ScheduleRunsDialog';
+import { useItemsPerPage } from '../hooks/useItemsPerPage';
+import { usePageSlice } from '../hooks/usePageSlice';
 
 // Same "keep an already-rendered list alive across a transient poll
 // failure" pattern as AgentsListPage — see its own POLL_INTERVAL_MS
@@ -40,6 +43,12 @@ export function SchedulesListPage() {
   const [historyScheduleId, setHistoryScheduleId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const hasLoadedOnceRef = useRef(false);
+  const itemsPerPage = useItemsPerPage();
+  // schedules is null until the first load resolves — usePageSlice (a hook)
+  // must run unconditionally on every render regardless, so it's called
+  // here, before the early error/loading returns below, on a fallback
+  // empty array in that case.
+  const { page, setPage, totalPages, pageItems } = usePageSlice(schedules ?? [], itemsPerPage);
 
   const reload = () => {
     schedulesApi
@@ -136,7 +145,7 @@ export function SchedulesListPage() {
               </tr>
             </thead>
             <tbody>
-              {schedules.map((schedule) => (
+              {pageItems.map((schedule) => (
                 <tr key={schedule.id}>
                   <td>{schedule.name}</td>
                   <td>{typeLabel(schedule, t)}</td>
@@ -166,6 +175,8 @@ export function SchedulesListPage() {
           </table>
         </div>
       )}
+
+      {schedules.length > 0 && <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />}
 
       {dialogSchedule && (
         <ScheduleDialog

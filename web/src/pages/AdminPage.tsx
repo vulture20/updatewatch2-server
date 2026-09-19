@@ -25,6 +25,10 @@ const AD_ENCRYPTIONS: AdEncryption[] = ['None', 'StartTls', 'Ldaps'];
 // 0 is the "unlimited, never discard" sentinel, listed last since it reads
 // more naturally as the final, most-permissive step in the dropdown.
 const AUDIT_LOG_RETENTION_DAYS_OPTIONS = [30, 60, 90, 180, 365, 0] as const;
+// Matches AdminController's server-side ValidItemsPerPage exactly — 0 is
+// the "unlimited, everything on one page" sentinel, listed last for the
+// same reason as AUDIT_LOG_RETENTION_DAYS_OPTIONS above.
+const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100, 200, 0] as const;
 const TABS = ['general', 'notifications', 'activeDirectory', 'certificates', 'updateFilters', 'auditLog', 'info'] as const;
 type Tab = (typeof TABS)[number];
 
@@ -261,7 +265,7 @@ export function AdminPage() {
       });
       setForm(toFormState(settings));
       setSavedMessage(true);
-      announceAdminSettingsSaved({ smtpConfigured: settings.smtpConfigured });
+      announceAdminSettingsSaved({ smtpConfigured: settings.smtpConfigured, itemsPerPage: settings.itemsPerPage });
       agentUpdatesApi.getStatus().then(setAgentUpdateStatus).catch(() => setAgentUpdateStatus(null));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('login.genericError'));
@@ -363,6 +367,21 @@ export function AdminPage() {
                 onChange={(e) => update('bruteForceLockoutMinutes', Number(e.target.value))}
               />
             </label>
+          </div>
+
+          <div className="card">
+            <span className="card-kicker">{t('admin.itemsPerPage.title')}</span>
+            <label>
+              {t('admin.itemsPerPage.title')}
+              <select value={form.itemsPerPage} onChange={(e) => update('itemsPerPage', Number(e.target.value))}>
+                {ITEMS_PER_PAGE_OPTIONS.map((count) => (
+                  <option key={count} value={count}>
+                    {count === 0 ? t('admin.itemsPerPage.unlimited') : t('admin.itemsPerPage.option', { count })}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="field-hint">{t('admin.itemsPerPage.hint')}</p>
           </div>
 
           <div className="card">

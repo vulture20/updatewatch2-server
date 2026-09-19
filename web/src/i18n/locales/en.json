@@ -342,6 +342,12 @@
     "auditLogRetention": "Retention",
     "auditLogRetentionDays": "Audit log retention",
     "auditLogRetentionDaysHint": "Entries older than this are permanently deleted by a periodic cleanup — lowering this also purges already-existing older entries on the next pass, not just new ones going forward.",
+    "itemsPerPage": {
+      "title": "Items per page",
+      "option": "{{count}} items",
+      "unlimited": "Unlimited (everything on one page)",
+      "hint": "Controls how many rows the paginated lists (agent overview, schedules, audit log) show per page."
+    },
     "auditLogRetentionDaysOption": "{{count}} days",
     "auditLogRetentionDaysUnlimited": "Unlimited (never discard)",
     "save": "Save",
@@ -371,6 +377,12 @@
     "previousPage": "Previous",
     "nextPage": "Next",
     "pageIndicator": "Page {{page}} of {{totalPages}}"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageIndicator": "Page {{page}} of {{totalPages}}",
+    "page": "Page {{page}}"
   },
   "schedules": {
     "title": "Schedules",
@@ -484,6 +496,7 @@
     "AgentCertificateValidityDaysInvalid": "AgentCertificateValidityDays must be between 1 and 3650.",
     "AgentAutoUpdateCheckIntervalHoursInvalid": "AgentAutoUpdateCheckIntervalHours must be at least 1.",
     "AuditLogRetentionDaysInvalid": "AuditLogRetentionDays must be one of: 0, 30, 60, 90, 180, 365 (0 = unlimited).",
+    "ItemsPerPageInvalid": "ItemsPerPage must be one of: 0, 10, 25, 50, 100, 200 (0 = unlimited).",
     "CertificateExpiryWarningLeadDaysInvalid": "CertificateExpiryWarningLeadDays must be between 1 and 365.",
     "NotificationRecipientAddressInvalid": "NotificationRecipientAddress must be a valid email address.",
     "InstanceUrlInvalid": "InstanceUrl must be an absolute http:// or https:// URL.",

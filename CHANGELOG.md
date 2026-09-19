@@ -12,6 +12,20 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.6.1] - 2026-09-19
+
+### Added
+
+- **Pagination, previously only on the Audit Log, now also exists on the Agent overview and Zeitpläne (Schedules) lists — at the user's explicit request ("Im Audit-Log gibt es ja Pagination. Ist das in der Agent-Übersicht und bei den Zeitplänen ebenfalls so? Falls nicht, bitte dort auch umsetzen. Außerdem sollte das Pagination so umgebaut werden, dass man auch direkt die Seitenzahl anspringen kann... In den Einstellungen unter 'Allgemein' sollte die Anzahl der angezeigten Einträge pro Seite einstellbar sein.").** Both new lists paginate client-side, over the same already-loaded, already-filtered/sorted array they always fetched in full (`GET /api/agents`/`GET /api/schedules` stay completely unpaged — no backend change to either controller/service), via a new shared `usePageSlice` hook. On `AgentsListPage`, the header "select all" checkbox now selects/deselects only the current page's rows rather than every filtered row across every page — a deliberate, user-confirmed change from its previous "every filtered row" behavior, now that a filtered result can span multiple pages.
+- **A shared `Pagination` component (`web/src/components/Pagination.tsx`) replaces the Audit Log's previously bespoke Previous/Next-only pager and now backs all three lists**, adding direct page-number jump buttons alongside Previous/Next everywhere — with smart ellipsis truncation (`buildPageNumbers`, independently unit-tested) so a long list doesn't render one button per page.
+- **New global admin setting, `AdminSettings.ItemsPerPage`** (Settings → General, DB schema `1.2.3`) — a fixed dropdown (10/25/50/100/200, default 50) plus an explicit "unlimited" option (sentinel `0`, mirroring `AuditLogRetentionDays`'s own unlimited convention) that shows every row on one page. One setting controls all three lists, fetched via a new `useItemsPerPage` hook (mirroring `SmtpWarningBanner`'s fetch-once-plus-live-update-via-`onAdminSettingsSaved` pattern) rather than three independent ones, per the user's own confirmed preference.
+  - For the Audit Log specifically (the one list that's genuinely server-paginated, unlike the other two), "unlimited" needed a real backend change: `AuditLogService.GetPageAsync` now treats a negative `pageSize` (the frontend sends exactly `-1`) as "no limit — return every matching row in one response, no `Skip`/`Take`" — a distinct sentinel from the query parameter's own pre-existing `pageSize=0` ("caller didn't specify one, default to 50"), since `AdminSettings.ItemsPerPage`'s own `0` "unlimited" value is a different, unrelated context that the frontend translates before it ever reaches this endpoint. A deliberate, admin-opted-into exception to this method's usual "never pull an unbounded table into memory" discipline — only taken when an admin explicitly chose unlimited.
+  - `AgentsListPage`/`SchedulesListPage`'s own client-side pagination handle `ItemsPerPage=0` far more simply, since the full list was already loaded either way: it just means one page containing everything, same as today's pre-pagination behavior.
+
+### Changed
+
+- `Db/SchemaVersion.cs` bumped to `1.2.3` for the new `AdminSettings.ItemsPerPage` column. No protocol bump — this is a purely admin-session-gated UI/settings change with no agent-facing wire effect.
+
 ## [1.6.0] - 2026-09-19
 
 ### Fixed

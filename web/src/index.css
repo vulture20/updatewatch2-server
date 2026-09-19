@@ -404,11 +404,19 @@ button:disabled {
   margin-bottom: 0;
 }
 
-.audit-log-pagination {
+.pagination {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
+  flex-wrap: wrap;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
 }
 
 .os-cell {
