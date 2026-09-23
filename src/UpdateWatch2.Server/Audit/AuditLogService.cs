@@ -9,6 +9,14 @@ public class AuditLogService(AppDbContext db) : IAuditLogService
     private const int MinPageSize = 1;
     private const int MaxPageSize = 200;
 
+    // A hard ceiling on the "unlimited" branch below — an admin explicitly
+    // opting into no pagination still shouldn't be able to pull an
+    // unbounded table into memory in one HTTP response (e.g. a
+    // long-lived instance with unlimited AuditLogRetentionDays and
+    // hundreds of thousands of rows). totalCount still reports the real
+    // total, so a caller can tell this cap was hit.
+    private const int MaxUnlimitedRows = 10_000;
+
     public async Task LogAsync(string actor, string action, string? details = null, CancellationToken ct = default)
     {
         db.AuditLogEntries.Add(new AuditLogEntry
@@ -20,19 +28,15 @@ public class AuditLogService(AppDbContext db) : IAuditLogService
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<AuditLogPageDto> GetPageAsync(int page, int pageSize, string? search = null, CancellationToken ct = default)
+    public async Task<AuditLogPageDto> GetPageAsync(int page, int? pageSize, string? search = null, CancellationToken ct = default)
     {
-        // A negative pageSize (the frontend only ever sends exactly -1) is a
-        // distinct sentinel for "no limit at all" — AdminSettings.ItemsPerPage's
-        // "unlimited" option (0 there), translated by the frontend before it
-        // ever reaches this API, since 0 already means something else at
-        // this query-parameter layer (see AuditLogController). A deliberate,
-        // admin-opted-into exception to this method's own "never pull an
-        // unbounded table into memory" discipline noted below — only taken
-        // when an admin explicitly chose unlimited, never the default.
-        var unlimited = pageSize < 0;
+        // A null pageSize is the one, unambiguous "no limit at all"
+        // representation — see this method's own doc comment on
+        // IAuditLogService. Even the genuine opt-in is still bounded by
+        // MaxUnlimitedRows below — never truly unbounded.
+        var unlimited = pageSize is null;
         page = Math.Max(1, page);
-        pageSize = unlimited ? pageSize : Math.Clamp(pageSize, MinPageSize, MaxPageSize);
+        var effectivePageSize = unlimited ? 0 : Math.Clamp(pageSize!.Value, MinPageSize, MaxPageSize);
 
         var query = db.AuditLogEntries.AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
@@ -63,14 +67,14 @@ public class AuditLogService(AppDbContext db) : IAuditLogService
         // (except in the unlimited branch below, an explicit admin opt-in).
         var orderedQuery = query.OrderByDescending(e => e.Id);
         var entries = await (unlimited
-                ? orderedQuery
-                : orderedQuery.Skip((page - 1) * pageSize).Take(pageSize))
+                ? orderedQuery.Take(MaxUnlimitedRows)
+                : orderedQuery.Skip((page - 1) * effectivePageSize).Take(effectivePageSize))
             .Select(e => new AuditLogEntryDto(e.Id, e.Timestamp, e.Actor, e.Action, e.Details))
             .ToListAsync(ct);
 
         return unlimited
             ? new AuditLogPageDto(entries, totalCount, 1, entries.Count)
-            : new AuditLogPageDto(entries, totalCount, page, pageSize);
+            : new AuditLogPageDto(entries, totalCount, page, effectivePageSize);
     }
 
     public async Task<int> PurgeOlderThanAsync(int retentionDays, CancellationToken ct = default)

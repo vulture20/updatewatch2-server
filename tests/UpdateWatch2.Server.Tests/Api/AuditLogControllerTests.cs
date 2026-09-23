@@ -97,7 +97,7 @@ public class AuditLogControllerTests : IClassFixture<WebApplicationFactory<Progr
     }
 
     [Fact]
-    public async Task Get_with_pageSize_negative_one_returns_every_entry_unpaged()
+    public async Task Get_with_unlimited_true_returns_every_entry_unpaged()
     {
         using (var scope = _factory.Services.CreateScope())
         {
@@ -108,15 +108,31 @@ public class AuditLogControllerTests : IClassFixture<WebApplicationFactory<Progr
             }
         }
 
-        var response = await _client.GetAsync("/api/admin/audit-log?pageSize=-1");
+        var response = await _client.GetAsync("/api/admin/audit-log?unlimited=true");
 
         response.EnsureSuccessStatusCode();
         var page = await response.Content.ReadFromJsonAsync<AuditLogPageDto>();
         Assert.NotNull(page);
         Assert.Equal(1, page!.Page);
         // At least the 5 entries this test added, plus AuthTestHelper.LoginAsync's own —
-        // the point is the -1 sentinel wasn't silently remapped to the 50 default.
+        // the point is the explicit flag genuinely bypassed pagination.
         Assert.True(page.Entries.Count >= 5);
         Assert.Equal(page.Entries.Count, page.PageSize);
+    }
+
+    [Fact]
+    public async Task Get_ignores_a_negative_pageSize_when_unlimited_is_not_set()
+    {
+        // "Unlimited" is its own explicit query parameter now — a negative
+        // pageSize alone (even -1, this endpoint's old, since-removed
+        // sentinel value) is no longer a second way to request it; it's
+        // just out-of-range input, clamped to the ordinary [1, 200] minimum
+        // like any other pageSize.
+        var response = await _client.GetAsync("/api/admin/audit-log?pageSize=-1");
+
+        response.EnsureSuccessStatusCode();
+        var page = await response.Content.ReadFromJsonAsync<AuditLogPageDto>();
+        Assert.NotNull(page);
+        Assert.Equal(1, page!.PageSize);
     }
 }

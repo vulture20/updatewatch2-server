@@ -381,9 +381,7 @@
     "actor": "Akteur",
     "action": "Aktion",
     "details": "Details",
-    "previousPage": "Zurück",
-    "nextPage": "Weiter",
-    "pageIndicator": "Seite {{page}} von {{totalPages}}"
+    "loading": "Wird geladen…"
   },
   "pagination": {
     "previous": "Zurück",

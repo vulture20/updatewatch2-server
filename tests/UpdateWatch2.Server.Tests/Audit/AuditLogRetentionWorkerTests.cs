@@ -118,7 +118,7 @@ public class AuditLogRetentionWorkerTests
         public Task LogAsync(string actor, string action, string? details = null, CancellationToken ct = default) =>
             throw new NotSupportedException();
 
-        public Task<AuditLogPageDto> GetPageAsync(int page, int pageSize, string? search = null, CancellationToken ct = default) =>
+        public Task<AuditLogPageDto> GetPageAsync(int page, int? pageSize, string? search = null, CancellationToken ct = default) =>
             throw new NotSupportedException();
 
         public Task<int> PurgeOlderThanAsync(int retentionDays, CancellationToken ct = default)
@@ -136,7 +136,7 @@ public class AuditLogRetentionWorkerTests
         public Task LogAsync(string actor, string action, string? details = null, CancellationToken ct = default) =>
             throw new NotSupportedException();
 
-        public Task<AuditLogPageDto> GetPageAsync(int page, int pageSize, string? search = null, CancellationToken ct = default) =>
+        public Task<AuditLogPageDto> GetPageAsync(int page, int? pageSize, string? search = null, CancellationToken ct = default) =>
             throw new NotSupportedException();
 
         public Task<int> PurgeOlderThanAsync(int retentionDays, CancellationToken ct = default)

@@ -66,7 +66,7 @@ describe('AuditLogTab', () => {
     render(<AuditLogTab />);
 
     await screen.findByText('No matching entries.');
-    expect(mockedGetPage).toHaveBeenCalledWith(1, 50, undefined);
+    expect(mockedGetPage).toHaveBeenCalledWith(1, 50, undefined, false);
   });
 
   it('searches and resets to page 1', async () => {
@@ -79,7 +79,7 @@ describe('AuditLogTab', () => {
     await user.type(screen.getByLabelText('Search'), 'delete');
     await user.click(screen.getByRole('button', { name: 'Search' }));
 
-    expect(mockedGetPage).toHaveBeenLastCalledWith(1, 50, 'delete');
+    expect(mockedGetPage).toHaveBeenLastCalledWith(1, 50, 'delete', false);
   });
 
   it('searches when Enter is pressed in the search field', async () => {
@@ -91,7 +91,7 @@ describe('AuditLogTab', () => {
 
     await user.type(screen.getByLabelText('Search'), 'delete{Enter}');
 
-    expect(mockedGetPage).toHaveBeenLastCalledWith(1, 50, 'delete');
+    expect(mockedGetPage).toHaveBeenLastCalledWith(1, 50, 'delete', false);
   });
 
   it('paginates with Previous/Next', async () => {
@@ -117,7 +117,7 @@ describe('AuditLogTab', () => {
     await user.click(screen.getByRole('button', { name: 'Next' }));
 
     await screen.findByText('Page 2 of 3');
-    expect(mockedGetPage).toHaveBeenLastCalledWith(2, 50, undefined);
+    expect(mockedGetPage).toHaveBeenLastCalledWith(2, 50, undefined, false);
     expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
   });
 
@@ -129,14 +129,14 @@ describe('AuditLogTab', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 
-  it('translates the "unlimited" items-per-page setting (0) into pageSize -1', async () => {
+  it('translates the "unlimited" items-per-page setting (0) into the explicit unlimited flag', async () => {
     mockedGetSettings.mockReset().mockResolvedValue({ auditLogItemsPerPage: 0 } as AdminSettings);
     mockedGetPage.mockResolvedValue({ entries: [], totalCount: 0, page: 1, pageSize: 0 });
 
     render(<AuditLogTab />);
 
     await screen.findByText('No matching entries.');
-    expect(mockedGetPage).toHaveBeenCalledWith(1, -1, undefined);
+    expect(mockedGetPage).toHaveBeenCalledWith(1, 0, undefined, true);
   });
 
   it('uses the independent auditLogItemsPerPage setting, not the shared itemsPerPage one', async () => {
@@ -146,7 +146,7 @@ describe('AuditLogTab', () => {
     render(<AuditLogTab />);
 
     await screen.findByText('No matching entries.');
-    expect(mockedGetPage).toHaveBeenCalledWith(1, 100, undefined);
+    expect(mockedGetPage).toHaveBeenCalledWith(1, 100, undefined, false);
   });
 
   it('jumps directly to a page number', async () => {
@@ -172,6 +172,6 @@ describe('AuditLogTab', () => {
     await user.click(screen.getByRole('button', { name: 'Page 10' }));
 
     await screen.findByText('Page 10 of 10');
-    expect(mockedGetPage).toHaveBeenLastCalledWith(10, 50, undefined);
+    expect(mockedGetPage).toHaveBeenLastCalledWith(10, 50, undefined, false);
   });
 });

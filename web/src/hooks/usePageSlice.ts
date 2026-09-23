@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export interface PageSlice<T> {
   /** 1-based. */
@@ -26,14 +26,20 @@ export function usePageSlice<T>(items: T[], pageSize: number): PageSlice<T> {
   // Clamp back into range whenever the underlying list (a new filter/sort/
   // search) or the page size itself shrinks totalPages below the
   // currently-viewed page — otherwise a filter change could strand the
-  // view on a now-empty out-of-range page.
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
+  // view on a now-empty out-of-range page. Adjusted directly during render
+  // (React's own documented pattern for this, not a useEffect): a
+  // post-render effect would still let THIS render compute `pageItems` from
+  // the stale, now out-of-range `page` first — a real one-frame flash of an
+  // empty page before the effect fires and corrects it. Calling `setPage`
+  // here instead restarts the render immediately, before anything paints,
+  // and `effectivePage` below covers the render that's currently in
+  // progress too, so `pageItems` is never wrong even for that one frame.
+  if (page > totalPages) {
+    setPage(totalPages);
+  }
+  const effectivePage = Math.min(page, totalPages);
 
-  const pageItems = pageSize === 0 ? items : items.slice((page - 1) * pageSize, page * pageSize);
+  const pageItems = pageSize === 0 ? items : items.slice((effectivePage - 1) * pageSize, effectivePage * pageSize);
 
-  return { page, setPage, totalPages, pageItems };
+  return { page: effectivePage, setPage, totalPages, pageItems };
 }

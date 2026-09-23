@@ -9,19 +9,21 @@ public interface IAuditLogService
     /// A page of the audit log, newest first, optionally filtered to
     /// entries whose actor/action/details contain <paramref name="search"/>
     /// (case-insensitive). Backs the admin UI's Audit Log tab.
-    /// <paramref name="page"/> is 1-based; a positive <paramref name="pageSize"/>
-    /// is clamped to [1, 200] server-side regardless of what's requested.
-    /// A negative <paramref name="pageSize"/> (the admin UI only ever sends
-    /// exactly -1) is a distinct "no limit" sentinel — every matching entry
-    /// is returned in one response, an explicit admin opt-in (see
-    /// <see cref="Admin.IAdminSettingsStore.ItemsPerPage"/>'s own "unlimited"
-    /// option) rather than the default; the returned <c>Page</c>/<c>PageSize</c>
-    /// reflect the actual single page (1) and count in that case, not -1.
-    /// A <paramref name="pageSize"/> of exactly 0 is unrelated to that
-    /// sentinel and keeps meaning "unspecified" (see
-    /// <c>AuditLogController</c>'s own handling).
+    /// <paramref name="page"/> is 1-based. <paramref name="pageSize"/> is
+    /// clamped to [1, 200] server-side regardless of what's requested; a
+    /// <c>null</c> <paramref name="pageSize"/> is the one, unambiguous "no
+    /// limit" representation — every matching entry is returned in one
+    /// response (still capped at <c>MaxUnlimitedRows</c>), an explicit admin
+    /// opt-in (see <see cref="Admin.IAdminSettingsStore.ItemsPerPage"/>'s own
+    /// "unlimited" option) rather than the default; the returned
+    /// <c>Page</c>/<c>PageSize</c> reflect the actual single page (1) and
+    /// count in that case. This method itself has no separate "unspecified"
+    /// concept — normalizing an unspecified/invalid request into a concrete
+    /// page size (or genuinely wanting no limit at all) is entirely
+    /// <c>AuditLogController</c>'s job, so every value that reaches here
+    /// means exactly one thing.
     /// </summary>
-    Task<AuditLogPageDto> GetPageAsync(int page, int pageSize, string? search = null, CancellationToken ct = default);
+    Task<AuditLogPageDto> GetPageAsync(int page, int? pageSize, string? search = null, CancellationToken ct = default);
 
     /// <summary>
     /// Permanently deletes every entry older than <paramref name="retentionDays"/>
