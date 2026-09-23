@@ -24,6 +24,10 @@ services:
       # UPDATEWATCH2_DEMOMODE/UPDATEWATCH2_TRUSTEDIP already use.
       # UPDATEWATCH2_AUTOUPDATE: "false"
       # UPDATEWATCH2_TRUSTEDIP: 10.0.0.0/8
+      # Restricts X-Forwarded-For/X-Forwarded-Proto to a known reverse
+      # proxy's IP/CIDR (comma-separated for multiple) — off by default,
+      # see ../.env.example.
+      # UPDATEWATCH2_TRUSTED_PROXY: 10.0.0.5
       # The externally-reachable hostname this container is addressed by —
       # becomes the SAN on the agent-facing TLS certificate Kestrel
       # generates on first run. MUST match the ServerAddress agents are

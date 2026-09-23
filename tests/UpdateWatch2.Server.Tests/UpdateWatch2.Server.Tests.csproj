@@ -8,6 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Microsoft.AspNetCore.Mvc.Testing (below) brings in WebApplicationFactory
+         and enough of the shared framework for hosting a real app under test,
+         but this project's plain Microsoft.NET.Sdk (unlike the main project's
+         Microsoft.NET.Sdk.Web) doesn't implicitly reference the ASP.NET Core
+         shared framework itself — needed here for framework-only types like
+         Microsoft.AspNetCore.HttpOverrides.ForwardedHeadersOptions that
+         TrustedProxyOptionsConfiguratorTests constructs directly, not just
+         through WebApplicationFactory. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

@@ -180,11 +180,33 @@ builder.Services.AddCors(options =>
 // boundary here is network-level (only the reverse proxy can reach this
 // container), not this middleware's proxy allowlist. This has no bearing
 // on the agent-facing 8796 port below, which Kestrel terminates directly.
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
+//
+// UPDATEWATCH2_TRUSTED_PROXY (optional, unset by default) restores the
+// normal allow-list for an admin who knows their reverse proxy's stable
+// IP/CIDR — see TrustedProxyOptionsConfigurator's own doc comment. Uses
+// AddOptions<T>().Configure<ILoggerFactory>(...) rather than the simpler
+// Configure<T>(Action<T>) form specifically so a malformed value can be
+// logged (this runs lazily, on first resolution of IOptions<ForwardedHeadersOptions>,
+// well after the DI container exists, unlike this file's other early,
+// pre-Build() env var reads).
+builder.Services.AddOptions<ForwardedHeadersOptions>().Configure<ILoggerFactory>((options, loggerFactory) =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
+
+    var trustedProxyEnv = Environment.GetEnvironmentVariable("UPDATEWATCH2_TRUSTED_PROXY");
+    if (!string.IsNullOrWhiteSpace(trustedProxyEnv)
+        && !TrustedProxyOptionsConfigurator.TryApply(trustedProxyEnv, options, out var error))
+    {
+        // A malformed value falls back to the cleared lists above (trust
+        // any peer) — the exact same behavior as leaving the env var
+        // unset, never a new hole, so this logs rather than crashing
+        // startup over a typo in an opt-in hardening knob.
+        loggerFactory.CreateLogger("Program").LogError(
+            "UPDATEWATCH2_TRUSTED_PROXY is set but invalid ({Error}) — ignoring it; forwarded headers will be trusted from any peer, same as when it's unset.",
+            error);
+    }
 });
 
 // Certificate-based mutual TLS is the security backbone for agent-server
