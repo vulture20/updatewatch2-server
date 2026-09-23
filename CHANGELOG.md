@@ -12,6 +12,14 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.7.1] - 2026-09-23
+
+### Fixed
+
+- **README/README.de falsely claimed the local admin password is "changeable afterward"/"from the UI" — reported directly by the user.** Confirmed genuinely false, and not a regression: `AuthController.ChangePassword` (`PUT /api/auth/password`) and `AdminAccountService.ChangePasswordAsync` have existed and worked since the very first commit that wired up login, and the web API client even has a `changePassword` function (`api/endpoints.ts`) — but no page, dialog, or route anywhere in the admin UI (`App.tsx`'s router, every file under `web/src/pages`/`web/src/components`) has ever called it; the client function is only referenced by test mocks. Fixed by describing reality instead: both READMEs now say the endpoint exists but isn't wired into any UI page, and give the two ways to actually change the password today — `UPDATEWATCH2_RESET_ADMIN_PASSWORD` plus a restart, or a direct `curl -X PUT .../api/auth/password` call with a valid session cookie. No code changed — building the missing UI itself was considered and explicitly declined in favor of a documentation-only fix, per the user's own choice.
+- **The "Project status" section's "Everything else has been confirmed working end to end against a real running deployment" was a real overstatement, found while auditing the rest of the README for accuracy at the user's request.** It only carved out three exceptions (WUApiLib, the Linux `dnf`/`yum` path, the NSIS installer's install/uninstall), but CLAUDE.md documents several more still-open "not live-verified" areas that were silently missing from that list: Windows-on-ARM entirely (no real ARM64 Windows device ever available), the Windows/Linux remote-reboot mechanisms, the Windows self-update apply path and Event Log output, Linux pre-download's actual `apt`/`dnf` execution (only argument-building is tested), `.rpm` install/upgrade (structural inspection only), the multi-arch Docker image on real arm64 hardware, and selective update install's actual OS-level commands (only the selection/orchestration logic is live-verified). Replaced the single blanket sentence with a complete, grouped list of every currently-open gap.
+- The example Docker image tag in the "Image tags" paragraph (`:v0.18.0`) was many versions stale, found in the same pass — updated to track the current release.
+
 ## [1.7.0] - 2026-09-23
 
 ### Added

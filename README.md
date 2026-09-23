@@ -34,7 +34,7 @@ Companion repository: [updatewatch2-agent](https://github.com/vulture20/updatewa
 - The server itself checks GitHub for new agent releases, downloads them once, and re-serves them to agents — agents never need their own internet access, and every download is SHA-256-verified before an agent applies it.
 
 ### 🔑 Login & access
-- Local `admin` account (random strong password on first start, changeable afterward) and optional Active Directory login (LDAP bind, gated on group membership) — both cookie-session based, with configurable brute-force protection and a trusted-IP exemption.
+- Local `admin` account (random strong password on first start) and optional Active Directory login (LDAP bind, gated on group membership) — both cookie-session based, with configurable brute-force protection and a trusted-IP exemption. The `PUT /api/auth/password` endpoint to change the local admin password exists and is fully functional, but there's no page for it in the admin UI yet — see below for how to change it today.
 
 ### 📧 Notifications & administration
 - Email alerts on an OR-threshold (too many updates on one machine, or too many machines affected), with a test-mail function and a live reachability warning.
@@ -46,7 +46,14 @@ Companion repository: [updatewatch2-agent](https://github.com/vulture20/updatewa
 
 ## ✅ Project status
 
-UpdateWatch2 was built with **vibe coding**: implemented and iterated on with [Claude Code](https://claude.com/claude-code) (Anthropic) in conversation, rather than hand-written line by line, driven by a human-authored architecture brief. Code has been built, tested, and repeatedly run live at each step — not just compiled — and the mutual-TLS security backbone (registration, approval, renewal, re-issuance, root rotation), the admin UI, and the agent-server protocol are implemented end to end, live-verified, and covered by an automated test suite (server: xUnit; UI: Vitest). A few pieces are explicitly **not yet live-verified against a real target host**, and are called out as such in code comments: the Windows Update API (WUApiLib COM) integration, the Linux `dnf`/`yum` update path (only `apt` was verified against a real package cache), and the NSIS Windows installer's actual install/uninstall run through a package manager. Everything else has been confirmed working end to end against a real running deployment. Keep backups of the `/app/data` and `/app/certs` volumes.
+UpdateWatch2 was built with **vibe coding**: implemented and iterated on with [Claude Code](https://claude.com/claude-code) (Anthropic) in conversation, rather than hand-written line by line, driven by a human-authored architecture brief. Code has been built, tested, and repeatedly run live at each step — not just compiled — and the mutual-TLS security backbone (registration, approval, renewal, re-issuance, root rotation), the admin UI, and the agent-server protocol are implemented end to end, live-verified, and covered by an automated test suite (server: xUnit; UI: Vitest). The `apt`-based Linux update path has also been live-verified against a real package cache. A number of pieces are explicitly **not yet live-verified against a real target host** — only unit/integration-tested, or design-reviewed but never run live — and are called out as such in code comments:
+
+- **Windows** (no real Windows host has ever been available while building this): the Windows Update API (WUApiLib COM) integration's real search→download→install cycle; the NSIS installer's actual install/uninstall through a real Service Control Manager; the agent's Windows self-update apply path (silently re-running the installer); `shutdown.exe`-based remote reboot scheduling; Windows Event Log output; Windows-on-ARM (`win-arm64`) entirely.
+- **Linux**: the RPM/`dnf`/`yum` update path (only `apt` was verified against a real package cache); pre-downloading updates before an install trigger (only the argument-building logic has real test coverage); `systemd`-based remote reboot scheduling (never run for real — would reboot the shared sandbox this project's own tooling depends on).
+- **Packaging**: `.rpm` install/upgrade (structural inspection only, never run through a real package manager); the multi-arch Docker image has not been pulled/run on real arm64 hardware.
+- **Selective update install**'s actual OS-level install commands (WUA COM filtering, apt `--only-upgrade`, dnf/yum scoped `update`) — only the surrounding selection/orchestration logic (which update IDs get sent, stored, cleared) is live-verified, not the OS commands themselves.
+
+Everything else — including the full mutual-TLS security backbone, agent onboarding/approval/renewal/re-issuance/CA root rotation, and the admin UI — has been confirmed working end to end against a real running deployment. Keep backups of the `/app/data` and `/app/certs` volumes.
 
 ## 🐳 Installation & configuration (Docker)
 
@@ -65,7 +72,16 @@ docker run -d \
   ghcr.io/vulture20/updatewatch2-server:latest
 ```
 
-Then open **http://localhost:8795** and log in as `admin` — the randomly generated first-start password is printed to the container's log (`docker logs updatewatch2-server`); change it from the UI afterward.
+Then open **http://localhost:8795** and log in as `admin` — the randomly generated first-start password is printed to the container's log (`docker logs updatewatch2-server`). There's no change-password page in the admin UI yet; the endpoint (`PUT /api/auth/password`) exists and works, just isn't wired into any UI. Two ways to actually change it today: set `UPDATEWATCH2_RESET_ADMIN_PASSWORD` (see below) and restart, or call the endpoint directly while logged in, e.g.:
+
+```bash
+curl -X PUT http://localhost:8795/api/auth/password \
+  -H 'Content-Type: application/json' \
+  -b cookies.txt \
+  -d '{"currentPassword":"<current>","newPassword":"<new, >=16 chars, mixed case + digit + symbol>"}'
+```
+
+(`cookies.txt` from a prior `curl -c cookies.txt -X POST .../api/auth/login ...` — or reuse your browser's session cookie.)
 
 **Ports:** `8795` is plain HTTP for the admin UI and its API, meant to sit behind a TLS-terminating reverse proxy. `8796` is agent-only — Kestrel terminates TLS directly there with mutual-certificate authentication, no reverse proxy in front. `UPDATEWATCH2_SERVER_HOSTNAME` becomes the SAN on the certificate presented on `8796` and **must match** the `ServerAddress` agents are configured to dial, or every agent connection fails certificate validation.
 
@@ -74,7 +90,7 @@ Then open **http://localhost:8795** and log in as `admin` — the randomly gener
 - `/app/certs` — the internal CA plus the server's own TLS leaf. Losing it invalidates every already-approved agent's certificate.
 - `/app/agent-updates` — cached downloads of the newest agent release, when agent auto-update is enabled. Losing it just triggers a one-time re-download, nothing destructive.
 
-**Image tags:** `:latest` tracks the newest push to `main`; `:v<version>` (e.g. `:v0.18.0`, matching this repo's own [`VERSION`](VERSION) file) pins a specific release; `:sha-<short-sha>` pins an exact commit. Images are built and published by [`docker-publish.yml`](.github/workflows/docker-publish.yml) on every push to `main` and on `v*.*.*` tags, gated on `dotnet test` and `npm test` both passing first — a pull request builds the image without pushing it.
+**Image tags:** `:latest` tracks the newest push to `main`; `:v<version>` (e.g. `:v1.7.1`, matching this repo's own [`VERSION`](VERSION) file) pins a specific release; `:sha-<short-sha>` pins an exact commit. Images are built and published by [`docker-publish.yml`](.github/workflows/docker-publish.yml) on every push to `main` and on `v*.*.*` tags, gated on `dotnet test` and `npm test` both passing first — a pull request builds the image without pushing it.
 
 ### Key environment variables
 
