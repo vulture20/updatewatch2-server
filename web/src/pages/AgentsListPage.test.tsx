@@ -550,6 +550,39 @@ describe('AgentsListPage', () => {
     expect(screen.queryByText('host-0')).not.toBeInTheDocument();
   });
 
+  it('shows how many agents are on the current page, not the total matching the filter, when paginated', async () => {
+    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 50 } as AdminSettings);
+    mockedList.mockResolvedValue(Array.from({ length: 81 }, (_, i) => makeAgent({ hostname: `host-${i}` })));
+
+    renderPage();
+
+    await screen.findByText('host-0');
+    // Previously showed "81 of 81 agents" (filteredAndSorted.length twice) even
+    // though only the first 50 were actually visible on this page — reported
+    // directly by the user.
+    expect(screen.getByText('50 of 81 agents')).toBeInTheDocument();
+  });
+
+  it('resets back to page 1 when a filter changes while viewing a later page', async () => {
+    mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 10 } as AdminSettings);
+    // host-1, host-10..host-19 (11 agents) match a "host-1" search — still
+    // enough for a second page at itemsPerPage=10, so the reset is
+    // observable rather than coincidentally landing on the only page.
+    mockedList.mockResolvedValue(Array.from({ length: 25 }, (_, i) => makeAgent({ hostname: `host-${i}` })));
+    const user = userEvent.setup();
+
+    renderPage();
+    await screen.findByText('host-0');
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await screen.findByText('Page 2 of 3');
+
+    await user.type(screen.getByLabelText('Search'), 'host-1');
+
+    await screen.findByText('Page 1 of 2');
+    expect(screen.getByText('host-1')).toBeInTheDocument();
+  });
+
   it('only selects the current page via the header checkbox, leaving other pages untouched', async () => {
     mockedGetSettings.mockReset().mockResolvedValue({ itemsPerPage: 10 } as AdminSettings);
     mockedList.mockResolvedValue(Array.from({ length: 25 }, (_, i) => makeAgent({ hostname: `host-${i}` })));

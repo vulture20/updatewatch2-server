@@ -165,8 +165,15 @@ export const schedulesApi = {
 
 /** Read-only, paginated audit log — see AuditLogController. */
 export const auditLogApi = {
-  getPage: (page: number, pageSize: number, search?: string) => {
-    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  // `unlimited` is its own explicit flag, not a magic pageSize value — when
+  // true, `pageSize` is never sent/consulted (see AuditLogController).
+  getPage: (page: number, pageSize: number, search?: string, unlimited?: boolean) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (unlimited) {
+      params.set('unlimited', 'true');
+    } else {
+      params.set('pageSize', String(pageSize));
+    }
     if (search) {
       params.set('search', search);
     }

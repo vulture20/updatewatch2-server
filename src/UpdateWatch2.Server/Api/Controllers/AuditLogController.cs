@@ -10,14 +10,23 @@ namespace UpdateWatch2.Server.Api.Controllers;
 [Authorize]
 public class AuditLogController(IAuditLogService auditLog) : ControllerBase
 {
-    // pageSize == 0 here means "the caller didn't specify one" (e.g. a
-    // manual Swagger call) and defaults to 50 — unrelated to the
-    // AdminSettings.ItemsPerPage "unlimited" sentinel, which is also 0 but
-    // never reaches this query parameter: the frontend always translates
-    // that setting into a distinct pageSize=-1 before calling this
-    // endpoint, which passes straight through to GetPageAsync unchanged
-    // (see that method's own doc comment for the -1 "no limit" branch).
+    // "Unlimited" is its own explicit query parameter, not encoded into
+    // pageSize as a magic negative value — the AdminSettings.ItemsPerPage
+    // "unlimited" sentinel (0 there) never reaches this layer either; the
+    // admin UI translates it into unlimited=true before calling this
+    // endpoint. pageSize itself now only ever means "the requested page
+    // size" — 0 (or omitted, e.g. a manual Swagger call) still falls back
+    // to the 50 default, but there is no longer a second, negative-number
+    // meaning layered on top of it. GetPageAsync's own pageSize parameter
+    // is `null` exactly when unlimited is true — the one, unambiguous "no
+    // limit" representation that reaches the service (see its own doc
+    // comment).
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] int page, [FromQuery] int pageSize, [FromQuery] string? search, CancellationToken ct) =>
-        Ok(await auditLog.GetPageAsync(page == 0 ? 1 : page, pageSize == 0 ? 50 : pageSize, search, ct));
+    public async Task<IActionResult> Get(
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
+        [FromQuery] bool unlimited,
+        [FromQuery] string? search,
+        CancellationToken ct) =>
+        Ok(await auditLog.GetPageAsync(page == 0 ? 1 : page, unlimited ? null : (pageSize == 0 ? 50 : pageSize), search, ct));
 }

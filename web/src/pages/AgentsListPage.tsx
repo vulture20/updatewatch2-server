@@ -210,6 +210,17 @@ export function AgentsListPage() {
 
   const { page, setPage, totalPages, pageItems } = usePageSlice(filteredAndSorted, itemsPerPage);
 
+  // A changed filter/search/sort can leave `page` pointing at a slice of
+  // the NEW result set rather than genuinely out of range (usePageSlice's
+  // own clamp only fires once page > totalPages) — reset to page 1 so the
+  // admin always lands on the top of a freshly filtered/sorted view rather
+  // than an unrelated slice a few pages in. Deliberately keyed on
+  // filters/statFilter/sort only, not `agents` itself, so a background poll
+  // tick never resets the page an admin is currently browsing.
+  useEffect(() => {
+    setPage(1);
+  }, [filters, statFilter, sort]);
+
   const allVisibleSelected = pageItems.length > 0 && pageItems.every((a) => selected.has(a.hostname));
   const someVisibleSelected = pageItems.some((a) => selected.has(a.hostname));
 
@@ -354,7 +365,13 @@ export function AgentsListPage() {
 
           <div className="list-toolbar">
             <span>
-              <span className="text-muted">{t('agents.filteredCount', { filtered: filteredAndSorted.length, total: agents.length })}</span>
+              {/* pageItems.length (what's actually visible right now), not filteredAndSorted.length
+                  (every filter match across every page) — a multi-page result used to show e.g.
+                  "81 of 81 agents" even though only 50 were actually on screen, reported directly by
+                  the user. filteredAndSorted.length as the second number still reflects how selective
+                  an active filter is (the grand unfiltered total is already shown in the "Total" stat
+                  card above). */}
+              <span className="text-muted">{t('agents.filteredCount', { filtered: pageItems.length, total: filteredAndSorted.length })}</span>
               {selected.size > 0 && (
                 <>
                   <span className="text-muted" aria-hidden="true">

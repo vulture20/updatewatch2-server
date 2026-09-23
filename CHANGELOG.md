@@ -12,6 +12,21 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.6.2] - 2026-09-23
+
+### Fixed
+
+A code review of the newly-shipped 1.6.1 pagination feature (not a user report) found and fixed several real gaps, plus one bug reported directly by the user:
+
+- **`AgentsListPage`/`SchedulesListPage` never reset back to page 1 when a filter/search/sort changed.** `usePageSlice`'s own clamp only fires once `page > totalPages`, so changing a filter while on a later page could silently render an unrelated slice of the new result set rather than the top of it. Fixed with a `useEffect` in `AgentsListPage` keyed on `filters`/`statFilter`/`sort` only — deliberately not `agents` itself, so a background poll tick never resets the page an admin is currently browsing.
+- **`AuditLogTab` could strand itself on an out-of-range page when `AuditLogItemsPerPage` changed live** (the Settings tab stays mounted alongside it via `AdminPage`'s `hidden`-tab pattern) — the resulting empty response rendered "No matching entries" with no `<Pagination>` to click back out of, since that's only shown for a non-empty result. Fixed by adjusting `page` back to 1 directly during render (not in a `useEffect`, which would still let one stale fetch through first) whenever `itemsPerPage` changes.
+- **`usePageSlice`'s own out-of-range clamp ran in a post-render `useEffect`**, so the render that shrank `totalPages` below the current page still computed `pageItems` from the stale, now out-of-range page first — a real, if brief, empty-table flash before the effect corrected it. Fixed the same way as the `AuditLogTab` case above: the clamp now happens directly during render, with `pageItems` derived from `Math.min(page, totalPages)` so even the triggering render itself is never wrong.
+- **`AuditLogService.GetPageAsync`'s "unlimited" branch (an admin explicitly opting out of pagination) had no upper bound at all** — a long-lived instance with unlimited `AuditLogRetentionDays` and hundreds of thousands of rows could return the entire table in one HTTP response. Fixed with a `MaxUnlimitedRows` cap (10,000; `TotalCount` still reports the real total so a caller can tell the cap was hit).
+- **The "unlimited" concept was encoded as a magic negative `pageSize` value with a different meaning at each of three layers** (`AdminSettings.ItemsPerPage`: `0` = unlimited; the query parameter: `0` = unspecified/default; `GetPageAsync`: negative = unlimited) — a real ambiguity, not just a style nit: a caller reasonably assuming `pageSize=0` meant "no limit" (the convention used everywhere else in this feature) silently got the 50-row default instead, with no error. Replaced with one unambiguous representation: `AuditLogController` now takes an explicit `unlimited` query flag, and `IAuditLogService.GetPageAsync`'s `pageSize` parameter is `int?`, where `null` is the only "no limit" value — every other value, including a stray negative one, is just an ordinary page size clamped to `[1, 200]`.
+- **`useItemsPerPage` always rendered once with its hardcoded placeholder default (50) before the real admin-configured value loaded.** Cosmetic on `AgentsListPage`/`SchedulesListPage` (purely client-side pagination), but a genuine duplicate HTTP request on `AuditLogTab`, whose fetch effect depends on `itemsPerPage`. Fixed with a new `useItemsPerPageState` (exposing a `loaded` flag) that `AuditLogTab` now waits on before firing its first fetch.
+- **`AgentsListPage`'s toolbar count showed e.g. "81 of 81 agents" even when the list was paginated and only 50 agents were actually visible — reported directly by the user.** It used `filteredAndSorted.length` (everything matching the active filter, across every page) for both halves of the count whenever no filter was active. Fixed to show `pageItems.length` (what's actually on screen right now) "of" `filteredAndSorted.length` (how many match the active filter) — the existing "Total" stat card already covers the grand unfiltered total separately.
+- Two dead i18n keys (`auditLog.previousPage`/`nextPage`/`pageIndicator`, left over from the 1.6.1 switch to the shared `Pagination` component's own `pagination.*` keys) removed from both locale files.
+
 ## [1.6.1] - 2026-09-19
 
 ### Added

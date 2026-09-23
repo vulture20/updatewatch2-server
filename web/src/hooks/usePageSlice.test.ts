@@ -35,6 +35,10 @@ describe('usePageSlice', () => {
 
     expect(result.current.page).toBe(1);
     expect(result.current.totalPages).toBe(1);
+    // Not just eventually correct — pageItems must reflect the clamped page
+    // on this exact render, with no intervening render where it's a stale,
+    // out-of-range (and therefore empty) slice.
+    expect(result.current.pageItems).toEqual([0, 1, 2, 3, 4]);
   });
 
   it('returns at least page 1 for an empty array', () => {

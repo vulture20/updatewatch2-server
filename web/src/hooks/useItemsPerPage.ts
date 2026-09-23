@@ -32,8 +32,27 @@ function fieldFor(kind: ItemsPerPageKind): keyof Pick<AdminSettings, 'itemsPerPa
  * `AdminSettings.auditLogItemsPerPage` instead, a genuinely separate value,
  * not an override of the default.
  */
-export function useItemsPerPage(kind: ItemsPerPageKind = 'default'): number {
+export interface ItemsPerPageState {
+  itemsPerPage: number;
+  /** False until the initial `getSettings()` call has settled (success or failure). */
+  loaded: boolean;
+}
+
+/**
+ * The full state behind {@link useItemsPerPage}, additionally exposing
+ * whether `itemsPerPage` is still the placeholder default or a value that's
+ * actually been confirmed (either the real setting, or the default
+ * confirmed-as-correct after a failed fetch). Use this instead of the plain
+ * `useItemsPerPage` when consuming the value triggers a network call of its
+ * own (AuditLogTab's server-side page fetch) — waiting for `loaded` avoids
+ * firing that call once with the placeholder default and again moments
+ * later with the real value. A purely client-side consumer slicing an
+ * already-loaded array (AgentsListPage/SchedulesListPage's usePageSlice)
+ * has no such cost and can keep using the plain number.
+ */
+export function useItemsPerPageState(kind: ItemsPerPageKind = 'default'): ItemsPerPageState {
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
+  const [loaded, setLoaded] = useState(false);
   const field = fieldFor(kind);
 
   useEffect(() => {
@@ -41,12 +60,19 @@ export function useItemsPerPage(kind: ItemsPerPageKind = 'default'): number {
     adminApi
       .getSettings()
       .then((settings) => {
-        if (!cancelled && typeof settings[field] === 'number') {
-          setItemsPerPage(settings[field]);
+        if (!cancelled) {
+          if (typeof settings[field] === 'number') {
+            setItemsPerPage(settings[field]);
+          }
+          setLoaded(true);
         }
       })
       .catch(() => {
-        // Couldn't load (e.g. no admin session yet) — keep the default.
+        // Couldn't load (e.g. no admin session yet) — keep the default, but
+        // still unblock a consumer waiting on `loaded`.
+        if (!cancelled) {
+          setLoaded(true);
+        }
       });
     return () => {
       cancelled = true;
@@ -63,5 +89,9 @@ export function useItemsPerPage(kind: ItemsPerPageKind = 'default'): number {
     [field],
   );
 
-  return itemsPerPage;
+  return { itemsPerPage, loaded };
+}
+
+export function useItemsPerPage(kind: ItemsPerPageKind = 'default'): number {
+  return useItemsPerPageState(kind).itemsPerPage;
 }

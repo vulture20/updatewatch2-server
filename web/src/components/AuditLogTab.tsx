@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { auditLogApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { Pagination } from './Pagination';
-import { useItemsPerPage } from '../hooks/useItemsPerPage';
+import { useItemsPerPageState } from '../hooks/useItemsPerPage';
 import type { AuditLogPage } from '../api/types';
 
 /**
@@ -16,24 +16,45 @@ import type { AuditLogPage } from '../api/types';
  */
 export function AuditLogTab() {
   const { t, i18n } = useTranslation();
-  const itemsPerPage = useItemsPerPage('auditLog');
+  const { itemsPerPage, loaded: itemsPerPageLoaded } = useItemsPerPageState('auditLog');
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [data, setData] = useState<AuditLogPage | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // itemsPerPage changes live (Settings tab stays mounted alongside this
+  // one, see AdminPage's `hidden`-tab pattern) — reset back to page 1
+  // whenever it does, otherwise a since-out-of-range page keeps being
+  // fetched (an empty response with no <Pagination> rendered to page back
+  // out of, since that's only shown for a non-empty result). Adjusting
+  // state directly during render (not in a useEffect) so the corrected
+  // page is what the fetch effect below ever sees — an effect-based reset
+  // would still fire one stale fetch with the old, now out-of-range page
+  // first.
+  const [prevItemsPerPage, setPrevItemsPerPage] = useState(itemsPerPage);
+  if (itemsPerPage !== prevItemsPerPage) {
+    setPrevItemsPerPage(itemsPerPage);
+    setPage(1);
+  }
+
   useEffect(() => {
+    // Wait for the real itemsPerPage setting before ever fetching — firing
+    // once with the hook's own placeholder default and again moments later
+    // with the real value would mean two real HTTP requests, not just a
+    // cosmetic flash (see useItemsPerPageState's own doc comment).
+    if (!itemsPerPageLoaded) {
+      return;
+    }
     setError(null);
     // itemsPerPage === 0 is AdminSettings.ItemsPerPage's own "unlimited"
-    // sentinel — translated here into the audit-log endpoint's own,
-    // distinct -1 "no limit" sentinel (see AuditLogService.GetPageAsync's
-    // doc comment for why 0 already means something else at that layer).
+    // sentinel — translated here into the audit-log endpoint's own explicit
+    // `unlimited` flag (see AuditLogController).
     auditLogApi
-      .getPage(page, itemsPerPage === 0 ? -1 : itemsPerPage, appliedSearch || undefined)
+      .getPage(page, itemsPerPage, appliedSearch || undefined, itemsPerPage === 0)
       .then(setData)
       .catch((err) => setError(err instanceof ApiError ? err.message : t('login.genericError')));
-  }, [page, appliedSearch, itemsPerPage, t]);
+  }, [page, appliedSearch, itemsPerPage, itemsPerPageLoaded, t]);
 
   const submitSearch = () => {
     setPage(1);
@@ -67,6 +88,8 @@ export function AuditLogTab() {
       </div>
 
       {error && <div role="alert" className="login-error">{error}</div>}
+
+      {!itemsPerPageLoaded && !error && <p>{t('auditLog.loading')}</p>}
 
       {data && data.entries.length === 0 && <p>{t('auditLog.empty')}</p>}
 

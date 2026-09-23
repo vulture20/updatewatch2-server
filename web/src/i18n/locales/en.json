@@ -381,9 +381,7 @@
     "actor": "Actor",
     "action": "Action",
     "details": "Details",
-    "previousPage": "Previous",
-    "nextPage": "Next",
-    "pageIndicator": "Page {{page}} of {{totalPages}}"
+    "loading": "Loading…"
   },
   "pagination": {
     "previous": "Previous",
