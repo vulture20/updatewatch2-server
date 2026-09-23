@@ -279,6 +279,8 @@ export interface AdminSettings {
   itemsPerPage: number;
   /** Same idea as itemsPerPage, but specifically for the Audit Log — a genuinely independent setting, not an override. Default 50. */
   auditLogItemsPerPage: number;
+  /** Whether a brand-new hostname's first registration attempt is accepted at all — a fleet-wide kill switch for onboarding new agents, not agent operation in general. Doesn't affect an already-approved/certified agent or one already mid-onboarding. Default true. */
+  autoRegistrationEnabled: boolean;
 }
 
 /**

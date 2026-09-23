@@ -219,6 +219,11 @@
     "bruteForceMaxAttempts": "Max attempts",
     "bruteForceWindowMinutes": "Window (minutes)",
     "bruteForceLockoutMinutes": "Lockout (minutes)",
+    "autoRegistration": {
+      "title": "Automatic agent registration",
+      "hint": "Controls whether a brand-new agent can register itself with this server at all. Turning this off prevents a buggy or malicious source from permanently spamming this server with new agent registrations — it does not affect any agent already approved/certified, or one already mid-registration.",
+      "enabled": "Allow new agents to register"
+    },
     "agentAutoUpdate": {
       "title": "Agent auto-update",
       "hint": "Periodically checks GitHub for a newer agent release, downloads it, and offers it to agents over their normal heartbeat — agents only ever download from this server, never from GitHub directly.",

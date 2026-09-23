@@ -131,6 +131,7 @@ const baseSettings = {
   timeZoneId: 'UTC',
   itemsPerPage: 50,
   auditLogItemsPerPage: 50,
+  autoRegistrationEnabled: true,
 };
 
 describe('AdminPage', () => {
@@ -612,6 +613,24 @@ describe('AdminPage', () => {
     expect(mockedUpdateSettings).toHaveBeenCalledWith(
       expect.objectContaining({ preDownloadWindowsUpdatesEnabled: true, preDownloadLinuxUpdatesEnabled: false }),
     );
+  });
+
+  it('submits the auto-registration checkbox unchecked', async () => {
+    mockedUpdateSettings.mockResolvedValue({ ...baseSettings, autoRegistrationEnabled: false });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>,
+    );
+    await screen.findByLabelText('SMTP host');
+
+    await user.click(screen.getByLabelText('Allow new agents to register'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByRole('status');
+    expect(mockedUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({ autoRegistrationEnabled: false }));
   });
 
   it('submits an edited instance URL', async () => {

@@ -219,6 +219,11 @@
     "bruteForceMaxAttempts": "Max. Fehlversuche",
     "bruteForceWindowMinutes": "Zeitraum (Minuten)",
     "bruteForceLockoutMinutes": "Sperre (Minuten)",
+    "autoRegistration": {
+      "title": "Automatische Agent-Registrierung",
+      "hint": "Steuert, ob sich ein neuer Agent überhaupt bei diesem Server registrieren kann. Wird dies deaktiviert, kann eine fehlerhafte oder böswillige Quelle diesen Server nicht mehr dauerhaft mit neuen Agent-Registrierungen fluten — bereits genehmigte/zertifizierte Agents sowie Agents, die sich bereits mitten in der Registrierung befinden, sind davon nicht betroffen.",
+      "enabled": "Neue Agents dürfen sich registrieren"
+    },
     "agentAutoUpdate": {
       "title": "Agent-Auto-Update",
       "hint": "Prüft regelmäßig auf GitHub nach einer neueren Agent-Version, lädt sie herunter und bietet sie den Agents über deren normalen Heartbeat an — Agents laden dabei ausschließlich von diesem Server herunter, nie direkt von GitHub.",

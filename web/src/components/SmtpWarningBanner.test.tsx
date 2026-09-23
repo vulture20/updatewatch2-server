@@ -80,6 +80,7 @@ const baseSettings = {
   timeZoneId: 'UTC',
   itemsPerPage: 50,
   auditLogItemsPerPage: 50,
+  autoRegistrationEnabled: true,
 };
 
 // Renders both siblings the way App.tsx actually does — SmtpWarningBanner

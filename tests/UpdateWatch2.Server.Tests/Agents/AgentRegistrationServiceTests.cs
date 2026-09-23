@@ -81,6 +81,47 @@ public class AgentRegistrationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_brand_new_hostnames_registration_is_rejected_when_auto_registration_is_disabled_and_no_row_is_created()
+    {
+        _settingsStore.AutoRegistrationEnabled = false;
+
+        var outcome = await _service.RegisterAsync("locked-down-host", BareRequest);
+
+        Assert.Equal(AgentRegistrationStatus.Rejected, outcome.Status);
+        Assert.False(await _db.Agents.AnyAsync(a => a.Hostname == "locked-down-host"));
+    }
+
+    [Fact]
+    public async Task Auto_registration_disabled_does_not_affect_an_already_pending_agent_polling_with_its_own_valid_token()
+    {
+        // The toggle gates ONLY a brand-new hostname's first contact — an
+        // agent already mid-onboarding (a row already exists, with a token
+        // issued while auto-registration was still enabled) must keep
+        // working, since it isn't a NEW registration.
+        var registered = await _service.RegisterAsync("already-pending-host", BareRequest);
+
+        _settingsStore.AutoRegistrationEnabled = false;
+        var outcome = await _service.RegisterAsync("already-pending-host", BareRequest with { RegistrationToken = registered.RegistrationToken });
+
+        Assert.Equal(AgentRegistrationStatus.Pending, outcome.Status);
+    }
+
+    [Fact]
+    public async Task Auto_registration_disabled_does_not_affect_an_already_approved_agents_certificate_issuance()
+    {
+        var registered = await _service.RegisterAsync("already-approved-host", BareRequest);
+        var agent = await _db.Agents.SingleAsync(a => a.Hostname == "already-approved-host");
+        agent.Approved = true;
+        await _db.SaveChangesAsync();
+
+        _settingsStore.AutoRegistrationEnabled = false;
+        var outcome = await _service.RegisterAsync("already-approved-host", BareRequest with { RegistrationToken = registered.RegistrationToken });
+
+        Assert.Equal(AgentRegistrationStatus.Approved, outcome.Status);
+        Assert.NotNull(outcome.CertificatePfxBase64);
+    }
+
+    [Fact]
     public async Task No_token_for_an_already_registered_hostname_is_rejected()
     {
         await _service.RegisterAsync("claimed-host", BareRequest);

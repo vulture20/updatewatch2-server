@@ -89,6 +89,9 @@ public interface IAdminSettingsStore
     /// <summary>See <see cref="Db.Entities.AdminSettings.AuditLogItemsPerPage"/>'s doc comment. 0 = unlimited. Default 50.</summary>
     int AuditLogItemsPerPage { get; }
 
+    /// <summary>See <see cref="Db.Entities.AdminSettings.AutoRegistrationEnabled"/>'s doc comment. Default true.</summary>
+    bool AutoRegistrationEnabled { get; }
+
     /// <summary>Loads the persisted row into the cache, seeding one from appsettings.json's defaults if none exists yet. Call once at startup.</summary>
     Task InitializeAsync(CancellationToken ct = default);
 

@@ -15,7 +15,13 @@ namespace UpdateWatch2.Server.Agents;
 /// by an agent (see <c>Protocol/AgentApiRoutes.Register</c> agent-side):
 ///
 /// - No token + unknown hostname -> create the Agent row (Approved=false),
-///   return a fresh registration token (only its hash is persisted).
+///   return a fresh registration token (only its hash is persisted) —
+///   UNLESS <see cref="Admin.IAdminSettingsStore.AutoRegistrationEnabled"/>
+///   is off, in which case this one branch is Rejected instead, before any
+///   row is created. The one place in this whole state machine that admin
+///   setting gates — every other branch below (an already-known hostname
+///   re-polling, an admin approving something already pending) still works
+///   exactly as before regardless of this toggle.
 /// - No token + hostname already has a row -> Rejected. A fresh,
 ///   unauthenticated call must never reset or hijack an in-flight
 ///   registration for a hostname someone else already claimed.
@@ -92,6 +98,22 @@ public class AgentRegistrationService(
             if (agent is not null)
             {
                 return AgentRegistrationOutcome.Rejected("An agent with this hostname is already registered.");
+            }
+
+            // Admin-controlled kill switch for onboarding brand-new agents
+            // (AdminSettings.AutoRegistrationEnabled, at the user's
+            // explicit request — stopping a buggy or malicious source from
+            // permanently spamming this endpoint with ever-new hostnames).
+            // Deliberately gates ONLY this branch: an unknown hostname's
+            // very first contact. Every other branch above/below —
+            // re-polling with an already-issued token, an admin approving
+            // an already-pending agent, an already-certified agent's
+            // early-return — is unaffected, since none of those create a
+            // new Agent row.
+            if (!settingsStore.AutoRegistrationEnabled)
+            {
+                await auditLog.LogAsync("agent", "agent.register.auto-registration-disabled", hostname, ct);
+                return AgentRegistrationOutcome.Rejected("Automatic agent registration is currently disabled by the administrator.");
             }
 
             var (rawToken, hash) = RegistrationTokenHasher.GenerateToken();

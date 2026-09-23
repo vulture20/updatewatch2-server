@@ -38,6 +38,7 @@ public class AdminSettingsStore(
     private string _timeZoneId = "UTC";
     private int _itemsPerPage = DefaultItemsPerPage;
     private int _auditLogItemsPerPage = DefaultItemsPerPage;
+    private bool _autoRegistrationEnabled = true;
 
     private const int DefaultAuditLogRetentionDays = 90;
     private const int DefaultItemsPerPage = 50;
@@ -110,6 +111,11 @@ public class AdminSettingsStore(
     public int AuditLogItemsPerPage
     {
         get { lock (_lock) return _auditLogItemsPerPage; }
+    }
+
+    public bool AutoRegistrationEnabled
+    {
+        get { lock (_lock) return _autoRegistrationEnabled; }
     }
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -190,6 +196,7 @@ public class AdminSettingsStore(
         row.TimeZoneId = request.TimeZoneId;
         row.ItemsPerPage = request.ItemsPerPage;
         row.AuditLogItemsPerPage = request.AuditLogItemsPerPage;
+        row.AutoRegistrationEnabled = request.AutoRegistrationEnabled;
         row.UpdatedAt = DateTimeOffset.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -245,7 +252,8 @@ public class AdminSettingsStore(
                 _preDownloadLinuxUpdatesEnabled,
                 _timeZoneId,
                 _itemsPerPage,
-                _auditLogItemsPerPage);
+                _auditLogItemsPerPage,
+                _autoRegistrationEnabled);
         }
     }
 
@@ -296,6 +304,7 @@ public class AdminSettingsStore(
         TimeZoneId = "UTC",
         ItemsPerPage = DefaultItemsPerPage,
         AuditLogItemsPerPage = DefaultItemsPerPage,
+        AutoRegistrationEnabled = true,
     };
 
     private void Apply(AdminSettings row)
@@ -372,6 +381,7 @@ public class AdminSettingsStore(
             _timeZoneId = row.TimeZoneId;
             _itemsPerPage = row.ItemsPerPage;
             _auditLogItemsPerPage = row.AuditLogItemsPerPage;
+            _autoRegistrationEnabled = row.AutoRegistrationEnabled;
         }
 
         // Pushes the change to the ACTUAL running logger, not just this

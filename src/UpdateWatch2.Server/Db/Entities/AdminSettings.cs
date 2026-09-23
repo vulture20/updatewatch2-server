@@ -167,5 +167,26 @@ public class AdminSettings
     /// </summary>
     public int AuditLogItemsPerPage { get; set; } = 50;
 
+    /// <summary>
+    /// Whether <see cref="Agents.AgentRegistrationService.RegisterAsync"/>
+    /// accepts a brand-new hostname's first-contact registration attempt at
+    /// all, at the user's explicit request ("Die automatische Registrierung
+    /// von Agents soll abschaltbar gemacht werden. Damit soll u. a. ein
+    /// permanentes Neuregistrieren von Agents verhindert werden. Sei es
+    /// durch einen Fehler oder mit böser Absicht."). A fleet-wide kill
+    /// switch for ONBOARDING new agents, not agent operation in general —
+    /// turning it off does not affect any already-approved/certified agent
+    /// (heartbeats, certificate renewal/self-heal, installs, reboots all
+    /// keep working, since none of those go through the registration
+    /// endpoint), and it does not affect an agent already mid-onboarding
+    /// (an existing row polling with its own already-issued token, or an
+    /// admin approving one already pending) — see
+    /// <see cref="Agents.AgentRegistrationService.RegisterAsync"/>'s own
+    /// doc comment for exactly which branch this gates. Default true
+    /// (today's existing behavior, unchanged until an admin explicitly
+    /// turns this off).
+    /// </summary>
+    public bool AutoRegistrationEnabled { get; set; } = true;
+
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

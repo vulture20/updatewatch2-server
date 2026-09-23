@@ -374,6 +374,19 @@ export function AdminPage() {
           </div>
 
           <div className="card">
+            <span className="card-kicker">{t('admin.autoRegistration.title')}</span>
+            <p className="card-body">{t('admin.autoRegistration.hint')}</p>
+            <label>
+              <input
+                type="checkbox"
+                checked={form.autoRegistrationEnabled}
+                onChange={(e) => update('autoRegistrationEnabled', e.target.checked)}
+              />
+              {t('admin.autoRegistration.enabled')}
+            </label>
+          </div>
+
+          <div className="card">
             <span className="card-kicker">{t('admin.pagination.title')}</span>
             <label>
               {t('admin.itemsPerPage.title')}

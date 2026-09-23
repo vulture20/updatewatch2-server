@@ -12,6 +12,15 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.7.0] - 2026-09-23
+
+### Added
+
+- **Automatic agent registration is now admin-configurable, at the user's explicit request** — "Die automatische Registrierung von Agents soll abschaltbar gemacht werden. Damit soll u. a. ein permanentes Neuregistrieren von Agents verhindert werden. Sei es durch einen Fehler oder mit böser Absicht." New `AdminSettings.AutoRegistrationEnabled` (Settings → General, DB schema `1.2.5`, default `true` — today's existing behavior, unchanged until an admin explicitly turns it off), with a checkbox plus explanatory text.
+  - Gates exactly one branch of `AgentRegistrationService.RegisterAsync`'s state machine: a brand-new hostname's very first contact (no token, no existing `Agent` row) — turning it off makes that call `Rejected` before any row is ever created, and records an audit-log entry (`agent.register.auto-registration-disabled`) so an admin has visibility into an actual flood/abuse attempt while the switch is off. Deliberately scoped no wider than that: an already-approved/certified agent's heartbeat, certificate renewal/self-heal, install/reboot delivery, and an agent already mid-onboarding (an existing row polling with its own already-issued token, or one an admin is in the middle of approving) are all completely unaffected, since none of those go through this branch.
+  - Backed by a real column (`AddAutoRegistrationEnabled` migration) rather than an env-var-only kill switch like `UPDATEWATCH2_DEMOMODE`/`UPDATEWATCH2_TRUSTEDIP`, since this is meant to be an easily reversible, UI-driven response to an ongoing abuse situation, not a deploy-time choice.
+  - Test coverage at the service layer (`AgentRegistrationServiceTests`): a brand-new hostname is rejected with no row created while disabled; an already-pending agent polling with its own valid token still succeeds; an already-approved agent still receives its certificate — all while the toggle is off, proving the gate's scope is exactly as narrow as intended.
+
 ## [1.6.2] - 2026-09-23
 
 ### Fixed

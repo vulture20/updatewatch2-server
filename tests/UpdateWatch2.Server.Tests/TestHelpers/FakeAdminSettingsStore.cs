@@ -53,6 +53,8 @@ public class FakeAdminSettingsStore(
 
     public int AuditLogItemsPerPage { get; set; } = 50;
 
+    public bool AutoRegistrationEnabled { get; set; } = true;
+
     public Task InitializeAsync(CancellationToken ct = default) => throw new NotSupportedException();
 
     public Task<AdminSettingsDto> UpdateAsync(UpdateAdminSettingsRequest request, CancellationToken ct = default) =>

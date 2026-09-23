@@ -51,6 +51,7 @@ public class AdminSettingsStoreTests : IDisposable
         Assert.Equal(30, store.BruteForce.LockoutMinutes);
         Assert.True(store.PreDownloadWindowsUpdatesEnabled);
         Assert.True(store.PreDownloadLinuxUpdatesEnabled);
+        Assert.True(store.AutoRegistrationEnabled);
 
         using var scope = _services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -106,7 +107,8 @@ public class AdminSettingsStoreTests : IDisposable
             AgentAutoUpdateCheckIntervalHours: 12,
             AuditLogRetentionDays: 30,
             PreDownloadWindowsUpdatesEnabled: false,
-            PreDownloadLinuxUpdatesEnabled: false);
+            PreDownloadLinuxUpdatesEnabled: false,
+            AutoRegistrationEnabled: false);
 
         var dto = await store.UpdateAsync(request);
 
@@ -136,6 +138,8 @@ public class AdminSettingsStoreTests : IDisposable
         Assert.False(dto.PreDownloadWindowsUpdatesEnabled);
         Assert.False(store.PreDownloadLinuxUpdatesEnabled);
         Assert.False(dto.PreDownloadLinuxUpdatesEnabled);
+        Assert.False(store.AutoRegistrationEnabled);
+        Assert.False(dto.AutoRegistrationEnabled);
 
         // Neither password ever comes back out through the DTO.
         Assert.True(dto.SmtpPasswordSet);

@@ -52,4 +52,5 @@ public record UpdateAdminSettingsRequest(
     bool PreDownloadLinuxUpdatesEnabled = true,
     string TimeZoneId = "UTC",
     int ItemsPerPage = 50,
-    int AuditLogItemsPerPage = 50);
+    int AuditLogItemsPerPage = 50,
+    bool AutoRegistrationEnabled = true);
