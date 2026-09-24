@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.7.3] - 2026-09-24
+
+### Fixed
+
+- **README/README.de's stability badge and Project status section overstated what was still unverified, reported directly by the user.** No code changed — documentation-only: the agent's real Windows Update API (WUApiLib) integration and the NSIS installer's install/uninstall behavior have since been confirmed against a real Windows host (including a selective, per-update install), closing `updatewatch2-agent#13`. Both were previously listed here as not yet verified against a real target host; reworded to reflect the confirmation, leaving only the RPM/dnf update path and the arm64 install path (Windows and Linux) as still-open gaps. The marketing homepage's status copy (`opt/UpdateWatch2/homepage`) and CLAUDE.md were updated to match.
+
 ## [1.7.2] - 2026-09-23
 
 ### Added
