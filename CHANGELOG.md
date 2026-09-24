@@ -12,6 +12,12 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.7.5] - 2026-09-24
+
+### Fixed
+
+- **README/README.de's Project status section updated to reflect the agent's x86_64 `.deb`/`.rpm` packaging install/upgrade path being fully confirmed too (agent v1.0.31), closing `updatewatch2-agent#9` for good.** No server code changed — documentation-only: the packaging bullet was reworded to move both x86_64 (now confirmed) and arm64 (already confirmed under emulation, v1.0.30) into the main confirmed-things paragraph, narrowing the remaining "Packaging" gap down to specifically the `systemctl enable`/`start`/`stop` service-lifecycle branches (never exercised outside the real production `hpn54l` host) and real arm64 hardware itself (only QEMU-emulated so far).
+
 ## [1.7.4] - 2026-09-24
 
 ### Fixed
