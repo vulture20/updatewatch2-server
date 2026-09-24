@@ -12,6 +12,17 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.7.4] - 2026-09-24
+
+### Fixed
+
+- **README/README.de's stability badge and Project status section were stale again — this time on two fronts: catching up with prior agent-side confirmations that had never been mirrored here, and reflecting new work done this session.** No server code changed — documentation-only:
+  - The agent's Linux RPM/`dnf`/`yum` update path (Fedora's dnf5, Rocky Linux's classic dnf4, and CentOS 7's bare legacy yum — search, reboot detection, and install) has been fully live-verified, closing `updatewatch2-agent#12`.
+  - The Linux arm64 packaging install/upgrade path (`dpkg`/`rpm` against the agent's own fpm-built package) has been confirmed too, though only under QEMU emulation, not real arm64 hardware, and without a running `systemd` to exercise the service enable/start/stop scriptlets — a real, ongoing gap, not fully closed.
+  - Previously undocumented here (agent v1.0.26/v1.0.27, never mirrored into this README before now): both platforms' remote reboot scheduling, Windows Event Log output, and the Windows agent's self-update apply step (silently re-running the NSIS installer) had already been confirmed against real hosts.
+  - Left correctly still-open: Windows-on-ARM entirely, the Linux agent's own self-update *apply* step (`updatewatch2-agent#24` tracks a real report it may still fail silently), `.rpm` install/upgrade of the agent's own package on x86_64 (`updatewatch2-agent#9`), the multi-arch Docker image on real arm64 hardware, and `apt --only-upgrade`'s own live verification.
+  - The marketing homepage's status copy (`../homepage`) and CLAUDE.md updated to match. A stale, unrelated duplicate clone of this repo at `/opt/UpdateWatch2/server` (behind by one commit, `d6e4a46` vs. `1005ed3`) — which is what the homepage's own relative paths actually read from — was fast-forwarded to catch up.
+
 ## [1.7.3] - 2026-09-24
 
 ### Fixed
