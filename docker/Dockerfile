@@ -9,7 +9,11 @@
 FROM node:22-alpine AS web-build
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
-RUN npm ci
+# --ignore-scripts: never run a dependency's install hooks during the image
+# build (supply-chain hardening; nothing here needs them — see the matching
+# comment in .github/workflows/docker-publish.yml, which also lints the
+# lockfile before this image is ever built).
+RUN npm ci --ignore-scripts
 COPY web/ ./
 RUN npm run build
 

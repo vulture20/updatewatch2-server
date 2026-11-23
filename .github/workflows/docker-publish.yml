@@ -47,7 +47,20 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - run: npm ci
+      # Supply-chain hardening. --ignore-scripts keeps every dependency's
+      # install/postinstall hook from running (only esbuild's binary
+      # self-check and macOS-only fsevents have one; neither is needed to
+      # build/test). With no hooks run, installing executes no dependency
+      # code, so the lockfile can be linted right after with the
+      # lockfile-pinned, integrity-verified lockfile-lint devDependency —
+      # the only dependency code that runs before the lockfile is vetted,
+      # and before vite/vitest/etc. ever run (build/test below).
+      # It rejects anything resolved from a host other than
+      # registry.npmjs.org, over plain HTTP, without an integrity hash, or
+      # under a URL whose package name doesn't match its key.
+      - run: npm ci --ignore-scripts
+        working-directory: web
+      - run: npm run lint:lockfile
         working-directory: web
       - run: npm run build
         working-directory: web
