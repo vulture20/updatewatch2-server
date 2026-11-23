@@ -12,6 +12,13 @@ their own schedules; a protocol or schema bump is called out inline
 below where a change caused one, but this changelog isn't those
 changelogs.
 
+## [1.7.6] - 2026-11-23
+
+### Security
+
+- **Web frontend build/test toolchain upgraded to clear all known vulnerabilities reported by a dependency scan (OSV.dev) and `npm audit`.** `vite` 5.4 → 7.3, `vitest` 2.1 → 4.1, `@vitejs/plugin-react` 4.3 → 5.2; transitively `esbuild` 0.21 → 0.28, `source-map-js` 1.2.1 → 1.2.4, and `tinypool`/`vite-node` no longer pulled in at all. Covers GHSA-5gmw-xhrv-c9v3/GHSA-85c8-ppgw-ccpr (tinypool), GHSA-5xrq-8626-4rwp/GHSA-82fw-gwwq-j7x9/GHSA-qxg6-89mg-rqv8 (vitest/@vitest/mocker), GHSA-68fv-2mgg-jv7q (source-map-js), GHSA-67mh-4wv8-2f99 (esbuild) and the vite/launch-editor advisories. All affected packages are devDependencies only — none of them ships in the Docker image's built static assets, and most advisories only apply while a Vite dev server or the Vitest UI is running — so the production server was not exposed. `npm audit` now reports 0 vulnerabilities; all 206 frontend tests pass and `npm run build` succeeds unchanged (no config or source changes needed).
+- The same scan's `secret.hardcoded-password` finding for `web/src/i18n/locales/de.json` (`"password": "Passwort"`) is a false positive — it's the login form's field label translation, not a credential. No change.
+
 ## [1.7.5] - 2026-09-24
 
 ### Fixed
